@@ -175,39 +175,32 @@ int db_delete(dsh_t *dsh, const dbv_t *token)
 
 int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 {
-    int ret = -1;
-    bool found = false;
-    size_t i;
     TDB_DATA db_key;
     TDB_DATA db_data;
-    TDB_CONTEXT *dbp;
 
     dbh_t *handle = dsh->dbh;
+    TDB_CONTEXT *dbp = handle->dbp[dsh->index];
 
     db_key.dptr = token->data;
-    db_key.dsize = token->leng;
+    db_key.dsize = token->size;
 
-    for (i = 0; i < handle->count; i += 1) {
-      dbp = handle->dbp[i];
-      db_data = tdb_fetch(dbp, db_key);
+    db_data = tdb_fetch(dbp, db_key);
 
-      if (db_data.dptr != NULL) {
-          if (val->size < db_data.dsize) {
-	      print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%s' ), size error %d::%d",
-			  (char *)token->data, val->size, db_data.dsize);
-            exit(EX_ERROR);
-          }
+    if (db_data.dptr == NULL)
+	return DB_NOTFOUND;
 
-          found = true;
-	  val->leng = db_data.dsize;
-          memcpy(val->data, db_data.dptr, db_data.dsize);
-
-          free(db_data.dptr);
-          ret = 0;
-      }
+    if (val->size < db_data.dsize) {
+	print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%s' ), size error %d::%d",
+		    (char *)token->data, val->size, db_data.dsize);
+	exit(EX_ERROR);
     }
 
-    return found ? 0 : ret;
+    val->leng = db_data.dsize;		/* read count */
+    memcpy(val->data, db_data.dptr, db_data.dsize);
+    
+    free(db_data.dptr);
+
+    return 0;
 }
 
 
@@ -216,24 +209,22 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     int ret;
     TDB_DATA db_key;
     TDB_DATA db_data;
-    size_t i;
+
     dbh_t *handle = dsh->dbh;
+    TDB_CONTEXT *dbp = handle->dbp[dsh->index];
 
     db_key.dptr = token->data;
     db_key.dsize = token->leng;
 
-    for (i = 0; i < handle->count; i += 1) {
-      TDB_CONTEXT *dbp = handle->dbp[i];
-      db_data.dptr = val->data;
-      db_data.dsize = val->size;
+    db_data.dptr = val->data;
+    db_data.dsize = val->leng;		/* write count */
 
-      ret = tdb_store(dbp, db_key, db_data, TDB_REPLACE);
+    ret = tdb_store(dbp, db_key, db_data, TDB_REPLACE);
 
-      if (ret != 0) {
-          print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%*s' ), err: %d, %s",
-			token->size, (char *)token->data, ret, tdb_errorstr(dbp));
-          exit(EX_ERROR);
-      }
+    if (ret != 0) {
+	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%*s' ), err: %d, %s",
+		    token->size, (char *)token->data, ret, tdb_errorstr(dbp));
+	exit(EX_ERROR);
     }
 
     return ret;
@@ -300,7 +291,8 @@ static int tdb_traversor(/*@unused@*/ __attribute__ ((unused)) TDB_CONTEXT * tdb
     ((char *)dbv_key.data)[dbv_key.leng] = '\0';
 
     dbv_data.data = data.dptr;
-    dbv_data.leng = data.dsize;
+    dbv_data.leng = data.dsize;		/* read count */
+    dbv_data.size = data.dsize;
 
     /* call user function */
     rc = hookdata->hook(&dbv_key, &dbv_data, hookdata->userdata);
@@ -314,28 +306,21 @@ static int tdb_traversor(/*@unused@*/ __attribute__ ((unused)) TDB_CONTEXT * tdb
 int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 {
     dbh_t *handle = dsh->dbh;
-    int ret = 0;
-    size_t i;
+    TDB_CONTEXT *dbp = handle->dbp[dsh->index];
+
+    int ret;
+
     userdata_t hookdata;
-    TDB_CONTEXT *dbp;
 
     hookdata.hook = hook;
     hookdata.userdata = userdata;
 
-    for (i = 0; i < handle->count; i += 1) {
-        dbp = handle->dbp[i];
-
-        ret = tdb_traverse(dbp, tdb_traversor, (void *) &hookdata);
-        if (ret == -1) {
-            print_error(__FILE__, __LINE__, "(db) db_foreach err: %d, %s",
-			ret, tdb_errorstr(dbp));
-            exit(EX_ERROR);
-        }
-        else {
-            /* tdb_traverse returns a count of records. We just want success or failure */
-            ret = 0;
-        }
+    ret = tdb_traverse(dbp, tdb_traversor, (void *) &hookdata);
+    if (ret == -1) {
+	print_error(__FILE__, __LINE__, "(db) db_foreach err: %d, %s",
+		    ret, tdb_errorstr(dbp));
+	exit(EX_ERROR);
     }
 
-    return ret;
+    return 0;
 }
