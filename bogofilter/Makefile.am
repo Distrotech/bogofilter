@@ -5,6 +5,7 @@
 AUTOMAKE_OPTIONS = foreign 1.6
 SUBDIRS =  dcdflib . tests
 SYSCONFDIR = @sysconfdir@
+DISTCHECK_CONFIGURE_FLAGS= @DISTCHECK_CONFIGURE_FLAGS@
 
 if ENABLE_GRAHAM_METHOD
 GRAHAM_SRC = graham.c graham.h
@@ -29,7 +30,7 @@ man_MANS = bogofilter.1 bogoutil.1 bogoupgrade.1 bogolexer.1
 sysconf_DATA = bogofilter.cf.example
 
 noinst_LIBRARIES = libbogofilter.a
-LDADD = libbogofilter.a
+LDADD = libbogofilter.a @LIBOBJS@
 
 # what to build that from
 libbogofilter_a_SOURCES= \
@@ -81,7 +82,9 @@ EXTRA_DIST = $(man_MANS) \
 	     README.cvs README.freebsd README.hp-ux \
 	     README.dcdflib README.Robinson \
 	     $(extradistdirs) \
-	     bogofilter-SA-2002-01
+	     bogofilter-SA-2002-01 \
+	     strlcat.3 strlcpy.3
+
 #
 VERSION_FROM=main.c bogofilter.c bogoutil.c lexer.l
 version.c:	version.sh $(VERSION_FROM)
@@ -99,7 +102,7 @@ directories.c: config.status
 	xmlto html-nochunks $<
 
 .xml.1:
-	xmlto man $<
+	{ xmllint --noout --postvalid $< && xmlto man $< ; } || { rm -f $@ ; exit 1 ; }	
 
 .PHONY: rpm cvs-check
 
