@@ -382,7 +382,7 @@ retry_db_open:
 	if (ret != 0) {
 	    print_error(__FILE__, __LINE__, "(db) DB->get_byteswapped: %s",
 		      db_strerror(ret));
-	    db_close(handle, false);
+	    db_close(handle);
 	    return NULL;		/* handle already freed, ok to return */
 	}
 
@@ -393,7 +393,7 @@ retry_db_open:
 	if (ret != 0) {
 	    print_error(__FILE__, __LINE__, "(db) DB->fd: %s",
 		      db_strerror(ret));
-	    db_close(handle, false);
+	    db_close(handle);
 	    return NULL;		/* handle already freed, ok to return */
 	}
 
@@ -648,16 +648,28 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 
 
 /* Close files and clean up. */
-void db_close(void *vhandle, bool nosync)
+void db_close(void *vhandle)
 {
     int ret;
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
-    uint32_t f = nosync ? DB_NOSYNC : 0;
+    uint32_t f = DB_NOSYNC; /* safe as long as we're logging TXNs*/
+
+#if DB_AT_LEAST(4,2)
+    /* get_flags and DB_TXN_NOT_DURABLE are new in 4.2 */
+    ret = dbe->get_flags(dbe, &f);
+    if (ret) {
+	print_error(__FILE__, __LINE__, "get_flags returned error: %s",
+		db_strerror(ret));
+	f = 0;
+    } else {
+	f = (f & DB_TXN_NOT_DURABLE) ? 0 : DB_NOSYNC;
+    }
+#endif
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->close(%s, %s)\n",
-		handle->name, nosync ? "nosync" : "sync");
+		handle->name, f & DB_NOSYNC ? "nosync" : "sync");
 
     if (handle->txn) {
 	print_error(__FILE__, __LINE__, "db_close called with transaction still open, program fault!");
@@ -665,9 +677,11 @@ void db_close(void *vhandle, bool nosync)
 
     ret = dbp->close(dbp, f);
 #if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
-    /* ignore dirty pages in buffer pool */
-    if (ret == DB_INCOMPLETE)
-	ret = 0;
+    /* flush dirty pages in buffer pool */
+    while (ret == DB_INCOMPLETE) {
+	rand_sleep(10000,1000000);
+	ret = dbe->memp_sync(dbe, NULL);
+    }
 #endif
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
@@ -694,9 +708,11 @@ void db_flush(void *vhandle)
 	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
 
 #if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
-    /* ignore dirty pages in buffer pool */
-    if (ret == DB_INCOMPLETE)
-	ret = 0;
+    /* flush dirty pages in buffer pool */
+    while (ret == DB_INCOMPLETE) {
+	rand_sleep(10000,1000000);
+	ret = dbe->memp_sync(dbe, NULL);
+    }
 #endif
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));

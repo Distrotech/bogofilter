@@ -136,7 +136,7 @@ void *ds_open(const char *path, const char *name, dbmode_t open_mode)
 	    if (DST_OK == ds_txn_commit(dsh))
 		return dsh;
 	}
-	db_close(v, false);
+	db_close(v);
 	dsh_free(dsh);
 	dsh = NULL;
     }
@@ -147,7 +147,7 @@ void *ds_open(const char *path, const char *name, dbmode_t open_mode)
 void ds_close(/*@only@*/ void *vhandle)
 {
     dsh_t *dsh = vhandle;
-    db_close(dsh->dbh, false);
+    db_close(dsh->dbh);
     xfree(dsh);
 }
 
