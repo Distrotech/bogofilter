@@ -164,8 +164,8 @@ static int count_hook(word_t *key, dsv_t *data,
 static int ds_oper(const char *path, dbmode_t open_mode, 
 		   ds_foreach_t *hook, void *userdata)
 {
-    int   ret = 0;
-    dsh_t *dsh = ds_open(".", 1, &path, open_mode);
+    int  ret = 0;
+    void *dsh = ds_open(".", 1, &path, open_mode);
 
     if (dsh == NULL) {
 	fprintf(stderr, "Can't open file %s\n", path);
@@ -206,7 +206,7 @@ static byte *spanword(byte *t)
 
 static int load_file(const char *ds_file)
 {
-    dsh_t *dsh;
+    void *dsh;
     byte buf[BUFSIZE];
     byte *p;
     int rv = 0;
@@ -325,8 +325,8 @@ static int get_token(buff_t *buff, FILE *fp)
 
 static int words_from_list(const char *ds_file, int argc, char **argv)
 {
-    dsh_t *dsh;
     int rv = 0;
+    void *dsh;
 
     dsh = ds_open(".", 1, &ds_file, DB_READ);
     if (dsh == NULL)
@@ -379,7 +379,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
     const char *head_format = !show_probability ? "%-20s %6s %6s\n"   : "%-20s %6s  %6s  %6s  %6s\n";
     const char *data_format = !show_probability ? "%-20s %6lu %6lu\n" : "%-20s %6lu  %6lu  %f  %f\n";
 
-    dsh_t *dsh;
+    void *dsh;
 
     set_wordlist_mode(dir);
     filepaths[0] = filepath1;
@@ -523,7 +523,7 @@ static int compute_robinson_x(char *path)
 	size_t count;
 
 	dsv_t val;
-	dsh_t *dsh;
+	void  *dsh;
 
 	char filepath1[PATH_LEN];
 	char filepath2[PATH_LEN];
