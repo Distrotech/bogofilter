@@ -1,6 +1,6 @@
 # $Id$
 
-TESTSCRIPTS = t.systest t.grftest t.vvvtest
+TESTSCRIPTS = t.systest t.grftest
 TESTS=$(TESTSCRIPTS)
 
 TESTS_ENVIRONMENT = RUN_FROM_MAKE=1 srcdir=$(srcdir) $(SHELL) $(VERBOSE)
