@@ -35,7 +35,7 @@ static const int syncflag = O_FSYNC;
 #endif
 
 static const int chk_intval = 30;	/* check interval in seconds */
-static const char aprt[] = DIRSEP_S "process-table";
+static const char aprt[] = DIRSEP_S "lockfile-p";
 static const off_t cellsize = 1;
 static off_t lockpos;			/* lock cell offset */
 static int locked;			/* if we have the lock */

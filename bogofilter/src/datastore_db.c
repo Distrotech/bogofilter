@@ -846,7 +846,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	u_int32_t flags, short locktype /* for fcntl */)
 {
     char *t;
-    const char *const tackon = DIRSEP_S "lockfile-do-not-delete";
+    const char *const tackon = DIRSEP_S "lockfile-d";
     int ret;
 
     assert(bogohome);
