@@ -79,7 +79,7 @@ retry:
 		    list->msgcount[IX_GOOD] = val.goodcount;
 		    list->msgcount[IX_SPAM] = val.spamcount;
 		    if (wordlist_version == 0 &&
-			    ds_get_wordlist_version(list->dsh, &val))
+			ds_get_wordlist_version(list->dsh, &val) == 0)
 			wordlist_version = val.count[0];
 		    if (DST_OK == ds_txn_commit(list->dsh))
 			return retry;
