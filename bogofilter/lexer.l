@@ -309,7 +309,7 @@ static int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf, count);
 	    lineno += 1;
-	    if (DEBUG_LEXER(0)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf);
+	    if (DEBUG_LEXER(0)) fprintf(stdout, "*** %2d %d %s\n", lineno, past_header, buf);
 
 	    if (count != -1 && *buf == '\n')
 		break;
@@ -334,7 +334,7 @@ static int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf+count, add);
 	    lineno += 1;
-	    if (DEBUG_LEXER(1)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf+count);
+	    if (DEBUG_LEXER(1)) fprintf(stdout, "*** %2d %d %s\n", lineno, past_header, buf+count);
 	    count += add;
 	} else {
 	    ungetc(c,yyin);
