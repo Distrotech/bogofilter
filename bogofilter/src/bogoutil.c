@@ -121,6 +121,8 @@ static int load_file(const char *ds_file)
 
     memset(buf, '\0', BUFSIZE);
 
+    ds_txn_begin(dsh);
+
     for (;;) {
 	dsv_t data;
 	word_t *token;
@@ -189,6 +191,15 @@ static int load_file(const char *ds_file)
 	    ds_write(dsh, token, &data);
 	}
 	word_free(token);
+    }
+
+    switch (ds_txn_commit(dsh)) {
+	case DST_FAILURE:
+	case DST_TEMPFAIL:
+	    fprintf(stderr, "commit failed\n");
+	    exit(EXIT_FAILURE);
+	case DST_OK:
+	    break;
     }
 
     ds_close(dsh, false);
@@ -331,6 +342,7 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
 static int get_robx(char *path)
 {
     double rx;
+    int ret = 0;
 
     rx = compute_robinson_x(path);
 
@@ -353,16 +365,20 @@ static int get_robx(char *path)
 	if (dsh == NULL)
 	    return EX_ERROR;
 
-	val.goodcount = 0;
-	val.spamcount = (uint32_t) (rx * 1000000);
-	ds_write(dsh, word_robx, &val);
+	if (DST_OK == ds_txn_begin(dsh)) {
+	    val.goodcount = 0;
+	    val.spamcount = (uint32_t) (rx * 1000000);
+	    ret = ds_write(dsh, word_robx, &val);
+	    if (DST_OK != ds_txn_commit(dsh))
+		ret = 1;
+	}
 	ds_close(dsh, false);
 	ds_cleanup();
 
 	word_free(word_robx);
     }
 
-    return EX_OK;
+    return ret ? EX_ERROR : EX_OK;
 }
 
 static void print_version(void)

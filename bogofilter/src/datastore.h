@@ -152,6 +152,15 @@ extern bool ds_get_msgcounts(void *vhandle, dsv_t *val);
 /** Set the database message count. */
 extern void ds_set_msgcounts(void *vhandle, dsv_t *val);
 
+/* */
+extern int ds_txn_begin(void *vhandle);
+extern int ds_txn_commit(void *vhandle);
+extern int ds_txn_abort(void *vhandle);
+extern int ds_checkpoint(void);
+#define DST_OK (0)
+#define DST_TEMPFAIL (1)
+#define DST_FAILURE (2)
+
 /** Get the current process ID. */
 extern unsigned long ds_handle_pid(void *vhandle);
 

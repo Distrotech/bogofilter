@@ -17,6 +17,24 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 **	3. Bogofilter's header files
 */
 
+/* BUGS: db_open is not part of a transaction
+ * only tested on db 4.0 so far */
+
+/* TODO:
+ * - make sure that db_open can be part of a transaction
+ * - implement proper retry when our transaction is aborted after a
+ *   deadlock
+ * - fix assertion failures in t.maint and t.nonascii_replace
+ *   (DB operation called outside a transaction, probably simple code
+ *   ordering issue; they fail in db_delete)
+ * - track down and fix a DB_RUNRECOVERY fault with subsequent lockup
+ *   in t.bulkmode (no ideas yet what's wrong here)
+ * - document code changes
+ * - conduct massive tests
+ * - check if we really need the log files for "catastrophic recovery"
+ *   or if we can remove them (see db_archive documentation)
+ */
+
 #define DONT_TYPEDEF_SSIZE_T 1
 #include "common.h"
 
@@ -25,6 +43,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #include <stdlib.h>
 #include <unistd.h>		/* for SEEK_SET for SunOS 4.1.x */
 #include <sys/resource.h>
+#include <assert.h>
 
 #include <db.h>
 #ifdef NEEDTRIO
@@ -57,6 +76,7 @@ typedef struct {
     DB		*dbp;
     bool	locked;
     bool	is_swapped;
+    DB_TXN	*txn;
 } dbh_t;
 
 #define DBT_init(dbt) (memset(&dbt, 0, sizeof(DBT)))
@@ -96,19 +116,6 @@ static int DB_OPEN(DB *db, const char *file,
     return ret;
 }
 
-/* implements locking. */
-static int db_lock(int fd, int cmd, short int type)
-{
-    struct flock lock;
-
-    lock.l_type = type;
-    lock.l_start = 0;
-    lock.l_whence = (short int)SEEK_SET;
-    lock.l_len = 0;
-    return (fcntl(fd, cmd, &lock));
-}
-
-
 static dbh_t *dbh_init(const char *path, const char *name)
 {
     dbh_t *handle;
@@ -125,6 +132,8 @@ static dbh_t *dbh_init(const char *path, const char *name)
 
     handle->locked     = false;
     handle->is_swapped = false;
+
+    handle->txn = NULL;
 
     return handle;
 }
@@ -351,27 +360,7 @@ retry_db_open:
 
 	/* check file size limit */
 	check_fsize_limit(handle->fd, pagesize);
-
-	/* skip manual lock when run in environment */
-	if (dbe)
-	    break;
-
-	/* try fcntl lock */
-	if (db_lock(handle->fd, F_SETLK,
-		    (short int)(open_mode == DB_READ ? F_RDLCK : F_WRLCK)))
-	{
-	    int e = errno;
-	    db_close(handle, true);
-	    handle = NULL;	/* db_close freed it, we don't want to use it anymore */
-	    errno = e;
-	    if (errno == EACCES)
-		errno = EAGAIN;
-	    if (errno != EAGAIN)
-		return NULL;
-	} else {
-	    /* have lock */
-	    break;
-	}
+	break;
     } /* for idx over retryflags */
 
     if (handle) {
@@ -395,12 +384,98 @@ retry_db_open:
     return NULL;
 }
 
+int db_txn_begin(dsh_t *dsh)
+{
+    DB_TXN *txn;
+    int ret;
+
+    assert(dbe);
+    assert(((dbh_t *)dsh->dbh)->txn == NULL);
+
+    ret = dbe->txn_begin(dbe, NULL, &txn, 0);
+    if (ret) {
+	print_error(__FILE__, __LINE__, "(db) txn_begin, err: %s",
+    		    db_strerror(ret));
+    }
+    ((dbh_t *)dsh->dbh)->txn = txn;
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "db_txn_begin, id: %lx\n",
+		(unsigned long)txn->id(txn));
+
+    return ret;
+}
+
+int db_txn_abort(dsh_t *dsh)
+{
+    int ret;
+    assert(dbe);
+    DB_TXN *txn = ((dbh_t *)dsh->dbh)->txn;
+    assert(txn);
+
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "db_txn_abort, id: %lx\n",
+		(unsigned long)txn->id(txn));
+    ret = txn->abort(txn);
+    if (ret)
+	print_error(__FILE__, __LINE__, "(db) txn_abort, err: %s",
+		db_strerror(ret));
+    ((dbh_t *)dsh->dbh)->txn = NULL;
+    return ret;
+}
+
+int db_txn_commit(dsh_t *dsh)
+{
+    int ret;
+    DB_TXN *txn = ((dbh_t *)dsh->dbh)->txn;
+    assert(dbe);
+    assert(txn);
+
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "db_txn_commit, id: %lx\n",
+		(unsigned long)txn->id(txn));
+    ret = txn->commit(txn, 0);
+    if (ret)
+	print_error(__FILE__, __LINE__, "(db) txn_commit, err: %s",
+		db_strerror(ret));
+    ((dbh_t *)dsh->dbh)->txn = NULL;
+
+    /* trickle write pages back to data base */
+    (void)dbe->memp_trickle(dbe, 15, NULL);
+
+    switch (ret) {
+	case 0:
+	    return DST_OK;
+	case DB_LOCK_DEADLOCK:
+	    return DST_TEMPFAIL;
+	default:
+	    return DST_FAILURE;
+    }
+}
+
+int db_checkpoint(void)
+{
+    int ret;
+    assert(dbe);
+
+    ret = dbe->txn_checkpoint(dbe,
+	    /* kBytes */   64,
+	    /* minutes */   1,
+	    /* flags */     0);
+
+    if (DEBUG_DATABASE(4))
+	fprintf(dbgout, "db_checkpoint\n");
+    if (ret)
+	print_error(__FILE__, __LINE__, "(db) checkpoint, err: %s",
+		db_strerror(ret));
+    return ret;
+}
 
 int db_delete(dsh_t *dsh, const dbv_t *token)
 {
     int ret = 0;
     dbh_t *handle = dsh->dbh;
     DB *dbp = handle->dbp;
+    assert(handle->txn);
 
     DBT db_key;
     DBT_init(db_key);
@@ -408,7 +483,7 @@ int db_delete(dsh_t *dsh, const dbv_t *token)
     db_key.data = token->data;
     db_key.size = token->leng;
 
-    ret = dbp->del(dbp, NULL, &db_key, 0);
+    ret = dbp->del(dbp, handle->txn, &db_key, 0);
 
     if (ret != 0 && ret != DB_NOTFOUND) {
 	print_error(__FILE__, __LINE__, "(db) db_delete('%.*s'), err: %d, %s",
@@ -442,7 +517,7 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_data.ulen = val->leng;		/* max size */
     db_data.flags = DB_DBT_USERMEM;	/* saves the memcpy */
 
-    ret = dbp->get(dbp, NULL, &db_key, &db_data, 0);
+    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, 0);
 
     val->leng = db_data.size;		/* read count */
 
@@ -474,6 +549,7 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     DBT db_data;
 
     dbh_t *handle = dsh->dbh;
+    assert(handle->txn);
     DB *dbp = handle->dbp;
 
     DBT_init(db_key);
@@ -485,7 +561,7 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     db_data.data = val->data;
     db_data.size = val->leng;		/* write count */
 
-    ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
+    ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
 
     if (ret != 0) {
 	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%.*s' ), err: %d, %s",
@@ -557,7 +633,10 @@ int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
     memset(&key, 0, sizeof(key));
     memset(&data, 0, sizeof(data));
 
-    ret = dbp->cursor(dbp, NULL, &dbcp, 0);
+    assert(dbe);
+    assert(handle->txn);
+
+    ret = dbp->cursor(dbp, handle->txn, &dbcp, 0);
     if (ret) {
 	dbp->err(dbp, ret, "(cursor): %s", handle->path);
 	return -1;
@@ -615,13 +694,10 @@ const char *db_str_err(int e) {
  * or transactional initialization/shutdown */
 static bool init = false;
 int db_init(void) {
-    char *t;
-    int cdb_alldb = 1;
-
     if (!bogohome)
 	abort();
 
-    if (bogohome && getenv("BOGOFILTER_CONCURRENT_DATA_STORE")) {
+    {
 	int ret = db_env_create(&dbe, 0);
 	if (ret != 0) {
 	    print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret, db_strerror(ret));
@@ -634,11 +710,13 @@ int db_init(void) {
 	    exit(EXIT_FAILURE);
 	}
 
-	/* Allow user to override DB_CDB_ALLDB to 0 */
-	if ((t = getenv("DB_CDB_ALLDB")))
-	    cdb_alldb = atoi(t);
+	/* configure automatic deadlock detector */
+	if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
+	    print_error(__FILE__, __LINE__, "DBENV->set_lk_detect(DB_LOCK_DEFAULT), err: %s", db_strerror(ret));
+	    exit(EXIT_FAILURE);
+	}
 
-	ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_CDB | DB_CREATE, /* mode */ 0644);
+	ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_TXN | DB_RECOVER | DB_CREATE, /* mode */ 0644);
 	if (ret != 0) {
 	    dbe->close(dbe, 0);
 	    print_error(__FILE__, __LINE__, "DBENV->open, err: %d, %s", ret, db_strerror(ret));
