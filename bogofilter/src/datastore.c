@@ -306,8 +306,10 @@ int ds_oper(const char *path, dbmode_t open_mode,
 
     if (DST_OK == ds_txn_begin(dsh)) {
 	ret = ds_foreach(dsh, hook, userdata);
-	if (ds_txn_commit(dsh) != DST_OK)
-	    ret = -1;
+	if (ret) { ds_txn_abort(dsh); }
+	else
+	    if (ds_txn_commit(dsh) != DST_OK)
+		ret = -1;
     }
 
     ds_close(dsh, false);
