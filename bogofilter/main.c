@@ -353,7 +353,7 @@ int main(int argc, char **argv)
 	    syslog(LOG_INFO, "%s, %s\n", msg_bogofilter, msg_register);
 	    break;
 	default:
-	    syslog(LOG_INFO, msg_register);
+	    syslog(LOG_INFO, "%s", msg_register);
 	    break;
 	}
 
