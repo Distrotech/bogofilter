@@ -284,7 +284,7 @@ void *dbe_init(const char *directory)
 
     dsm_init();
 
-    env = dsm->dsm_init(directory);
+    env = dsm->dsm_env_init(directory);
 
     return env;
 }

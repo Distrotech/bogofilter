@@ -13,7 +13,7 @@ typedef struct {
 
 /* public -- used in datastore.c */
 typedef int	dsm_function		(void *vhandle);
-typedef dbe_t  *dsm_init		(const char *directory);
+typedef dbe_t  *dsm_env_init		(const char *directory);
 /* private -- used in datastore_db_*.c */
 typedef DB_ENV *dsm_get_env_dbe		(dbe_t *env);
 typedef const char *dsm_database_name	(const char *db_file);
@@ -31,7 +31,7 @@ typedef struct {
     dsm_function	        *dsm_begin;
     dsm_function        	*dsm_abort;
     dsm_function        	*dsm_commit;
-    dsm_init			*dsm_init;
+    dsm_env_init		*dsm_env_init;
     /* private -- used in datastore_db_*.c */
     dsm_get_env_dbe		*dsm_get_env_dbe;
     dsm_database_name		*dsm_database_name;
