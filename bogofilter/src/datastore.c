@@ -246,7 +246,7 @@ int ds_delete(void *vhandle, const word_t *word)
 int ds_txn_begin(void *vhandle) { return db_txn_begin(vhandle); }
 int ds_txn_abort(void *vhandle) { return db_txn_abort(vhandle); }
 int ds_txn_commit(void *vhandle) { return db_txn_commit(vhandle); }
-int ds_checkpoint(void) { return db_checkpoint(); }
+int ds_checkpoint(void *vhandle) { return db_checkpoint(vhandle); }
 
 typedef struct {
     ds_foreach_t *hook;
