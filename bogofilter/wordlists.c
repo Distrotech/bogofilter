@@ -55,6 +55,7 @@ static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const ch
     new->active=false;
     new->weight=weight;
     new->bad=bad;
+    new->ignore=ignore;
 
     if (! word_lists) {
 	word_lists=new;
