@@ -67,33 +67,42 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 {
   dbh_t *handle;
  
-  /* Don't do any locking. We'll take care of it, if necessary. */
-  int tdb_flags = TDB_NOLOCK;
-  int open_flags = open_mode == DB_READ ? O_RDONLY : O_RDWR | O_CREAT;
+  int tdb_flags = 0;
+  int open_flags;
+  TDB_CONTEXT *tdb;
+
+  if (open_mode ==  DB_WRITE){
+    /* tdb_flags = TDB_NOMMAP; */
+    open_flags = O_RDWR | O_CREAT;
+  }
+  else {
+    tdb_flags = TDB_NOLOCK;
+    open_flags = O_RDONLY;
+  }
 
   handle = dbh_init(db_file, name);
 
-  handle->dbp = tdb_open(handle->filename, 0, tdb_flags, open_flags, 0664);
+  handle->dbp = tdb = tdb_open(handle->filename, 0, tdb_flags, open_flags, 0664);
 
-  if (handle->dbp == NULL){
-    print_error(__FILE__, __LINE__, "tdb_open( %s ) failed. %s", handle->filename, strerror(errno));
+  if (tdb == NULL){
+    print_error(__FILE__, __LINE__, "(db) tdb_open( %s ) failed with error %s", handle->filename, strerror(errno));
     dbh_free(handle);
     handle = NULL;
   }
   else {
 
     if (DEBUG_DATABASE(1)) {
-      fprintf(dbgout, "tdb_open( %s, %s, %d )\n", name, db_file, open_mode);
+      fprintf(dbgout, "(db) tdb_open( %s, %s, %d )\n", handle->name, handle->filename, open_mode);
     }
     
     if (open_mode == DB_WRITE){
-      if (db_write_lock(handle->dbp->fd) == 0){
+      if (tdb_lockall(handle->dbp) == 0){
         handle->locked = 1;
       }
       else {
-        print_error(__FILE__, __LINE__, "db_lock failed on file (%s).", db_file);
+        print_error(__FILE__, __LINE__, "(db) tdb_lockall on file (%s) failed with error %s.", handle->filename, tdb_errorstr(tdb));
         dbh_free(handle);
-        handle = NULL;        
+        handle = NULL;
       }
     }
   }
@@ -201,12 +210,12 @@ void db_close(void *vhandle, bool nosync){
 
   if (handle == NULL) return;
   
-  if (handle->locked){
-    db_unlock(handle->dbp->fd);
-  }
+  if (handle->locked)
+    tdb_unlockall(handle->dbp);
+  
 
   if ((ret = tdb_close(handle->dbp))) {
-    print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, tdb_errorstr(handle->dbp));
+    print_error(__FILE__, __LINE__, "(db) tdb_close on file %s failed with error %s", handle->filename,  tdb_errorstr(handle->dbp));
   }
 
   dbh_free(handle);
