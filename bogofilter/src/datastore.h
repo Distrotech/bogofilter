@@ -25,7 +25,11 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #include <stdlib.h>
 
 #include "word.h"
-#include "wordlists.h"
+
+typedef enum sh_e { SPAM, GOOD } sh_t;
+
+#define	spamcount count[SPAM]
+#define	goodcount count[GOOD]
 
 #define MSG_COUNT_TOK ((const byte *)".MSG_COUNT")
 
