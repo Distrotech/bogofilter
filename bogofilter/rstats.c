@@ -92,8 +92,8 @@ static int compare_rstats_t(const void *const ir1, const void *const ir2)
     const rstats_t *r1 = *(const rstats_t *const *)ir1;
     const rstats_t *r2 = *(const rstats_t *const *)ir2;
 
-    if (r1->prob > r2->prob) return 1;
-    if (r1->prob < r2->prob) return -1;
+    if (r1->prob - r2->prob > EPS) return 1;
+    if (r2->prob - r1->prob > EPS) return -1;
 
     return strcmp(r1->token, r2->token);
 }
@@ -158,10 +158,10 @@ void rstats_print_histogram(size_t robn, rstats_t **rstats_array, size_t count)
 	{
 	    double prob = rstats_array[r]->prob;
 	    double invn, invproduct, product, spamicity;
-	    if (prob >= fin)
+	    if (prob - fin >= EPS)
 		break;
 
-	    if (fabs(EVEN_ODDS - prob) >= min_dev)
+	    if (fabs(EVEN_ODDS - prob) - min_dev >= EPS)
 	    {
 		cnt += 1;
 		h->prob += prob;
@@ -225,7 +225,7 @@ void rstats_print_rtable(rstats_t **rstats_array, size_t count)
 		     : (pw = (cur->bad / msgs_bad) /
 			(cur->bad / msgs_bad + cur->good / msgs_good)));
 	double fw = (robs * robx + n * pw) / (robs + n);
-	char flag = (fabs(fw-EVEN_ODDS) < min_dev) ? '-' : '+';
+	char flag = (fabs(fw-EVEN_ODDS) - min_dev >= EPS) ? '+' : '-';
 
 	(void)fprintf(stdout, "\"%s\"%*s %5d  %8.6f  %8.6f  %8.6f%10.5f%10.5f %c\n",
 		      token, len, " ",

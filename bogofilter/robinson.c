@@ -217,7 +217,7 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 	 * P = 1 - ((1-p1)*(1-p2)*...*(1-pn))^(1/n)     [spamminess]
          * Q = 1 - (p1*p2*...*pn)^(1/n)                 [non-spamminess]
 	 */
-        if (fabs(EVEN_ODDS - prob) >= min_dev) {
+        if (fabs(EVEN_ODDS - prob) - min_dev >= EPS) {
 	    P.mant *= 1-prob;
 	    if (P.mant < 1.0e-200) {
 		P.mant *= 1.0e200;
