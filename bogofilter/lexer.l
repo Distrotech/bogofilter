@@ -72,8 +72,8 @@ char *yylval;
 
 UINT8		([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5]))
 IPADDR		{UINT8}\.{UINT8}\.{UINT8}\.{UINT8}
+BCHARS		[0-9a-zA-Z\'()+_,-./:=?]
 BCHARSNOSPC	[0-9a-zA-Z'()+_,-./:=?]
-BCHARS		[ 0-9a-zA-Z'()+_,-./:=?]
 MIME_BOUNDARY	{BCHARS}*{BCHARSNOSPC}
 
 ID		[0-9a-zA-Z-]*
@@ -245,7 +245,7 @@ width	;
 						      msg_header = 1; 
 						      if (mime_lexer) {
 							  stackp = 0;
-							  resetmsgstate(&msg_stack[stackp], 0); 
+							  reset_msg_state(&msg_stack[stackp], 0); 
 						      } 
 						      return(FROM);
 						  } else { 
@@ -256,10 +256,10 @@ width	;
 ^\tid\ {ID}					;
 
 E?SMTP\ id\ {ID}				;
-boundary=.*					{ if (mime_lexer) { mime_boundary(); }}
+boundary=.*					{ if (mime_lexer) { set_mime_boundary(); }}
 name=\"?					;
 filename=\"?					;
-^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { mime_boundary(); return (BOUNDARY); }}
+^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { chk_mime_boundary(); return (BOUNDARY); }}
 
 {IPADDR}					{return(IPADDR);}
 {TOKEN}						{return(TOKEN);}
@@ -371,21 +371,22 @@ static int yyinput(char *buf, int max_size)
 /* input getter for the scanner */
 {
     int i, count, decoded_count;
+
     count = yygetline(buf, max_size);
 
     if ((count > 0) && !msg_header){
-     
+
 	decoded_count = mime_decode(buf, count);
 
-        /*change buffer size only if the decoding worked */
-        if (decoded_count != 0){
-            count = decoded_count;
-        }
+	/*change buffer size only if the decoding worked */
+	if (decoded_count != 0)
+	    count = decoded_count;
     }
 
     for (i = 0; i < count; i++ )
     {	
-	buf[i] = charset_table[(unsigned char)buf[i]];
+	unsigned char ch = buf[i];
+	buf[i] = charset_table[ch];
     }
 
     return (count == -1 ? 0 : count);

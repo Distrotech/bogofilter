@@ -33,8 +33,9 @@ extern int stackp;
 extern struct msg_state *msg_state;
 extern struct msg_state msg_stack[MIME_STACK_MAX];
 
-void resetmsgstate(struct msg_state *ms, int new);
-void mime_boundary(void);
+void reset_msg_state(struct msg_state *ms, int new);
+void set_mime_boundary(void);
+void chk_mime_boundary(void);
 void mime_disposition(void);
 void mime_encoding(void);
 void mime_type(void);

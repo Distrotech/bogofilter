@@ -93,7 +93,7 @@ void msg_state_init(bool header, char *boundary, size_t len)
     msg_state->boundary_len = len;
 }
 
-void resetmsgstate(struct msg_state *ms, int new)
+void reset_msg_state(struct msg_state *ms, int new)
 {
     while (new > 0) {
 	struct msg_state *t = ms + new;
@@ -252,33 +252,48 @@ void mime_type(void)
     return;
 }
 
-void mime_boundary(void)
+void set_mime_boundary(void)
 {
     char *boundary;
     size_t len;
 
     if (DEBUG_MIME(1))
-	fprintf(stderr, "*** enter_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
+	fprintf(stderr, "*** --> set_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
 
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
 	boundary = getword(yytext+len, yytext + yyleng);
 	msg_state_init(true, boundary, strlen(boundary));
-    } else {			/* verify that it's really a boundary line */
-	boundary = msg_state->boundary;
-	if (boundary == NULL )
-	    return;
-	len = msg_state->boundary_len;
-	/* XXX FIXME: recover from missing end boundaries? */
-	if (memcmp(yytext+2, boundary, len) == 0) {
-	    msg_state = &msg_stack[stackp];
-	    memset(msg_state, 0, sizeof(*msg_state));
-	    msg_state_init(true, boundary, len);
-	}
     }
 
     if (DEBUG_MIME(1))
-	fprintf(stderr, "*** mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
+	fprintf(stderr, "*** <-- set_mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
+
+    return;
+}
+
+void chk_mime_boundary(void)
+{
+    char *boundary;
+    size_t len;
+
+    if (DEBUG_MIME(1))
+	fprintf(stderr, "*** --> chk_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
+
+    boundary = msg_state->boundary;
+    if (boundary == NULL )
+	return;
+    len = msg_state->boundary_len;
+    /* XXX FIXME: recover from missing end boundaries? */
+    if (memcmp(yytext+2, boundary, len) == 0) {
+	msg_state = &msg_stack[stackp];
+	memset(msg_state, 0, sizeof(*msg_state));
+	msg_state_init(true, boundary, len);
+    }
+
+    if (DEBUG_MIME(1))
+	fprintf(stderr, "*** <-- chk_mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
+
     return;
 }
 
@@ -287,6 +302,7 @@ size_t mime_decode(char *buff, size_t size)
     size_t count = size;
 
     if (DEBUG_MIME(3)) fprintf(stderr, "*** mime_decode %d \"%s\"\n", size, buff);
+
     if (msg_state->mime_header)	/* do nothing if in header */
 	return count;
 
