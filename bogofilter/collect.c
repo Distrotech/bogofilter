@@ -46,6 +46,8 @@ void collect_words(/*@out@*/ wordhash_t **wh,
     wordprop_t *w;
     wordhash_t *h = wordhash_init();
 
+    if (DEBUG_WORDLIST(2)) fprintf(stdout, "### collect_words() begins\n");
+
     for (;;){
 	token_t token_type = get_token();
 
@@ -53,6 +55,7 @@ void collect_words(/*@out@*/ wordhash_t **wh,
 	    w = wordhash_insert(h, yylval, sizeof(wordprop_t), &wordprop_init);
 	    if (w->freq < max_repeats) w->freq++;
 	    w_count++;
+	    if (DEBUG_WORDLIST(3)) fprintf(stdout, "%3d %s\n", w_count, yylval);
 	    continue;
 	}
 
@@ -65,6 +68,8 @@ void collect_words(/*@out@*/ wordhash_t **wh,
 	*cont = (token_type != 0);
 	break;
     }
+
+    if (DEBUG_WORDLIST(2)) fprintf(stdout, "### collect_words() ends\n");
 
     if (word_count)
 	*word_count = w_count;

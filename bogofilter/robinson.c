@@ -185,6 +185,7 @@ static double compute_probability(const char *token)
 double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 /* selects the best spam/nonspam indicators and calculates Robinson's S */
 {
+    int count = 0;
     hashnode_t *node;
 
     FLOAT P = {1.0, 0};		/* Robinson's P */
@@ -192,6 +193,8 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 
     double spamicity;
     size_t robn = 0;
+
+    if (DEBUG_WORDLIST(2)) fprintf(stdout, "### rob_compute_spamicity() begins\n");
 
     Rtable |= verbose > 3;
 
@@ -206,6 +209,9 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 
     if (Rtable || verbose)
 	rstats_init();
+
+    if (DEBUG_WORDLIST(2)) fprintf(stdout, "min_dev: %f, robs: %f, robx: %f\n", 
+				   min_dev, robs, robx);
 
     for(node = wordhash_first(wordhash); node != NULL; node = wordhash_next(wordhash))
     {
@@ -231,6 +237,7 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 	    }
             robn ++;
         }
+	if (DEBUG_WORDLIST(3)) fprintf(stdout, "%3d %3d %f %s\n", robn, count, prob, token);
     }
 
     /* Robinson's P, Q and S
@@ -241,6 +248,8 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 
     if (robn && (Rtable || verbose))
 	rstats_fini(robn, P, Q, spamicity );
+
+    if (DEBUG_WORDLIST(2)) fprintf(stdout, "### rob_compute_spamicity() ends\n");
 
     return (spamicity);
 }
