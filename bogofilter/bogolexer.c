@@ -24,7 +24,7 @@ NAME:
 /* exports */
 bool logflag;				/* '-l' */
 bool quiet;				/* '-q' */
-int  passthrough;			/* '-p' */
+bool passthrough;			/* '-p' */
 int  verbose;				/* '-v' */
 bool replace_nonascii_characters;	/* '-n' */
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     int option;
     int count=0;
 
-    while ((option = getopt(argc, argv, ":hnpqvxM")) != -1)
+    while ((option = getopt(argc, argv, ":hnpqvx:M")) != -1)
 	switch (option) {
 	case 'h':
 	    help();
