@@ -149,11 +149,11 @@ endif
 LDADD += @LIBOBJS@
 
 if ENABLE_TDB_DATASTORE
-datastore_SOURCE = datastore_tdb.c datastore_dummies.c
+datastore_SOURCE = datastore_tdb.c datastore_txn_dummies.c
 else
 if ENABLE_QDBM_DATASTORE
 datastore_SOURCE = datastore_qdbm.c datastore_qdbm.h datastore_qdbm_cmpkey.c \
-		   datastore_dummies.c
+		   datastore_txn_dummies.c
 
 bin_PROGRAMS += bogoQDBMupgrade
 bogoQDBMupgrade_SOURCES = bogoQDBMupgrade.c datastore_qdbm_cmpkey.c
@@ -163,10 +163,10 @@ if ENABLE_SQLITE_DATASTORE
 datastore_SOURCE = datastore_sqlite.c
 else
 if ENABLE_TRANSACTIONS
-datastore_SOURCE = datastore_db.c datastore_db_trans.c datastore_db_trad_stub.c
+datastore_SOURCE = datastore_db.c datastore_db_trans.c datastore_trad_dummies.c
 else
 if DISABLE_TRANSACTIONS
-datastore_SOURCE = datastore_db.c datastore_db_trad.c datastore_db_trans_stub.c
+datastore_SOURCE = datastore_db.c datastore_db_trad.c datastore_txn_dummies.c
 else
 datastore_SOURCE = datastore_db.c datastore_db_trad.c datastore_db_trans.c
 endif
