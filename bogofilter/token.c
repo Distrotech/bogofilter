@@ -41,6 +41,12 @@ int html_comment_level = 0;
 
 lexer_state_t lexer_state = LEXER_HEAD;
 
+void reset_html_level(void)
+{
+    html_tag_level = 0;
+    html_comment_level = 0;
+}
+ 
 void html_tag(int level)
 {
     html_tag_level += level;
@@ -166,6 +172,7 @@ token_t got_from(const char *text)
 	if (mime_lexer) {
 	    stackp = 0;
 	    reset_msg_state(&msg_stack[stackp], 0); 
+	    reset_html_level();
 	} 
 	return(FROM);
     }
