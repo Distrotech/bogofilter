@@ -12,15 +12,16 @@ NAME:
 
 #define MIME_STACK_MAX 100
 
-enum mimetype { MIME_MULTIPART, MIME_MESSAGE, MIME_TEXT, MIME_OTHER };
+enum mimetype { MIME_MULTIPART, MIME_MESSAGE, MIME_TEXT, MIME_TEXT_PLAIN, MIME_TEXT_HTML, MIME_OTHER };
 enum mimeencoding { MIME_7BIT, MIME_8BIT, MIME_BINARY, MIME_QP, MIME_BASE64, MIME_UUENCODE };
 enum mimedisposition { MIME_ATTACHMENT, MIME_INLINE };
 
 struct msg_state {
     char *charset;
-    char *boundary; /* only valid if mime_type is MIME_MULTIPART or
-		       MIME_MESSAGE */
+    char   *boundary;	/* only valid if mime_type is MIME_MULTIPART or MIME_MESSAGE */
     size_t boundary_len;
+    char  *nxt_boundary;/* only valid if mime_type is MIME_MULTIPART or MIME_MESSAGE */
+    size_t nxt_boundary_len;
     char *version;
     bool mime_header;
     bool mime_mail;
@@ -34,13 +35,13 @@ extern struct msg_state *msg_state;
 extern struct msg_state msg_stack[MIME_STACK_MAX];
 
 void reset_msg_state(struct msg_state *ms, int new);
-void set_mime_boundary(void);
-void chk_mime_boundary(void);
-void mime_disposition(void);
-void mime_encoding(void);
-void mime_type(void);
+void mime_boundary_set(const char *text, int leng);
+void mime_boundary_chk(const char *text, int leng);
+void mime_disposition(const char *text, int leng);
+void mime_encoding(const char *text, int leng);
+void mime_type(const char *text, int leng);
 enum mimetype get_mime_type(void);
-void mime_version(void);
+void mime_version(const char *text, int leng);
 size_t mime_decode(char *buff, size_t size);
 
 #endif	/* HAVE_MIME_H */
