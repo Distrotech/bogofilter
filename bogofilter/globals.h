@@ -8,6 +8,9 @@
 
 #include "system.h" /* has bool */
 
+#ifdef __LCLINT__
+#define bool int
+#endif
 extern bool nonspam_exits_zero;	/* '-e' */
 extern bool fisher;		/* '-f' */
 extern bool force;		/* '-F' */
