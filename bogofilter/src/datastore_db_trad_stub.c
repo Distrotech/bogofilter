@@ -12,15 +12,12 @@ David Relson	<relson@osagesoftware.com> 2005
 
 ******************************************************************************/
 
-#define DONT_TYPEDEF_SSIZE_T 1
 #include "common.h"
 
 #include <db.h>
 
 #include "datastore.h"
 #include "datastore_db_private.h"
-#include "datastore_db.h"
-#include "datastore_dbcommon.h"
 
 /* OO function lists */
 
