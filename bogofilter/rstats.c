@@ -114,7 +114,13 @@ void rstats_print(void)
     size_t robn  = header.robn;
     size_t count = header.count;
     rstats_t *cur;
-    rstats_t **rstats_array = (rstats_t **) xcalloc( count, sizeof(rstats_t *));
+    rstats_t **rstats_array;
+
+/*  ElectricFence doesn't like xcalloc(0,...) */
+    if (count == 0)
+	return;
+
+    rstats_array = (rstats_t **) xcalloc(count, sizeof(rstats_t *));
 
     for (r= 0, cur = header.list; r<count; r+=1, cur=cur->next)
 	rstats_array[r] = cur;
