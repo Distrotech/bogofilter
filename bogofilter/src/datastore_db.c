@@ -263,7 +263,9 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
     size_t idx;
     uint32_t retryflags[] = { 0, DB_NOMMAP };
 
-    if (!init) abort();
+    if (!init)
+	/* internal error: must be called only after initialization */
+	abort();
 
     check_db_version();
 
@@ -760,8 +762,9 @@ int db_init(void) {
     {
 	int ret = db_env_create(&dbe, 0);
 	if (ret != 0) {
-	    print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret, db_strerror(ret));
-	    abort();
+	    print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret,
+		    db_strerror(ret));
+	    exit(EX_ERROR);
 	}
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "db_env_create: %p\n", dbe);
