@@ -9,7 +9,8 @@ deqp_SOURCES=deqp.c
 deb64_SOURCES=deb64.c
 spam_header_name_SOURCES=spam_header_name.c
 
-AM_CFLAGS = -I.. -L..
+AM_CPPFLAGS = -I$(srcdir)/..
+AM_LDFLAGS = -L..
 LIBS = -lbogofilter
 
 t.integrity: dehex dumbhead
