@@ -55,7 +55,7 @@ token_t get_token(void)
 	    continue;
 
 	/* ignore anything when not reading text MIME types */
-	if (class == TOKEN && mime_lexer && msg_state->mime_type != MIME_TEXT)
+	if (class == TOKEN && mime_lexer && stackp > 0 && msg_state->mime_type != MIME_TEXT)
 	    continue;
 	
 	if (class == IPADDR && block_on_subnets)
