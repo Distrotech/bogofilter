@@ -86,6 +86,7 @@ void msg_state_init(bool header, char *boundary, size_t len);
 void msg_state_init(bool header, char *boundary, size_t len)
 {
     msg_state->mime_header = header;
+    msg_state->mime_mail = false;
     msg_state->mime_type = MIME_TEXT;
     msg_state->mime_encoding = MIME_7BIT;
     msg_state->boundary = boundary;
@@ -105,7 +106,6 @@ void resetmsgstate(struct msg_state *ms, int new)
 	new -= 1;
     }
     msg_state = ms;
-    ms->mime_mail = 0;
     msg_state_init(false, NULL, 0);
     ms->charset = xstrdup("US-ASCII");
 }
@@ -168,8 +168,8 @@ void mime_version(void)
 {
     size_t l = strlen("MIME-Version:");
     char *w = getword(yytext+l, yytext + yyleng);
-    msg_state->mime_mail = 1;
-    msg_state->mime_header = 1;
+    msg_state->mime_mail = true;
+    msg_state->mime_header = true;
     msg_state->version = w;
 }
 
