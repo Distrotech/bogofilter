@@ -164,19 +164,10 @@ int db_lock(int fd, int cmd, short int type)
 
 static void dsm_init(void)
 {
-#if	!defined(ENABLE_TRANSACTIONS) && !defined(DISABLE_TRANSACTIONS)
     if (!fTransaction)
 	dsm = &dsm_traditional;
     else
 	dsm = &dsm_transactional;
-#else
-#ifdef	ENABLE_TRANSACTIONS
-	dsm = &dsm_transactional;
-#endif
-#ifdef	DISABLE_TRANSACTIONS
-	dsm = &dsm_traditional;
-#endif
-#endif
 }
 
 /** "constructor" - allocate our handle and initialize its contents */
