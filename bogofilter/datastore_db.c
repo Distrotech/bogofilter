@@ -131,6 +131,10 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode,
 	goto open_err;
     }
 
+    if (DEBUG_DATABASE(1)) {
+      fprintf(dbgout, "db_open( %s, %s, %d )\n", name, db_file, open_mode);
+    }
+
     /* see if the database byte order differs from that of the cpu's */
 #if DB_AT_LEAST(3,3)
     ret = handle->dbp->get_byteswapped (handle->dbp, &(handle->is_swapped));
@@ -366,6 +370,11 @@ void db_close(void *vhandle){
   if ((ret = handle->dbp->close(handle->dbp, 0))) {
     print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
   }
+
+  if (DEBUG_DATABASE(1)) {
+      fprintf(dbgout, "db_close( %s, %s )\n", handle->name, handle->filename);
+  }
+
 /*  db_lock_release(handle); */
   dbh_free(handle);
 }
