@@ -56,6 +56,15 @@ static struct sigaction oldact; /* save area */
 
 typedef char cell_t;
 
+static const char *s_locktype(int locktype) {
+    switch (locktype) {
+	case F_UNLCK: return "F_UNLCK";
+	case F_RDLCK: return "F_RDLCK";
+	case F_WRLCK: return "F_WRLCK";
+	default:      return "UNKNOWN";
+    }
+}
+
 /* 1 if locked, 0 if unlocked, negative if error */
 static int check_celllock(int fd, off_t offset) {
     struct flock fl;
@@ -73,8 +82,9 @@ static int check_celllock(int fd, off_t offset) {
 	return -1;
     }
     if (DEBUG_DATABASE(2))
-	fprintf(dbgout, "check_celllock(fd=%d, offset=%ld) = %s\n",
-		fd, (long)offset, fl.l_type == F_UNLCK ? "unlocked" : "locked");
+	fprintf(dbgout, "check_celllock(fd=%d, offset=%ld) = %s (%s)\n",
+		fd, (long)offset, s_locktype(fl.l_type),
+		fl.l_type == F_UNLCK ? "unlocked" : "locked");
     return fl.l_type == F_UNLCK ? 0 : 1;
 }
 
@@ -89,8 +99,9 @@ static int set_celllock(int fd, off_t offset, int locktype) {
     fl.l_len = cellsize;
     r = fcntl(fd, F_SETLK, &fl);
     if (DEBUG_DATABASE(2))
-	fprintf(dbgout, "set_celllock(fd=%d, offset=%ld, type=%d) = %d%s%s\n",
-		fd, (long)offset, locktype, r, r < 0 ? ", " : "", r < 0 ? strerror(errno) : "");
+	fprintf(dbgout, "set_celllock(fd=%d, offset=%ld, type=%d (%s)) = %d%s%s\n",
+		fd, (long)offset, locktype, s_locktype(locktype),
+		r, r < 0 ? ", " : "", r < 0 ? strerror(errno) : "");
     return r;
 }
 
