@@ -251,7 +251,7 @@ static unsigned char xlate_us[] = {
     0x92, '\'',	/* windows apostrophe  to single quote */
     0x93, '"',	/* windows left  quote to double quote */
     0x94, '"',	/* windows right quote to double quote */
-    0xA9, ' '		/* copyright sign      to space        */
+    0xA9, ' '	/* copyright sign      to space        */
 };
 
 /* For us-ascii, 
@@ -382,21 +382,21 @@ void init_charset_table(const char *charset_name, bool use_default)
 
 void got_charset( const char *charset )
 {
-    char *t = strchr( charset, '=' );
+    char *t = strchr( charset, '=' ) + 1;
     bool q = *t == '"';
     char *s, *d;
     t = xstrdup( t + q);
     for (s = d = t; *s != '\0'; s++)
     {
-	char c = *s;
+	char c = tolower(*s);	/* map upper case to lower */
 	if (c == '_')		/* map underscore to dash */
 	    c = '-';
-	*d++ = tolower(c);	/* map upper case to lower */
 	if (c == '-' &&		/* map "iso-" to "iso"     */
-	    memcmp(t, "iso-", 4) == 0)
-	    d -= 1;
+	    memcmp(t, "iso", 3) == 0)
+	    continue;
 	if (q && c == '"')
 	    break;
+	*d++ = c;
     }
     *d++ = '\0';
     if (DEBUG_CONFIG(0))
