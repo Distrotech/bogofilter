@@ -40,9 +40,6 @@
   <arg choice='opt'>-F</arg>
   <arg choice='opt'>-I <replaceable>filename</replaceable></arg>
   <arg choice='opt'>-O <replaceable>filename</replaceable></arg>
-  <arg choice='opt'>-a <replaceable>age</replaceable></arg>
-  <arg choice='opt'>-c <replaceable>count</replaceable></arg>
-  <arg choice='opt'>-s <replaceable>min,max</replaceable></arg>
   <arg choice='opt'>-y <replaceable>date</replaceable></arg>
 </cmdsynopsis>
 
@@ -215,10 +212,10 @@ the output, up to a maximum of 4.  With <option>-vv</option>, the report
 lists the tokens with highest deviation from a mean of 0.5 association
 with spam.</para>
 
-<para>The Robinson method is the default algorithm used for computing a
+<para>The Robinson-Fisher method is the default algorithm used for computing a
 message's spamicity score, unless <application>bogofilter</application> 
 has been compiled without it, by using the 
-<option>--disable-robinson-method</option> option to the configure
+<option>--disable-robinson-fisher</option> option to the configure
 script.  The method to be used can be specified on the command line or
 in the configuration file.</para>
 
@@ -270,19 +267,6 @@ tells <application>bogofilter</application> where to write its output in
 passthrough mode.  Note that this only works when -p is explicitly given.</para>
 
 <para>
-  Option <option>-a age</option> indicates an acceptable token age, with older ones being discarded.  
-  The age can be a date (in form YYYYMMMDD) or a day count, i.e. discard tokens older than 
-  <option>age</option> days.
-</para>
-<para>
-  Option <option>-c min</option> indicates that tokens with counts less than <option>min</option> 
-  are to be discarded.
-</para>
-<para>
-  Option <option>-s min,max</option> is used to discard tokens based on their size, i.e. length.  
-  All tokens shorter than <option>min</option> or longer than <option>max</option> will be discarded.
-</para>
-<para>
   Option <option>-y date</option> is specifies the date to give to tokens that don't have dates.
 </para>
 
@@ -301,11 +285,11 @@ passthrough mode.  Note that this only works when -p is explicitly given.</para>
 <refsect1 id='configuration'><title>CONFIGURATION</title>
 <para>The <application>bogofilter</application> command line allows setting of many 
 options that determine how <application>bogofilter</application> operates.
-File <filename>/etc/bogofilter.cf</filename> can be used to set additional
+File <filename>@sysconfdir@/bogofilter.cf</filename> can be used to set additional
 parameters that affect its operation.  File 
-<filename>/etc/bogofilter.cf.example</filename> has samples of all of the parameters.
+<filename>@sysconfdir@/bogofilter.cf.example</filename> has samples of all of the parameters.
 Status and logging messages can be customized for each site (see 
-<filename>/etc/bogofilter.cf.example</filename>).
+<filename>@sysconfdir@/bogofilter.cf.example</filename>).
 </para>
 </refsect1>
 
@@ -457,7 +441,7 @@ comments.</para>
 <refsect1 id='files'><title>FILES</title>
 <variablelist>
 <varlistentry>
-<term><filename>/etc/bogofilter.cf</filename></term>
+<term><filename>@sysconfdir@/bogofilter.cf</filename></term>
 <listitem><para>System configuration file.</para></listitem>
 </varlistentry>
 <varlistentry>
