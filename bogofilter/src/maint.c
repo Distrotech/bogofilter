@@ -158,9 +158,9 @@ static int maintain_hook(word_t *w_key, dsv_t *in_val,
     token.text = w_key->text;
     token.leng = w_key->leng;
 
-    len = strlen(".MSG_COUNT");
+    len = strlen(MSG_COUNT);
     if (len == token.leng && 
-	strncmp((char *)token.text, ".MSG_COUNT", token.leng) == 0)
+	strncmp((char *)token.text, MSG_COUNT, token.leng) == 0)
 	return 0;
 
     if ((!keep_count(in_val->spamcount) && !keep_count(in_val->goodcount)) || 

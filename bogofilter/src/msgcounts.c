@@ -25,7 +25,7 @@ char	msg_count_chars[MSG_COUNT_MAX_LEN];
 int	msg_count_leng = MSG_COUNT_MAX_LEN;
 char   *msg_count_text = msg_count_chars;
 
-const char *msg_count_header = "\".MSG_COUNT\"";
+const char *msg_count_header = "\"" MSG_COUNT "\"";
 size_t	    msg_count_header_len = 0;
 
 long	msgs_good = 0L;

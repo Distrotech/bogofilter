@@ -31,7 +31,7 @@ typedef enum sh_e { SPAM, GOOD } sh_t;
 #define	spamcount count[SPAM]
 #define	goodcount count[GOOD]
 
-#define MSG_COUNT_TOK ((const byte *)".MSG_COUNT")
+#define MSG_COUNT ".MSG_COUNT"
 
 /* typedef:  Datastore handle type
 ** - used to communicate between datastore layer and database layer

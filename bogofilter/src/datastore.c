@@ -306,7 +306,7 @@ word_t  *msg_count_tok;
 void ds_init()
 {
     if (msg_count_tok == NULL) {
-	msg_count_tok = word_new(MSG_COUNT_TOK, strlen((const char *)MSG_COUNT_TOK));
+	msg_count_tok = word_new((const byte *)MSG_COUNT, strlen(MSG_COUNT));
     }
 }
 

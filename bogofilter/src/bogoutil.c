@@ -499,7 +499,8 @@ static double compute_robx(dsh_t *dsh)
 
     robx = sum/tok_cnt;
     if (verbose)
-	printf(".MSG_COUNT: %lu, %lu, scale: %f, sum: %f, cnt: %6d, .ROBX: %f\n",
+	printf("%s: %lu, %lu, scale: %f, sum: %f, cnt: %6d, .ROBX: %f\n",
+	       MSG_COUNT,
 	       (unsigned long)msg_spam, (unsigned long)msg_good, rh.scalefactor,
 	       sum, (int)tok_cnt, robx);
     else if (onlyprint) printf("%f\n", robx);
