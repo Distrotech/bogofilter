@@ -94,10 +94,9 @@ dsm_t dsm_transactional = {
 
 static int plock(const char *path, short locktype, int mode);
 static int db_try_glock(const char *directory, short locktype, int lockcmd);
-static int bf_dbenv_create(DB_ENV **env);
+static int bf_dbenv_create(DB_ENV **dbe);
 static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
-static void dbx_cleanup_lite(dbe_t *env);
 static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
 static ex_t dbe_common_close(DB_ENV *dbe, const char *directory);
 
@@ -611,7 +610,7 @@ static void dbx_cleanup(dbe_t *env)
 	free(env->directory);
     free(env);
 }
- 
+
 /* close the environment, but do not release locks */
 static void dbx_cleanup_lite(dbe_t *env)
 {
