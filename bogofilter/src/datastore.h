@@ -156,7 +156,6 @@ extern void ds_set_msgcounts(void *vhandle, dsv_t *val);
 extern int ds_txn_begin(void *vhandle);
 extern int ds_txn_commit(void *vhandle);
 extern int ds_txn_abort(void *vhandle);
-extern int ds_checkpoint(void *vhandle);
 #define DST_OK (0)
 #define DST_TEMPFAIL (1)
 #define DST_FAILURE (2)
