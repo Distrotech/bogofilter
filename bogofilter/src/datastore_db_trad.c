@@ -45,17 +45,25 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
-static int  tra_begin	(void *vhandle);
-static int  tra_abort	(void *vhandle);
-static int  tra_commit	(void *vhandle);
+static DB_ENV	  *tra_get_env_dbe	(dbe_t *env);
+static int	  tra_begin		(void *vhandle);
+static int  	  tra_abort		(void *vhandle);
+static int  	  tra_commit		(void *vhandle);
 
 /* OO function lists */
 
 dsm_t dsm_traditional = {
+    &tra_get_env_dbe,
     &tra_begin,
     &tra_abort,
     &tra_commit,
 };
+
+DB_ENV *tra_get_env_dbe	(dbe_t *env)
+{
+    (void) env;
+    return NULL;
+}
 
 int  tra_begin	(void *vhandle) { (void) vhandle; return 0; }
 int  tra_abort	(void *vhandle) { (void) vhandle; return 0; }

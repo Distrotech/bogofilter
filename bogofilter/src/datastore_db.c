@@ -378,6 +378,7 @@ void *db_open(void *vhandle, const char *path,
     for (idx = 0; idx < COUNTOF(retryflags); idx += 1)
     {
 	DB *dbp;
+	DB_ENV *dbe;
 	bool err = false;
 	uint32_t pagesize;
 	uint32_t retryflag = retryflags[idx];
@@ -388,7 +389,8 @@ void *db_open(void *vhandle, const char *path,
 	    return NULL;
 
 	/* create DB handle */
-	if ((ret = db_create (&dbp, fTransaction ? env->dbe : NULL, 0)) != 0) {
+	dbe = dsm->dsm_get_env_dbe(env);
+	if ((ret = db_create (&dbp, dbe, 0)) != 0) {
 	    print_error(__FILE__, __LINE__, "(db) db_create, err: %s",
 			db_strerror(ret));
 	    goto open_err;

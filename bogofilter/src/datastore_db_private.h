@@ -11,13 +11,15 @@ typedef struct {
     char	*directory;	/* stores the home directory for this environment */
 } dbe_t;
 
-typedef int dsm_function	(void *vhandle);
-typedef void dsm_init_config	(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
+typedef		int dsm_function		(void *vhandle);
+typedef		DB_ENV *dsm_get_env_dbe		(dbe_t *env);
+typedef 	void dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 
 typedef struct {
-    dsm_function         *dsm_begin;
-    dsm_function         *dsm_abort;
-    dsm_function         *dsm_commit;
+    dsm_get_env_dbe		*dsm_get_env_dbe;
+    dsm_function	        *dsm_begin;
+    dsm_function        	*dsm_abort;
+    dsm_function        	*dsm_commit;
 } dsm_t;
 
 /** implementation internal type to keep track of databases

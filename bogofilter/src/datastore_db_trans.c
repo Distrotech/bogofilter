@@ -59,25 +59,23 @@ bool	  db_log_autoremove = false;	/* DB_LOG_AUTOREMOVE */
 bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
-static int  txn_begin	(void *vhandle);
-static int  txn_abort	(void *vhandle);
-static int  txn_commit	(void *vhandle);
+static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
+static int	  txn_begin		(void *vhandle);
+static int  	  txn_abort		(void *vhandle);
+static int  	  txn_commit		(void *vhandle);
 
 /* OO function lists */
 
-dsm_t dsm_transactional = {
+dsm_t dsm_traditional = {
+    &txn_get_env_dbe,
     &txn_begin,
     &txn_abort,
-    &txn_commit
+    &txn_commit,
 };
 
-void *db_get_env(void *vhandle)
+DB_ENV *txn_get_env_dbe(dbe_t *env)
 {
-    dbh_t *handle = vhandle;
-
-    assert(handle->magic == MAGIC_DBH);
-
-    return handle->dbenv;
+    return env->dbe;
 }
 
 static int txn_begin(void *vhandle)
