@@ -411,26 +411,21 @@ retry_db_open:
 
 	ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | retryflag, DS_MODE);
 
-	if (fTransaction) {	/* TRANSACTION */
-	if (ret != 0 && ( ret != ENOENT || opt_flags == DB_RDONLY ||
-		((handle->created = true),
+	/* Begin complex xform ... */
+	{
+	if (ret != 0) {
+	    err = (ret != ENOENT) || (opt_flags == DB_RDONLY);
+	    if (!err) {
+		if (
 #if DB_EQUAL(4,1)
 		 (ret = DB_SET_FLAGS(dbp, DB_CHKSUM_SHA1)) != 0 ||
 #endif
 #if DB_AT_LEAST(4,2)
 		 (ret = DB_SET_FLAGS(dbp, DB_CHKSUM)) != 0 ||
 #endif
-		(ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, DS_MODE)) != 0)))
-	    err = true;
-	}
-	else {			/* NON-TRANSACTION */
-	if (ret != 0) {
-	    err = (ret != ENOENT) || (opt_flags == DB_RDONLY);
-	    if (!err) {
-		ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL | retryflag, DS_MODE);
-		if (ret != 0)
+		 (ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL | retryflag, DS_MODE)))
 		    err = true;
-		else
+		if (!err)
 		    handle->created = true;
 	    }
 	}
@@ -441,7 +436,7 @@ retry_db_open:
 	    else
 		err = true;
 	}
-	}
+	} /* End complex xform ... */
 
 	if (err)
 	{
