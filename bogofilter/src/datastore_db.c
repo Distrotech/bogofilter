@@ -72,20 +72,22 @@ static bool init;
 typedef struct {
     char	*path;
     char	*name;
-    int		fd;
-    dbmode_t	open_mode;
-    DB		*dbp;
-    bool	is_swapped;
-    DB_TXN	*txn;
+    int		fd;		/* file descriptor of data base file */
+    dbmode_t	open_mode;	/* datastore open mode, DS_READ/DS_WRITE */
+    DB		*dbp;		/* data base handle */
+    bool	is_swapped;	/* set if CPU and data base endianness differ */
+    DB_TXN	*txn;		/* stores the transaction handle */
 } dbh_t;
 
 #define DBT_init(dbt) (memset(&dbt, 0, sizeof(DBT)))
 
 #define DB_AT_LEAST(maj, min) ((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
 #define DB_AT_MOST(maj, min) ((DB_VERSION_MAJOR < (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR <= (min))))
+#define DB_EQUAL(maj, min) ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR == (min)))
 
 /* Function definitions */
 
+/** translate BerkeleyDB \a flags bitfield back to symbols */
 static const char *resolveflags(u_int32_t flags) {
     static char buf[160];
     char b2[80];
@@ -102,6 +104,8 @@ static const char *resolveflags(u_int32_t flags) {
     return buf;
 }
 
+/** wrapper for Berkeley DB's DB->open() method which has changed API and
+ * semantics -- this should deal with 3.2, 3.3, 4.0, 4.1 and 4.2. */
 static int DB_OPEN(DB *db, const char *file,
 	const char *database, DBTYPE type, u_int32_t flags, int mode)
 {
@@ -113,7 +117,7 @@ static int DB_OPEN(DB *db, const char *file,
 
     ret = db->open(db,
 #if DB_AT_LEAST(4,1)
-	    0,
+	    0,	/* TXN handle - we use autocommit instead */
 #endif
 	    file, database, type, flags, mode);
 
@@ -127,6 +131,7 @@ static int DB_OPEN(DB *db, const char *file,
     return ret;
 }
 
+/** "constructor" - allocate our handle and initialize its contents */
 static dbh_t *dbh_init(const char *path, const char *name)
 {
     dbh_t *handle;
@@ -148,7 +153,8 @@ static dbh_t *dbh_init(const char *path, const char *name)
     return handle;
 }
 
-
+/** free \a handle and associated data.
+ * NB: does not close transactions, data bases or the environment! */
 static void dbh_free(/*@only@*/ dbh_t *handle)
 {
     if (handle != NULL) {
@@ -159,7 +165,8 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
     return;
 }
 
-
+/* If header and library version do not match,
+ * print an error message on stderr and exit with EX_ERROR. */
 static void check_db_version(void)
 {
     int maj, min;
@@ -216,7 +223,7 @@ static void check_fsize_limit(int fd, uint32_t pagesize) {
  * DB_CACHED_COUNTS, and without DB_CACHED_COUNTS, BerlekeyDB will read
  * the whole data base, incurring a severe performance penalty. We'll
  * guess a page size.  As this is a safety margin for the file size,
- * we'll let the code below guess some size. */
+ * we'll return 0 and let the caller guess some size instead. */
 #if DB_AT_LEAST(3,3)
 /* return page size, of 0xffffffff for trouble */
 static uint32_t get_psize(DB *dbp)
@@ -247,10 +254,9 @@ const char *db_version_str(void)
     return v;
 }
 
-/*
-  Initialize database.
-  Returns: pointer to database handle on success, NULL otherwise.
-*/
+/** Initialize database. Expects open environment.
+ * \return pointer to database handle on success, NULL otherwise.
+ */
 void *db_open(const char *path, const char *name, dbmode_t open_mode)
 {
     int ret;
@@ -265,7 +271,7 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 
     if (!init)
 	/* internal error: must be called only after initialization */
-	abort();
+	internal_error;
 
     check_db_version();
 
@@ -296,7 +302,7 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 	handle->dbp = dbp;
 
 	/* set flags */
-#if DB_AT_LEAST(4,1) && DB_AT_MOST(4,1)
+#if DB_EQUAL(4,1)
 	    flags = DB_CHKSUM_SHA1;
 #endif
 #if DB_AT_LEAST(4,2)
@@ -402,6 +408,8 @@ retry_db_open:
     return NULL;
 }
 
+/* wrapper for the API that changed in 4.0, to
+ * collect the junk in a location separate from the implementation */
 #if DB_AT_LEAST(4,0)
 #define BF_LOG_FLUSH(e, i) ((e)->log_flush((e), (i)))
 #define BF_TXN_BEGIN(e, f, g, h) ((e)->txn_begin((e), (f), (g), (h)))
@@ -416,6 +424,7 @@ retry_db_open:
 #define BF_TXN_COMMIT(t, f) (txn_commit((t), (f)))
 #endif
 
+/** begin transaction. Returns 0 for success. */
 int db_txn_begin(dsh_t *dsh)
 {
     DB_TXN *t;
@@ -836,6 +845,8 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	Matthias, 2004-03-17, BDB4.2
      * ************************************************************* */
 
+    /* this code is not yet useful - but it may become if we have
+     * recovery code in bogoutil for instance */
     if (locktype) {
 	ret = mkdir(bogohome, (mode_t)0755);
 	if (ret && errno != EEXIST) {
@@ -849,6 +860,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	strlcpy(t, bogohome, tl);
 	strlcat(t, tackon, tl);
 
+	/* FIXME: this may be dead code if we leave recover outside */
 	ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
 	if (ret && errno != EEXIST) {
 	    print_error(__FILE__, __LINE__, "open(%s): %s",
@@ -862,9 +874,10 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 		    t, strerror(errno));
 	    exit(EXIT_FAILURE);
 	}
+	/* END FIXME :-) */
 
 	free(t);
-    }
+    } /* if(locktype) */
 
     ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK
 	    | DB_INIT_LOG | DB_INIT_TXN | DB_CREATE | flags, /* mode */ 0644);
@@ -884,6 +897,11 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     return 0;
 }
 
+/* initialize data base, configure some lock table sizes
+ * (which can be overridden in the DB_CONFIG file)
+ * and lock the file to tell other parts we're initialized and
+ * do not want recovery to stomp over us
+ */
 int db_init(void) {
     const u_int32_t numlocks = 16384;
     const u_int32_t numobjs = 16384;
