@@ -62,7 +62,9 @@ for alg in r g ; do
     $BOGOFILTER -$alg -n < ${SYSTEST}/inputs/good.mbx
     $BOGOUTIL -d $BOGOFILTER_DIR/spamlist.db > $BOGOFILTER_DIR/spamlist.txt
     $BOGOUTIL -d $BOGOFILTER_DIR/goodlist.db > $BOGOFILTER_DIR/goodlist.txt
-    ls -l $BOGOFILTER_DIR/*list.txt
+    if  [ $verbose -ne 0 ]; then
+	ls -l $BOGOFILTER_DIR/*list.txt
+    fi
     #
     # run tests for msg.1.txt, msg.2.txt, and msg.3.txt
     #
