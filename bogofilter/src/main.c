@@ -85,6 +85,8 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
     if (logflag)
 	closelog();
 
+    free(progtype);
+
     exit(exitcode);
 }
 
