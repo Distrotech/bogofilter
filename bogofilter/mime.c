@@ -238,14 +238,12 @@ bool get_boundary_props(const char *boundary, int boundary_len, boundary_t *b)
   
   b->is_valid = false;
 
-  if (boundary_len <= 2 || boundary[0] != '-' || boundary[1] != '-')
-    return b->is_valid;
-
-  while (*(boundary + boundary_len - 1) == '\r' ||
-         *(boundary + boundary_len - 1) == '\n')
-    boundary_len--;
-
   if (boundary_len > 2 && *(boundary) == '-' && *(boundary + 1) == '-'){
+
+    while (*(boundary + boundary_len - 1) == '\r' ||
+           *(boundary + boundary_len - 1) == '\n')
+  	  boundary_len--;
+
     /* skip initial -- */
     boundary += 2;
     boundary_len -= 2;
