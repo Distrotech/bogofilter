@@ -451,8 +451,6 @@ void *db_open(void *vhandle,
      * Date: Thu, 6 Feb 2003 18:20:16 +0100
      */
 
-    assert(env);
-
     check_db_version();
 
     /* retry when locking failed */
