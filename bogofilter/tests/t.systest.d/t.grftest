@@ -1,6 +1,6 @@
 #!/bin/sh
 
-relpath="`pwd`/../.." . ${srcdir}/../t.frame
+relpath="`pwd`/../.." . ${srcdir:=.}/../t.frame
 
 set -e
 
