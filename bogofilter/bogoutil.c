@@ -442,9 +442,9 @@ static int compute_robinson_x(char *path)
 
     double robx;
 
-    e = build_path(db_spam_file, sizeof(db_spam_file), path, "spamlist.db");
+    e = build_path(db_spam_file, sizeof(db_spam_file), path, SPAMFILE);
     if (e < 0) goto overflow;
-    e = build_path(db_good_file, sizeof(db_good_file), path, "goodlist.db");
+    e = build_path(db_good_file, sizeof(db_good_file), path, GOODFILE);
     if (e < 0) goto overflow;
 
     memset(wl, 0, sizeof(wl));
