@@ -341,18 +341,6 @@ void ds_set_msgcounts(void *vhandle, dsv_t *val)
     return;
 }
 
-/* implements locking. */
-int db_lock(int fd, int cmd, short int type)
-{
-    struct flock lock;
-
-    lock.l_type = type;
-    lock.l_start = 0;
-    lock.l_whence = (short int)SEEK_SET;
-    lock.l_len = 0;
-    return (fcntl(fd, cmd, &lock));
-}
-
 const char *ds_version_str(void)
 {
     return db_version_str();

@@ -78,6 +78,19 @@ static void db_enforce_locking(dbh_t *handle, const char *func_name)
 }
 
 
+/* implements locking. */
+static int db_lock(int fd, int cmd, short int type)
+{
+    struct flock lock;
+
+    lock.l_type = type;
+    lock.l_start = 0;
+    lock.l_whence = (short int)SEEK_SET;
+    lock.l_len = 0;
+    return (fcntl(fd, cmd, &lock));
+}
+
+
 static dbh_t *dbh_init(const char *path, size_t count, const char **names)
 {
     size_t c;
@@ -408,7 +421,7 @@ void db_close(void *vhandle, bool nosync)
 
 #if 0
     if (handle->fd >= 0) {
-	db_lock(handle->fd, F_UNLCK,
+	ds_lock(handle->fd, F_UNLCK,
 		(short int)(handle->open_mode == DB_READ ? F_RDLCK : F_WRLCK));
     }
 #endif
@@ -421,7 +434,7 @@ void db_close(void *vhandle, bool nosync)
 	    print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
     }
 
-/*  db_lock_release(handle); */
+/*  ds_lock_release(handle); */
     dbh_free(handle);
 }
 
