@@ -179,12 +179,13 @@ static int maintain_wordlist(void *vhandle)
     
     if (DST_OK == ds_txn_begin(vhandle)) {
 	ret = ds_foreach(vhandle, maintain_hook, &userdata);
-	if (DST_OK != ds_txn_commit(vhandle))
-	    ret = -1;
     } else
 	ret = -1;
 
-    return ret | ta_commit(transaction);
+    ret |= ta_commit(transaction);
+    if (DST_OK != ds_txn_commit(vhandle))
+	ret = -1;
+    return ret;
 }
 
 #if 0
