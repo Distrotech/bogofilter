@@ -113,20 +113,48 @@ static int set_celllock(int fd, off_t offset, int locktype) {
     return r;
 }
 
+static int init_lockfile(const char *fn) {
+    char b[1024];	/* XXX FIXME: make lock size configurable */
+
+    memset(b, (unsigned char)cell_free, sizeof(b)); /* XXX FIXME: only works for char */
+    if (sizeof(b) != write(lockfd, b, sizeof(b))
+	    || fsync(lockfd)) {
+	close(lockfd);
+	if (fn)
+	    unlink(fn);
+	return -1;
+    }
+    return 0;
+}
+
 /* returns descriptor of open lock file for success,
  * -1 for error */
 static int create_lockfile(const char *fn, int modes) {
-    lockfd = open(fn, modes|O_CREAT|O_EXCL, 0664); /* umask will decide about group writability */
-    if (lockfd >= 0) {
-	char b[1024];	/* XXX FIXME: make lock size configurable */
+    char *tmp = NULL;
+    int count=1;
 
-	memset(b, (unsigned char)cell_free, sizeof(b)); /* XXX FIXME: only works for char */
-	if (sizeof(b) != write(lockfd, b, sizeof(b))
-		|| fsync(lockfd)) {
-	    close(lockfd);
-	    unlink(fn);
+    do {
+	char buf[50];
+	snprintf(buf, sizeof(buf), ".%ld.%d", (long)getpid(), count++);
+	if (tmp) free(tmp);
+	tmp = mxcat(fn, buf, NULL);
+	lockfd = open(tmp, modes|O_CREAT|O_EXCL, 0664); /* umask will decide about group writability */
+    } while (lockfd < 0 && errno == EEXIST);
+
+    if (lockfd >= 0) {
+	if (init_lockfile(tmp)) {
+	    free(tmp);
 	    return -1;
 	}
+	if (link(tmp, fn)) {
+	    int e = errno;
+	    close(lockfd);
+	    unlink(tmp);
+	    free(tmp);
+	    errno = e;
+	    return -1;
+	}
+	unlink(tmp);
     }
     return lockfd;
 }
@@ -140,11 +168,14 @@ static int open_lockfile(const char *bogodir) {
     if (lockfd >= 0) return 0;
     fn = mxcat(bogodir, aprt, NULL);
 
-    lockfd = open(fn, modes);
-    if (lockfd < 0 && errno == ENOENT)
-	lockfd = create_lockfile(fn, modes);
+    do {
+	lockfd = open(fn, modes);
+	if (lockfd < 0 && errno == ENOENT)
+	    lockfd = create_lockfile(fn, modes);
+    } while (lockfd < 0 && errno == EEXIST);
+
     if (lockfd < 0) {
-	print_error(__FILE__, __LINE__, "open_lockfile: open(%s): %s\n",
+	print_error(__FILE__, __LINE__, "open_lockfile: open(%s): %s",
 		fn, strerror(errno));
     } else {
 	if (DEBUG_DATABASE(1)) {
@@ -314,10 +345,10 @@ int clear_lockfile(const char *bogodir) {
     fn = mxcat(bogodir, aprt, NULL);
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "clear_lockfile(%s)\n", fn);
-    if (unlink(fn)) {
-	if (errno == ENOENT)
-	    return 0;
+
+    if (open_lockfile(bogodir))
 	return -1;
-    }
+    if (init_lockfile(NULL))
+	return -1;
     return 0;
 }
