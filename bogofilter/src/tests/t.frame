@@ -13,6 +13,11 @@ set -e
 : ${relpath=..}
 : ${BF_TESTDIR=.}
 
+
+DB_EXT=`${relpath}/bogofilter -V 2>&1|sed  -n 's/^.*(database: \(.*\))/\1/p'`
+test  -z "$DB_EXT" && { echo >&2 'Cannot get database type!'; exit 1; }
+export DB_EXT
+
 # Cater for GNU coreutils "compatiblity"
 _POSIX2_VERSION=199209
 export _POSIX2_VERSION
