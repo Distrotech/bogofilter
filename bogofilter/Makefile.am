@@ -23,7 +23,7 @@ AM_CPPFLAGS = -I$(srcdir)/dcdflib/doc
 AM_CFLAGS = -DBOGOFILTER
 
 # what to build
-bin_PROGRAMS = bogofilter bogoutil bogolexer
+bin_PROGRAMS = bogofilter bogoutil bogolexer lexertest
 bin_SCRIPTS = bogoupgrade
 check_PROGRAMS = debugtest configtest wordhash find_home.test bogowordfreq
 man_MANS = bogofilter.1 bogoutil.1 bogoupgrade.1 bogolexer.1
@@ -48,7 +48,7 @@ libbogofilter_a_SOURCES= \
 	datastore.h datastore_db.h datastore_db.c \
 	error.h error.c \
 	format.h format.c \
-	lexer.h lexer.l \
+	lexer.h lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l \
 	maint.h maint.c \
 	mime.h mime.c \
 	paths.h paths.c \
@@ -84,6 +84,8 @@ wordhash_SOURCES = wordhash.main.c
 
 find_home_test_SOURCES = find_home.test.c
 
+lexertest_SOURCES = lexertest.c lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l
+
 # what to distribute
 extradistdirs = doc
 EXTRA_DIST = $(man_MANS) \
@@ -99,7 +101,7 @@ EXTRA_DIST = $(man_MANS) \
 	     bogofilter-SA-2002-01 \
 	     strlcat.3 strlcpy.3
 #
-VERSION_FROM=main.c bogofilter.c bogoutil.c lexer.l
+VERSION_FROM=main.c bogofilter.c bogoutil.c lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l
 version.c:	version.sh $(VERSION_FROM)
 	$(srcdir)/version.sh $(srcdir) $(VERSION_FROM) >"$@" \
 	    || rm -f "$@"
@@ -107,6 +109,15 @@ version.c:	version.sh $(VERSION_FROM)
 directories.c: config.status
 	echo "const char *const system_config_file = \"$(SYSCONFDIR)/bogofilter.cf\";" >"$@" \
 	    || rm -f "$@"
+#
+lexer_head.c:	lexer_head.l
+	flex -Plexer_ -o$@ $<
+
+lexer_text_plain.c:	lexer_text_plain.l
+	flex -Ptext_plain_ -o$@ $<
+
+lexer_text_html.c:	lexer_text_html.l
+	flex -Ptext_html_ -o$@ $<
 #
 .xml.pdf:
 	xmlto pdf --extensions $<
