@@ -497,17 +497,19 @@ int db_txn_commit(void *vhandle)
     int ret;
     dbh_t *handle = vhandle;
     DB_TXN *t = handle->txn;
+    u_int32_t id;
     assert(dbe);
     assert(t);
 
+    id = BF_TXN_ID(t);
     ret = BF_TXN_COMMIT(t, 0);
     if (ret)
 	print_error(__FILE__, __LINE__, "DB_TXN->commit(%lx) error: %s",
-		(unsigned long)BF_TXN_ID(t), db_strerror(ret));
+		(unsigned long)id, db_strerror(ret));
     else
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_TXN->commit(%lx, 0)\n",
-		    (unsigned long)BF_TXN_ID(t));
+		    (unsigned long)id);
     handle->txn = NULL;
 
     switch (ret) {
