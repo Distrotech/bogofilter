@@ -251,7 +251,7 @@ const char *db_version_str(void)
   Initialize database.
   Returns: pointer to database handle on success, NULL otherwise.
 */
-void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
+void *db_open(const char *path, const char *name, dbmode_t open_mode)
 {
     int ret;
     int is_swapped;
@@ -269,13 +269,10 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 
     check_db_version();
 
-    if (open_mode == DB_READ)
+    if (open_mode & DS_READ )
 	opt_flags = DB_RDONLY;
-    else
-	/* Read-write mode implied.  Allow database to be created if
-	 * necessary. DB_EXCL makes sure our locking doesn't fail if two
-	 * applications try to create a DB at the same time. */
-	opt_flags = 0;
+    if (open_mode & DS_CREATE )
+	opt_flags = DB_CREATE | DB_EXCL;
 
     {
 #if DB_AT_LEAST(4,1)
@@ -284,7 +281,7 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 	DB *dbp;
 	uint32_t pagesize;
 
-	handle = dbh_init(db_file, name);
+	handle = dbh_init(path, name);
 
 	if (handle == NULL)
 	    return NULL;
@@ -549,7 +546,7 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_data.flags = DB_DBT_USERMEM;	/* saves the memcpy */
 
     /* DB_RMW can avoid deadlocks */
-    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, handle->open_mode == DB_READ ? 0 : DB_RMW);
+    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, handle->open_mode == DS_READ ? 0 : DB_RMW);
 
     val->leng = db_data.size;		/* read count */
 
@@ -894,6 +891,7 @@ int db_init(void) {
     return db_xinit(numlocks, numobjs, /* flags */ 0, F_RDLCK);
 }
 
+#ifdef COMPILE_DEAD_CODE
 int db_recover(const char *name, int catastrophic) {
     int ret;
     void *handle;
@@ -910,7 +908,7 @@ int db_recover(const char *name, int catastrophic) {
      * c. close it
      * d. kill environment and re-open with proper sizes */
     printf("Pass 2: resize environment\n");
-    handle = db_open(name, name, DB_READ);
+    handle = db_open(name, name, DS_READ);
     if (!handle) goto rec_fail;
 
     
@@ -922,6 +920,7 @@ int db_recover(const char *name, int catastrophic) {
 rec_fail:
     exit(EX_ERROR);
 }
+#endif
 
 void db_cleanup(void) {
     if (!init)

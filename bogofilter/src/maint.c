@@ -142,6 +142,60 @@ bool do_replace_nonascii_characters(register byte *str, register size_t len)
     return change;
 }
 
+#ifdef DEAD_CODE
+void maintain_wordlists(void)
+{
+    wordlist_t *list;
+
+    for (list = word_lists; list != NULL; list = list->next) {
+	maintain_wordlist(list->dsh);
+	list = list->next;
+    }
+}
+
+static bool check_wordlist_version(dsh_t *dsh)
+{
+    dsv_t val;
+    ds_get_wordlist_version(dsh, &val);
+    if (val.count[0] >= CURRENT_VERSION)
+	return true;
+    else
+	return false;
+}
+
+int maintain_wordlist_file(const char *db_file)
+{
+    int rc = 0;
+    dsh_t *dsh;
+    bool done = false;
+
+    ds_init();
+    dsh = ds_open(CURDIR_S, db_file, DS_WRITE);
+
+    if (dsh == NULL)
+	return EX_ERROR;
+
+    if (upgrade_wordlist_version) {
+	done = check_wordlist_version(dsh);
+	if (!done)
+	    fprintf(dbgout, "Upgrading wordlist.\n");
+	else
+	    fprintf(dbgout, "Wordlist has already been upgraded.\n");
+    }
+
+    if (!done)
+	rc = maintain_wordlist(dsh);
+
+    if (!done && upgrade_wordlist_version)
+	ds_set_wordlist_version(dsh, NULL);
+
+    ds_close(dsh, false);
+    ds_cleanup();
+
+    return rc;
+}
+
+#endif
 struct userdata_t {
     void *vhandle;
     ta_t *transaction;
@@ -282,7 +336,7 @@ int maintain_wordlist_file(const char *db_file)
     dsh_t *dsh;
 
     ds_init();
-    dsh = ds_open(CURDIR_S, db_file, DB_WRITE);
+    dsh = ds_open(CURDIR_S, db_file, DS_WRITE);
 
 
     if (dsh == NULL)

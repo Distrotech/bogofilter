@@ -953,7 +953,7 @@ static void load_wordlist(ds_foreach_t *hook, void *userdata)
 	fflush(stdout);
     }
 
-    ds_oper(ds_path, DB_READ, hook, userdata);
+    ds_oper(ds_path, DS_READ, hook, userdata);
 
     return;
 }
@@ -1120,6 +1120,10 @@ static void progress(uint cur, uint top)
 {
     uint i;
     uint ndots = ceil(70.0 * cur / top);
+
+    if (quiet)
+	return;
+
     if (ndots < 1)
 	ndots = 1;
      printf("\r%3u [", cur);

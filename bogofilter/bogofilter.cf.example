@@ -26,6 +26,17 @@
 ##user_config_file=~/.bogofilterrc
 ##user_config_file=~/.bogofilter/config
 
+#### WORDLIST: define additional word lists
+#
+#	char type: 'r' (regular) or 'i' (ignore)
+#	char *name: name of list, e.g. "system", "user", "ignore"
+#	char *path: absolute path to file or
+#	            file name (relative to bogofilter_dir)
+#	int  order - once found, skip higher numbered lists
+#
+##wordlist i,ignore,~/ignorelist.db,1
+##wordlist r,wordlist,~/wordlist.db,2
+
 #### SPAM_HEADER_NAME
 #
 #	used in reporting spamicity and
@@ -197,7 +208,8 @@
 
 #### Auto-update threshold
 #
-#	When using '-u' (auto-update), update wordlist if
-#	value less than score and score less than 1-value.
+#	Skip autoupdating if the spamicity is within this value
+#	of 0.000000 (surely ham) or 1.000000 (surely spam).
 #
 ## thresh_update=0.01
+

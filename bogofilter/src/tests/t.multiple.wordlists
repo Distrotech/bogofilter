@@ -92,31 +92,30 @@ system_hi
 message
 EOF
 
-# suppress version info in output
-BFOPTS="-D -H -e -m0.1 -y 0"
-BFHEAD='--header_format=%h: %c, tests=bogofilter, spamicity=%p'
+# suppress timestamps & version info in output
+BUOPTS="-y 0"
+BFOPTS='--header_format=%h: %c, tests=bogofilter, spamicity=%p'
+PAT="s/[,]\? version.*//"
 
 # build wordlists
-$BOGOUTIL -l ${TMPDIR}/ignore.db   < ${TMPDIR}/ignore.txt
-$BOGOUTIL -l ${TMPDIR}/wordlist.db < ${TMPDIR}/wordlist.txt
-$BOGOUTIL -l ${TMPDIR}/user.db     < ${TMPDIR}/user.txt
-$BOGOUTIL -l ${TMPDIR}/system.db   < ${TMPDIR}/system.txt
+$BOGOUTIL $OPTS -l ${TMPDIR}/ignore.db   < ${TMPDIR}/ignore.txt
+$BOGOUTIL $OPTS -l ${TMPDIR}/wordlist.db < ${TMPDIR}/wordlist.txt
+$BOGOUTIL $OPTS -l ${TMPDIR}/user.db     < ${TMPDIR}/user.txt
+$BOGOUTIL $OPTS -l ${TMPDIR}/system.db   < ${TMPDIR}/system.txt
 
 (echo "#### 1: score message using each wordlist ####"; echo) >> $OUT
 
 for DB in ${TMPDIR}/*.db ; do
-    N=`basename $DB`
-    printf "%-12s" $N: >> $OUT
-    $BOGOFILTER $BFOPTS "$BFHEAD" -v -C --wordlist=r,wordlist,$N,1 -I ${TMPDIR}/message >> $OUT
+    printf "%-12s" `basename $DB`: >> $OUT
+    $BOGOFILTER "$BFOPTS" -C -D -H -e --wordlist=r,wordlist,`basename $DB`,1 -m0.1 -v -I ${TMPDIR}/message | sed "$PAT" >> $OUT
 done
 echo >> $OUT
 
 (echo "#### 1: score message using each config file ####"; echo) >> $OUT
 
 for CFG in ${TMPDIR}/*.cf ; do
-    N=`basename $CFG`
-    echo Using $N: >> $OUT
-    $BOGOFILTER $BFOPTS "$BFHEAD" -vvv -c $CFG -I ${TMPDIR}/message >> $OUT
+    echo Using `basename $CFG`: >> $OUT
+    $BOGOFILTER "$BFOPTS" -D -H -e -c $CFG -m0.1 -vvv -I ${TMPDIR}/message | sed "$PAT" >> $OUT
     echo >> $OUT
 done
 
@@ -125,23 +124,21 @@ done
 # Add message to user.db (first regular wordlist in CF_IGN_USR_SYS)
 
 echo >> $OUT
-echo common message ignore | $BOGOFILTER $BFOPTS "$BFHEAD" -n -c ${TMPDIR}/$CF_IGN_USR_SYS
+echo common message ignore | $BOGOFILTER "$BFOPTS" -D -H -n -c ${TMPDIR}/$CF_IGN_USR_SYS -y 0
 
 (echo "#### 2: score message using each wordlist ####"; echo) >> $OUT
 
 for DB in ${TMPDIR}/*.db ; do
-    N=`basename $DB`
-    printf "%-12s" $N: >> $OUT
-    $BOGOFILTER $BFOPTS "$BFHEAD" -v -C --wordlist=r,wordlist,$N,1 -I ${TMPDIR}/message >> $OUT
+    printf "%-12s" `basename $DB`: >> $OUT
+    $BOGOFILTER "$BFOPTS" -C -D -H -e --wordlist=r,wordlist,`basename $DB`,1 -m0.1 -v -I ${TMPDIR}/message | sed "$PAT" >> $OUT
 done
 echo >> $OUT
 
 (echo "#### 2: score message using each config file ####"; echo) >> $OUT
 
 for CFG in ${TMPDIR}/*.cf ; do
-    N=`basename $CFG`
-    echo Using $N: >> $OUT
-    $BOGOFILTER $BFOPTS "$BFHEAD" -vvv -c $CFG -I ${TMPDIR}/message >> $OUT
+    echo Using `basename $CFG`: >> $OUT
+    $BOGOFILTER "$BFOPTS" -D -H -e -c $CFG -m0.1 -vvv -I ${TMPDIR}/message | sed "$PAT" >> $OUT
     echo >> $OUT
 done
 

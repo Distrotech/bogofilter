@@ -80,7 +80,7 @@ static int dump_wordlist(char *ds_file)
     token_count = 0;
 
     set_bogohome(ds_file);
-    rc = ds_oper(ds_file, DB_READ, ds_dump_hook, NULL);
+    rc = ds_oper(ds_file, DS_READ, ds_dump_hook, NULL);
 
     if (rc)
 	fprintf(stderr, "error dumping tokens!\n");
@@ -118,7 +118,7 @@ static int load_wordlist(const char *ds_file)
 
     ds_init();
 
-    dsh = ds_open(CURDIR_S, ds_file, DB_WRITE);
+    dsh = ds_open(CURDIR_S, ds_file, DS_WRITE | DS_LOAD);
     if (dsh == NULL)
 	return EX_ERROR;
 
@@ -268,14 +268,14 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
     if ( stat(path, &sb) == 0 ) {
 	/* XXX FIXME: deadlock possible */
 	if ( ! S_ISDIR(sb.st_mode)) {		/* words from file */
-	    dsh = ds_open(CURDIR_S, path, DB_READ);
+	    dsh = ds_open(CURDIR_S, path, DS_READ);
 	}
 	else {					/* words from path */
 	    char filepath[PATH_LEN];
 
 	    build_wordlist_path(filepath, sizeof(filepath), path);
 
-	    dsh = ds_open(CURDIR_S, filepath, DB_READ);
+	    dsh = ds_open(CURDIR_S, filepath, DS_READ);
 	}
     }
 
@@ -374,7 +374,7 @@ static int get_robx(char *path)
 
 	set_bogohome(filepath);
 	ds_init();
-	dsh = ds_open(CURDIR_S, filepath, DB_WRITE);
+	dsh = ds_open(CURDIR_S, filepath, DS_WRITE);
 	if (dsh == NULL)
 	    return EX_ERROR;
 

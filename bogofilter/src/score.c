@@ -76,9 +76,9 @@ void msg_print_stats(FILE *fp)
 	rstats_print(unsure);
 }
 
-static void wordprob_add(wordcnts_t *cnts, uint count, uint bad)
+static void wordprob_add(wordcnts_t *cnts, uint count, uint idx)
 {
-    if (bad)
+    if (idx == IX_SPAM)
 	cnts->bad += count;
     else
 	cnts->good += count;
@@ -108,12 +108,25 @@ static void lookup(const word_t *token, wordcnts_t *cnts)
     {
 	size_t i;
 	dsv_t val;
+	int ret;
 
 	if (override > list->override)	/* if already found */
 	    break;
 
-	if (ds_read(list->dsh, token, &val) != 0)
+	if (ds_txn_begin(list->dsh) != DST_OK) {
+	    fprintf(stderr, "Problem starting transaction!\n");
+	    exit(EX_ERROR);
+	}
+
+	ret = ds_read(list->dsh, token, &val);
+
+	ds_txn_commit(list->dsh); /* reading shouldn't fail... */
+
+	if (ret)
 	    continue;			/* not found */
+
+	if (list->type == WL_IGNORE)	/* if on ignore list */
+	    break;
 
 	override=list->override;
 
@@ -123,7 +136,7 @@ static void lookup(const word_t *token, wordcnts_t *cnts)
 		val.count[i] = 0;
 		ds_write(list->dsh, token, &val);
 	    }
-	    wordprob_add(cnts, val.count[i], list->bad[i]);
+	    wordprob_add(cnts, val.count[i], i);
 	}
 
 	if (DEBUG_ALGORITHM(1)) {
@@ -143,7 +156,7 @@ double msg_lookup_and_score(const word_t *token, wordcnts_t *cnts)
     if (cnts->bad == 0 && cnts->good == 0)
 	lookup(token, cnts);
 
-	prob = wordprob_result(cnts);
+    prob = wordprob_result(cnts);
 
     return prob;
 }
@@ -191,65 +204,58 @@ double msg_compute_spamicity(wordhash_t *wh, FILE *fp) /*@globals errno@*/
 
     wordhash_sort(wh);
 
-    if (DST_OK == ds_txn_begin(word_list->dsh)) {
-	for(node = wordhash_first(wh); node != NULL; node = wordhash_next(wh))
-	{
-	    double prob;
-	    word_t *token;
-	    wordcnts_t *cnts;
-	    wordprop_t *props;
+    for(node = wordhash_first(wh); node != NULL; node = wordhash_next(wh))
+    {
+	double prob;
+	word_t *token;
+	wordcnts_t *cnts;
+	wordprop_t *props;
 
-	    if (!fBogotune) {
-		props = (wordprop_t *) node->buf;
-		cnts  = &props->cnts;
-		token = node->key;
-	    }
-	    else {
-		cnts = (wordcnts_t *) node;
-		token = NULL;
-	    }
-
-	    count += 1;
-
-	    prob = compute_probability(token, cnts);
-
-	    if (need_stats)
-		rstats_add(token, prob, cnts);
-
-	    /* Robinson's P and Q; accumulation step */
-	    /*
-	     * P = 1 - ((1-p1)*(1-p2)*...*(1-pn))^(1/n)     [spamminess]
-	     * Q = 1 - (p1*p2*...*pn)^(1/n)                 [non-spamminess]
-	     */
-	    if (fabs(EVEN_ODDS - prob) - min_dev >= EPS) {
-		int e;
-
-		P.mant *= 1-prob;
-		if (P.mant < 1.0e-200) {
-		    P.mant = frexp(P.mant, &e);
-		    P.exp += e;
-		}
-
-		Q.mant *= prob;
-		if (Q.mant < 1.0e-200) {
-		    Q.mant = frexp(Q.mant, &e);
-		    Q.exp += e;
-		}
-		robn ++;
-	    }
-
-	    if (DEBUG_ALGORITHM(3)) {
-		(void)fprintf(dbgout, "%3lu %3lu %f ",
-			      (unsigned long)robn, (unsigned long)count, prob);
-		(void)word_puts(token, 0, dbgout);
-		(void)fputc('\n', dbgout);
-	    }
+	if (!fBogotune) {
+	    props = (wordprop_t *) node->buf;
+	    cnts  = &props->cnts;
+	    token = node->key;
 	}
-	
-	if (DST_OK != ds_txn_commit(word_list->dsh))
-	    err = 1, fprintf(stderr, "Problem committing transaction!\n");
-    } else {
-	err = 1, fprintf(stderr, "Problem starting transaction!\n");
+	else {
+	    cnts = (wordcnts_t *) node;
+	    token = NULL;
+	}
+
+	count += 1;
+
+	prob = compute_probability(token, cnts);
+
+	if (need_stats)
+	    rstats_add(token, prob, cnts);
+
+	/* Robinson's P and Q; accumulation step */
+	/*
+	 * P = 1 - ((1-p1)*(1-p2)*...*(1-pn))^(1/n)     [spamminess]
+	 * Q = 1 - (p1*p2*...*pn)^(1/n)                 [non-spamminess]
+	 */
+	if (fabs(EVEN_ODDS - prob) - min_dev >= EPS) {
+	    int e;
+
+	    P.mant *= 1-prob;
+	    if (P.mant < 1.0e-200) {
+		P.mant = frexp(P.mant, &e);
+		P.exp += e;
+	    }
+
+	    Q.mant *= prob;
+	    if (Q.mant < 1.0e-200) {
+		Q.mant = frexp(Q.mant, &e);
+		Q.exp += e;
+	    }
+	    robn ++;
+	}
+
+	if (DEBUG_ALGORITHM(3)) {
+	    (void)fprintf(dbgout, "%3lu %3lu %f ",
+			  (unsigned long)robn, (unsigned long)count, prob);
+	    (void)word_puts(token, 0, dbgout);
+	    (void)fputc('\n', dbgout);
+	}
     }
 
     /* Robinson's P, Q and S
@@ -400,14 +406,14 @@ double get_spamicity(size_t robn, FLOAT P, FLOAT Q)
 void msg_print_summary(void)
 {
     if (!Rtable) {
-	(void)fprintf(fpo, "%-*s %5lu %9.6f %9.6f %9.6f\n",
+	(void)fprintf(fpo, "%-*s %6lu %9.6f %9.6f %9.6f\n",
 		      MAXTOKENLEN+2, "N_P_Q_S_s_x_md", (unsigned long)score.robn, 
 		      score.p_pr, score.q_pr, score.spamicity);
-	(void)fprintf(fpo, "%-*s %9.6f %9.6f %9.6f\n",
+	(void)fprintf(fpo, "%-*s  %9.6f %9.6f %9.6f\n",
 		      MAXTOKENLEN+2+6, " ", robs, robx, min_dev);
     }
     else
-	(void)fprintf(fpo, "%-*s %5lu %9.2e %9.2e %9.2e %9.2e %9.2e %5.3f\n",
+	(void)fprintf(fpo, "%-*s %6lu %9.2e %9.2e %9.2e %9.2e %9.2e %5.3f\n",
 		      MAXTOKENLEN+2, "N_P_Q_S_s_x_md", (unsigned long)score.robn, 
 		      score.p_pr, score.q_pr, score.spamicity, robs, robx, min_dev);
 }

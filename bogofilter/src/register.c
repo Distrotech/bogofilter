@@ -18,29 +18,30 @@
 
 #define PLURAL(count) ((count == 1) ? "" : "s")
 
-/**
- * register wordhash to a specified list
+/*
+ * tokenize text on stdin and register it to a specified list
  * and possibly out of another list
- * exits the program in case of error.
  */
 void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
 {
     const char *r="",*u="";
     hashnode_t *node;
-    wordprop_t *wordprop;
     dsv_t val;
+    wordprop_t *wordprop;
+    run_t save_run_type = run_type;
     int retrycount = 5;			/* we'll retry an aborted
 					   registration five times
 					   before giving up. */
 
-    u_int32_t g = 0, b = 0;
+    u_int32_t g, b;
     u_int32_t wordcount = h->count;	/* use number of unique tokens */
 
+    wordlist_t *list;
     sh_t incr = IX_UNDF, decr = IX_UNDF;
 
     /* If update directory explicity supplied, setup the wordlists. */
     if (update_dir) {
-	if (setup_wordlists(update_dir, PR_CFG_UPDATE) != 0)
+	if (set_wordlist_dir(update_dir, PR_CFG_UPDATE) != 0)
 	    exit(EX_ERROR);
     }
 
@@ -52,12 +53,16 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     if (wordcount == 0)
 	msgcount = 0;
 
-    format_log_update(msg_register, msg_register_size, u, r,
-	    wordcount, msgcount);
+    format_log_update(msg_register, msg_register_size, u, r, wordcount, msgcount);
 
     if (verbose)
-	(void)fprintf(dbgout, "# %u word%s, %u message%s\n",
+	(void)fprintf(dbgout, "# %u word%s, %u message%s\n", 
 		      wordcount, PLURAL(wordcount), msgcount, PLURAL(msgcount));
+
+    /* When using auto-update with separate wordlists , 
+       datastore.c needs to know which to update */
+
+    run_type |= _run_type;
 
 retry:
     if (ds_txn_begin(word_list->dsh)) {
@@ -65,7 +70,8 @@ retry:
 	exit(EX_ERROR);
     }
 
-    /* register words */
+    g = b = 0;
+
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
 	wordprop = node->buf;
@@ -81,27 +87,31 @@ retry:
 	ds_write(word_list->dsh, node->key, &val);
     }
 
-    /* register counts */
-    ds_get_msgcounts(word_list->dsh, &val);
-    word_list->msgcount[IX_SPAM] = val.spamcount;
-    word_list->msgcount[IX_GOOD] = val.goodcount;
+    list = word_list; /* FIXME: this is an alias left over from the
+			 bogus for loop that used to be here. */
+    ds_get_msgcounts(list->dsh, &val);
+    list->msgcount[IX_SPAM] = val.spamcount;
+    list->msgcount[IX_GOOD] = val.goodcount;
 
     if (incr != IX_UNDF)
-	word_list->msgcount[incr] += msgcount;
+	list->msgcount[incr] += msgcount;
 
     if (decr != IX_UNDF) {
-	if (word_list->msgcount[decr] > msgcount)
-	    word_list->msgcount[decr] -= msgcount;
+	if (list->msgcount[decr] > msgcount)
+	    list->msgcount[decr] -= msgcount;
 	else
-	    word_list->msgcount[decr] = 0;
+	    list->msgcount[decr] = 0;
     }
 
-    val.spamcount = word_list->msgcount[IX_SPAM];
-    val.goodcount = word_list->msgcount[IX_GOOD];
+    val.spamcount = list->msgcount[IX_SPAM];
+    val.goodcount = list->msgcount[IX_GOOD];
 
-    ds_set_msgcounts(word_list->dsh, &val);
+    ds_set_msgcounts(list->dsh, &val);
 
-    switch(ds_txn_commit(word_list->dsh)) {
+    g += val.goodcount;
+    b += val.spamcount;
+
+    switch(ds_txn_commit(list->dsh)) {
 	case DST_OK:
 	    break;
 	case DST_TEMPFAIL:
@@ -120,14 +130,13 @@ retry:
 	    abort();
     }
 
-    ds_flush(word_list->dsh);
+    ds_flush(list->dsh);
 
     if (DEBUG_REGISTER(1))
-	(void)fprintf(dbgout, "bogofilter: word_list %s - %ul spam, %ul good\n",
-		      word_list->filename, word_list->msgcount[IX_SPAM], word_list->msgcount[IX_GOOD]);
-
-    g += val.goodcount;
-    b += val.spamcount;
+	(void)fprintf(dbgout, "bogofilter: list %s (%s) - %ul spam, %ul good\n",
+		      list->listname, list->filepath, list->msgcount[IX_SPAM], list->msgcount[IX_GOOD]);
 
     set_msg_counts(g, b);
+
+    run_type = save_run_type;
 }

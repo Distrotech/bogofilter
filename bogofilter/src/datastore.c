@@ -118,9 +118,17 @@ void dsh_free(void *vhandle)
     return;
 }
 
-void *ds_open(const char *db_file, const char *name, dbmode_t open_mode)
+void *ds_open(const char *path, const char *name, dbmode_t open_mode)
 {
-    void *v = db_open(db_file, name, open_mode);
+    void *v = db_open(path, name, open_mode);
+
+    if (v == NULL && open_mode != DS_READ) {
+	v = db_open(path, name, DS_CREATE);
+	
+	if (v && (open_mode & DS_WRITE) && ! (open_mode & DS_LOAD))
+	    ds_set_wordlist_version(v, NULL);
+    }
+
     return v;
 }
 
@@ -388,6 +396,14 @@ bool ds_get_wordlist_version(void *vhandle, dsv_t *val)
 void ds_set_wordlist_version(void *vhandle, dsv_t *val)
 {
     dsh_t *dsh = vhandle;
+    dsv_t  tmp;
+
+    if (val == NULL)
+    {
+	val = &tmp;
+	val->count[0] = CURRENT_VERSION;
+	val->count[1] = 0;
+    }
 
     val->date = today;
 
