@@ -151,7 +151,7 @@ int yyinput(char *buf, int max_size)
 	unsigned char ch = buf[i];
 	buf[i] = charset_table[ch];
     }
-
+    
     return (count == -1 ? 0 : count);
 }
 

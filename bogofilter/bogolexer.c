@@ -20,6 +20,7 @@ NAME:
 #include "lexer.h"
 #include "textblock.h"
 #include "token.h"
+#include "mime.h"
 
 const char *progname = "bogolexer";
 
@@ -89,6 +90,7 @@ int main(int argc, char **argv)
     }
 
     init_charset_table("default", true);
+    mime_reset();
 
     while ((t = get_token()) > 0)
     {

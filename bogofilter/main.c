@@ -36,6 +36,7 @@ AUTHOR:
 #include "textblock.h"
 #include "wordlists.h"
 #include "xmalloc.h"
+#include "mime.h"
 
 #define BOGODIR ".bogofilter"
 
@@ -95,6 +96,8 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
     }
     
     textblocks = textblock_init();
+
+    mime_reset();
 
     switch(run_type) {
 	case RUN_NORMAL:

@@ -80,12 +80,12 @@ E?SMTP\ id\ {ID}				;
 boundary=[ ]*\"?{MIME_BOUNDARY}\"?		{ if (mime_lexer) { mime_boundary_set(yytext, yyleng); }}
 name=\"?					;
 filename=\"?					;
-^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { mime_boundary_chk(yytext, yyleng); return (BOUNDARY); }}
+^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { got_mime_boundary(yytext, yyleng); return (BOUNDARY); }}
 
 {IPADDR}					{ return(IPADDR);}
 {TOKEN}						{ return(TOKEN);}
 .						;
-^\n						{ got_newline();  if (mime_lexer) { msg_stack[stackp].mime_header = 0; /* eat token */ } return(EMPTY);}
+^\n						{ got_newline(); return(EMPTY);}
 \n						;
 
 %%

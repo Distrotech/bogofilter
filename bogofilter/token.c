@@ -61,9 +61,7 @@ void reset_html_level(void)
 
 void html_tag(int level)
 {
-    html_tag_level += level;
-    if (html_tag_level < 0)
-	html_tag_level = 0;
+    html_tag_level = level;
 }
 
 void html_comment(int level)
@@ -126,19 +124,22 @@ token_t get_token(void)
 		continue;
 
 	case TOKEN:	/* ignore anything when not reading text MIME types */
-	    if (html_tag_level > 0 || html_comment_level > 0)
+	      if (html_tag_level > 0 || html_comment_level > 0)
 		continue;
-	    if (msg_header || msg_state->mime_header)
+	      
+	    if (msg_state->mime_header)
 		break;
-	    if (stackp > 0)
-		switch (msg_state->mime_type) {
-		case MIME_TEXT:
-		case MIME_TEXT_HTML:
-		case MIME_TEXT_PLAIN:
-		    break;
-		default:
-		    continue;
-		}
+
+            switch (msg_state->mime_type) {
+            case MIME_TEXT:
+            case MIME_TEXT_HTML:
+            case MIME_TEXT_PLAIN:
+            case MIME_MULTIPART:
+            case MIME_MESSAGE:
+              break;
+            default:
+              continue;
+            }
 	    break;
 
 	case IPADDR:
@@ -179,18 +180,14 @@ token_t got_from(const char *text)
     if (memcmp(text, "From ", 5) != 0 )
 	return(TOKEN);
     else { 
-	msg_header = 1; 
 	lexer_state = LEXER_HEAD;
-	if (mime_lexer) {
-	    stackp = 0;
-	    reset_msg_state(&msg_stack[stackp], 0); 
-	    reset_html_level();
-	}
+	mime_reset(); 
+	reset_html_level();
 	return(FROM);
     }
 }
 
-#define	DEBUG	0
+#define	DEBUG 0	
 
 #if	!DEBUG
 
@@ -223,11 +220,12 @@ void change_lexer_state(lexer_state_t new)
 
 void got_newline()
 {
-    if (!msg_header && !msg_state->mime_header)
+
+    if (msg_state->mime_type != MIME_MESSAGE && !msg_state->mime_header)
 	return;
 
     msg_header = msg_state->mime_header = false;
-    
+     
     switch (msg_state->mime_type) {
 
     case LEXER_HEAD:
@@ -245,6 +243,10 @@ void got_newline()
     case MIME_TEXT_HTML:
 	change_lexer_state(LEXER_HTML);
 	break;
+
+    case MIME_MESSAGE:
+      mime_add_child(msg_state);
+      change_lexer_state(LEXER_HEAD);
 
     default:
 	change_lexer_state(LEXER_TEXT);
