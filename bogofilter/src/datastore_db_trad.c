@@ -60,6 +60,7 @@ static int	   tra_lock		(void *handle, int open_mode);
 static int	  tra_begin		(void *vhandle);
 static int  	  tra_abort		(void *vhandle);
 static int  	  tra_commit		(void *vhandle);
+static ex_t	   tra_common_close	(DB_ENV *dbe, const char *db_file);
 
 /* OO function lists */
 
@@ -73,6 +74,7 @@ dsm_t dsm_traditional = {
     &tra_begin,
     &tra_abort,
     &tra_commit,
+    &tra_common_close,
 };
 
 DB_ENV *tra_get_env_dbe	(dbe_t *env)
@@ -89,6 +91,13 @@ const char *tra_database_name(const char *db_file)
 int  tra_auto_commit_flags(void)
 {
     return 0;
+}
+
+ex_t tra_common_close	(DB_ENV *dbe, const char *db_file)
+{
+    (void) dbe;
+    (void) db_file;
+    return EX_OK;
 }
 
 int tra_lock(void *vhandle, int open_mode)

@@ -19,6 +19,7 @@ typedef		int	dsm_auto_commit_flags	(void);
 typedef		int	dsm_get_rmw_flag	(int open_mode);
 typedef 	void dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 typedef		int	dsm_lock		(void *handle, int open_mode);
+typedef		ex_t	dsm_common_close	(DB_ENV *dbe, const char *db_file);
 
 typedef struct {
     dsm_get_env_dbe		*dsm_get_env_dbe;
@@ -30,6 +31,7 @@ typedef struct {
     dsm_function	        *dsm_begin;
     dsm_function        	*dsm_abort;
     dsm_function        	*dsm_commit;
+    dsm_common_close		*dsm_common_close;
 } dsm_t;
 
 /** implementation internal type to keep track of databases

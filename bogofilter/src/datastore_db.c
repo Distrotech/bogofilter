@@ -899,7 +899,9 @@ ex_t db_verify(const char *db_file)
 	free(dir);
 	exit(EX_ERROR);
     }
-    e = dbe_common_close(env, dir);
+
+    e = dsm->dsm_common_close(env, db_file);
+
     free(dir);
     if (e == 0 && verbose)
 	printf("%s OK.\n", db_file);

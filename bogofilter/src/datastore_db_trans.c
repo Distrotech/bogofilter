@@ -80,6 +80,7 @@ static int	   txn_lock		(void *handle, int open_mode);
 static int	  txn_begin		(void *vhandle);
 static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
+static ex_t	   txn_common_close	(DB_ENV *dbe, const char *db_file);
 
 /* OO function lists */
 
@@ -93,6 +94,7 @@ dsm_t dsm_transactional = {
     &txn_begin,
     &txn_abort,
     &txn_commit,
+    &txn_common_close
 };
 
 /* non-OO static function prototypes */
@@ -226,6 +228,22 @@ static DB_ENV *txn_recover_open(const char *dir, DB **dbp)
     }
 
     return env;
+}
+
+static ex_t txn_common_close(DB_ENV *env, const char *directory)
+{
+    int e;
+
+    e = env->close(env, 0);
+    if (e != 0) {
+	print_error(__FILE__, __LINE__, "Error closing environment \"%s\": %s",
+		directory, db_strerror(e));
+	exit(EX_ERROR);
+    }
+
+    db_try_glock(directory, F_UNLCK, F_SETLKW); /* release lock */
+
+    return EX_OK;
 }
 
 static int txn_begin(void *vhandle)
