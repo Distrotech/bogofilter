@@ -744,12 +744,7 @@ void db_flush(void *vhandle)
     if (ret)
 	print_error(__FILE__, __LINE__, "db_sync: err: %s", db_strerror(ret));
 
-    if (fTransaction) {
-	ret = BF_LOG_FLUSH(handle->dbenv->dbe, NULL);
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", (void *)handle->dbenv->dbe,
-		    db_strerror(ret));
-    }
+    dsm->dsm_log_flush(handle->dbenv->dbe);
 }
 
 ex_t db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
