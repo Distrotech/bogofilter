@@ -57,9 +57,9 @@ static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
 static int	   tra_auto_commit_flags(void);
 static int	   tra_get_rmw_flag	(int open_mode);
 static int	   tra_lock		(void *handle, int open_mode);
-static int	  tra_begin		(void *vhandle);
-static int  	  tra_abort		(void *vhandle);
-static int  	  tra_commit		(void *vhandle);
+static int	   tra_begin		(void *vhandle);
+static int  	   tra_abort		(void *vhandle);
+static int  	   tra_commit		(void *vhandle);
 static ex_t	   tra_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   tra_sync		(DB_ENV *env, int ret);
 static void	   tra_log_flush	(DB_ENV *env);
@@ -97,14 +97,14 @@ int  tra_auto_commit_flags(void)
     return 0;
 }
 
-ex_t tra_common_close	(DB_ENV *dbe, const char *db_file)
+ex_t tra_common_close(DB_ENV *dbe, const char *db_file)
 {
     (void) dbe;
     (void) db_file;
     return EX_OK;
 }
 
-int     tra_sync	(DB_ENV *env, int ret)
+int tra_sync(DB_ENV *env, int ret)
 {
     (void) env;
     (void) ret;
@@ -140,7 +140,7 @@ int tra_get_rmw_flag(int open_mode)
     return 0;
 }
 
-DB_ENV *tra_recover_open	(const char *db_file, DB **dbp)
+DB_ENV *tra_recover_open(const char *db_file, DB **dbp)
 {
     int e;
     int fd;

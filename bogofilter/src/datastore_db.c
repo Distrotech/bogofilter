@@ -57,13 +57,13 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "bogohome.h"
 #include "error.h"
 #include "maint.h"
+#include "mxcat.h"
 #include "paths.h"		/* for build_path */
 #include "rand_sleep.h"
 #include "swap.h"
 #include "word.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
-#include "mxcat.h"
 #include "db_lock.h"
 
 static dsm_t *dsm = NULL;
@@ -345,8 +345,10 @@ const char *db_version_str(void)
 /** Initialize database. Expects open environment.
  * \return pointer to database handle on success, NULL otherwise.
  */
-void *db_open(void *vhandle, const char *path,
-	const char *name, dbmode_t open_mode)
+void *db_open(void *vhandle,
+	      const char *path,
+	      const char *name,
+	      dbmode_t open_mode)
 {
     int ret;
     int is_swapped;
