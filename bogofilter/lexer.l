@@ -238,7 +238,7 @@ width	;
 -->	;
 
 ^MIME-Version:.*				{ if (mime_lexer) { mime_version(); yyredo(':'); } }
-^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) { mime_encoding(); yyredo(':'); } }
+^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) {  mime_encoding(); yyredo(':'); } }
 ^Content-Type:{MTYPE}				{ if (mime_lexer) { mime_type(); yyredo(':'); } }
 ^Content-Disposition:{MTYPE}			{ if (mime_lexer) { mime_disposition(); yyredo(':'); } }
 ^From\ 						{ if (memcmp(yytext, "From ",5) == 0 ) { 
@@ -370,35 +370,25 @@ static int yygetline(char *buf, int max_size)
 static int yyinput(char *buf, int max_size)
 /* input getter for the scanner */
 {
-    int i, count, save;
+    int i, count, decoded_count;
+    count = yygetline(buf, max_size);
 
-    while (1) {
-	count = yygetline(buf, max_size);
-	if (count == 0)
-	    break;
+    if ((count > 0) && past_header){
+     
+	decoded_count = mime_decode(buf, count);
 
-	/* do nothing if in header */
-	if (!past_header ||
-	    msg_state->mime_header)
-	    break;
-
-	save = count;
-	count = mime_decode(buf, count);
-
-	if (count == save)
-	    break;
-	/* eat attachments */
-	if (msg_state->mime_disposition != MIME_ATTACHMENT)
-	    break;
+        /*change buffer size only if the decoding worked */
+        if (decoded_count != 0){
+            count = decoded_count;
+        }
     }
 
-    for (i = 0; i < count; i += 1)
+    for (i = 0; i < count; i++ )
     {	
-	unsigned char ch = buf[i];
-	buf[i] = charset_table[ch];
+	buf[i] = charset_table[(unsigned char)buf[i]];
     }
 
-    return (count == -1 ? YY_NULL : count);
+    return (count == -1 ? 0 : count);
 }
 
 static int yyredo(char del)
