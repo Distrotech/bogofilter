@@ -98,26 +98,20 @@ AM_CONDITIONAL(ENABLE_STATIC, test x$enable_static = xyes)
 
 WITH_TDB=
 AC_ARG_WITH(tdb,
-	    AC_HELP_STRING([--with-tdb[=PATH]],
-            [Use trivial database (tdb), optionally specifying path to installation directory]),
-	    [
-            if test "x$withval" != "xno"; then
-            WITH_TDB=yes
-dnl            if test "x$withval" = "xyes"; then
-dnl            else
-dnl dnl check user supplied data for correctness
-            fi
-        ]	
+	    AC_HELP_STRING([--with-tdb],
+            [Use trivial database (tdb)]),
+    	    [ WITH_TDB=$withval ]
 )
 
 if test "x$WITH_TDB" = "xyes"; then 
 AC_CHECK_LIB(tdb,
              tdb_open,,
-             [AC_MSG_ERROR(Cannot link to tdb library. Please specify path to tdb installation directory.)],
+             [AC_MSG_ERROR(Cannot link to tdb library.
+                           Try setting the environment variables:
+                           LDFLAGS='-L/path/to/tdb/lib' CPPFLAGS='-I/path/to/tdb/include'
+                           )],
 )
-fi
-
-if test "x$WITH_TDB" != "xyes"; then 
+else
 AH_TEMPLATE([HAVE_DB_H], [Have suitable db.h header])
 need_dash_r=
 case $target_os in
@@ -301,7 +295,12 @@ fi
 AM_CONDITIONAL(ENABLE_MEMDEBUG, test x$MEM_DEBUG != xNO)
 
 if test "x$WITH_TDB" = "xyes" ; then
-    AC_DEFINE(ENABLE_TDB_DATASTORE,1, [Enable tdb datastore])
+    #AC_DEFINE(ENABLE_TDB_DATASTORE,1, [Enable tdb datastore])
+    AC_DEFINE_UNQUOTED(DB_TYPE, "tdb", [tdb database type])
+    AC_DEFINE_UNQUOTED(DB_EXT, ".tdb", [tdb database file extension])
+else
+    AC_DEFINE_UNQUOTED(DB_TYPE, "db", [default database type])
+    AC_DEFINE_UNQUOTED(DB_EXT, ".db", [default database file extension])
 fi
 
 AM_CONDITIONAL(ENABLE_TDB_DATASTORE, test "x$WITH_TDB" = "xyes")
