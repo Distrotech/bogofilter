@@ -37,10 +37,10 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 typedef struct {
     char	*path;
     size_t	count;
-    char	*name[2];
-    int		fd[2];
+    char	*name[IX_SIZE];
+    int		fd[IX_SIZE];
     dbmode_t	open_mode;
-    DB		*dbp[2];
+    DB		*dbp[IX_SIZE];
     pid_t	pid;
     bool	locked;
     bool	is_swapped;

@@ -28,10 +28,10 @@ Gyepi Sam <gyepi@praxis-sw.com>   2003
 typedef struct {
     char *path;
     size_t count;
-    char *name[2];
+    char *name[IX_SIZE];
     pid_t pid;
     bool locked;
-    TDB_CONTEXT *dbp[2];
+    TDB_CONTEXT *dbp[IX_SIZE];
 } dbh_t;
 
 /* Function definitions */

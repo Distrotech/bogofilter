@@ -213,7 +213,7 @@ static int load_file(const char *ds_file)
     size_t len;
     int load_count = 0;
     unsigned long line = 0;
-    unsigned long count[2], date;
+    unsigned long count[IX_SIZE], date;
     YYYYMMDD today_save = today;
 
     dsh = ds_open(".", 1, &ds_file, DB_WRITE);
@@ -367,7 +367,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
 
     char filepath1[PATH_LEN];
     char filepath2[PATH_LEN];
-    char *filepaths[2];
+    char *filepaths[IX_SIZE];
 
     byte buf[BUFSIZE];
     buff_t *buff = buff_new(buf, 0, BUFSIZE);
@@ -528,10 +528,10 @@ static int compute_robinson_x(char *path)
 
 	char filepath1[PATH_LEN];
 	char filepath2[PATH_LEN];
-	char *filepaths[2];
+	char *filepaths[IX_SIZE];
 
-	filepaths[0] = filepath1;
-	filepaths[1] = filepath2;
+	filepaths[IX_SPAM] = filepath1;
+	filepaths[IX_GOOD] = filepath2;
 
 	count = build_wordlist_paths(filepaths, path);
 
