@@ -17,8 +17,8 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 **	3. Bogofilter's header files
 */
 
-/* This code has been tested with BerkeleyDB 3.2, 3.3, 4.0, 4.1 and 4.2.
- * Matthias Andree, 2004-03-17 */
+/* This code has been tested with BerkeleyDB 3.0, 3.1 3.2, 3.3, 4.0,
+ * 4.1 and 4.2.  -- Matthias Andree, 2004-10-04 */
 
 /* TODO:
  * - implement proper retry when our transaction is aborted after a
@@ -950,8 +950,11 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	exit(EXIT_FAILURE);
     }
 
-    if (DEBUG_DATABASE(1))
+    if (DEBUG_DATABASE(1)) {
+	fprintf(stderr, "dbgout=%p, stdout=%p, stderr=%p\n",
+		dbgout, stdout, stderr);
 	fprintf(dbgout, "DB_ENV->open(home=%s)\n", bogohome);
+    }
 
     init = true;
     return 0;
