@@ -20,6 +20,11 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #ifndef DATASTORE_TDB_H
 #define DATASTORE_TDB_H
 
+#ifndef	DB_NOTFOUND
+/* Next line is from /usr/include/db3.h */
+#define	DB_NOTFOUND		(-30990)/* Key/data pair not found (EOF). */
+#endif
+
 /** Initialize database, open and lock files, etc.
  * params: char * path to database file, char * name of database
  * \return opaque pointer to database handle, which must be saved and
@@ -82,13 +87,5 @@ void dbh_print_names(dsh_t *dsh, const char *msg);
 
 /* Returns version string */
 const char *db_version_str(void);
-
-/* This is not currently used ...
- * 
-#define db_write_lock(fd) db_lock(fd, F_SETLKW, F_WRLCK)
-#define db_read_lock(fd) db_lock(fd, F_SETLKW, F_RDLCK)
-#define db_unlock(fd) db_lock(fd, F_SETLK, F_UNLCK)
-
-*/
 
 #endif
