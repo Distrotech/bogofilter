@@ -51,37 +51,37 @@ bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
 /* public -- used in datastore.c */
-static int	   txn_begin		(void *vhandle);
-static int  	   txn_abort		(void *vhandle);
-static int  	   txn_commit		(void *vhandle);
+static int	   dbx_begin		(void *vhandle);
+static int  	   dbx_abort		(void *vhandle);
+static int  	   dbx_commit		(void *vhandle);
 /* private -- used in datastore_db_*.c */
-static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
-static const char *txn_database_name	(const char *db_file);
-static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
-static int	   txn_auto_commit_flags(void);
-static int	   txn_get_rmw_flag	(int open_mode);
-static int	   txn_lock		(void *handle, int open_mode);
-static ex_t	   txn_common_close	(DB_ENV *dbe, const char *db_file);
-static int	   txn_sync		(DB_ENV *env, int ret);
-static void	   txn_log_flush	(DB_ENV *env);
+static DB_ENV	  *dbx_get_env_dbe	(dbe_t *env);
+static const char *dbx_database_name	(const char *db_file);
+static DB_ENV	  *dbx_recover_open	(const char *db_file, DB **dbp);
+static int	   dbx_auto_commit_flags(void);
+static int	   dbx_get_rmw_flag	(int open_mode);
+static int	   dbx_lock		(void *handle, int open_mode);
+static ex_t	   dbx_common_close	(DB_ENV *dbe, const char *db_file);
+static int	   dbx_sync		(DB_ENV *env, int ret);
+static void	   dbx_log_flush	(DB_ENV *env);
 
 /* OO function lists */
 
 dsm_t dsm_transactional = {
     /* public -- used in datastore.c */
-    &txn_begin,
-    &txn_abort,
-    &txn_commit,
+    &dbx_begin,
+    &dbx_abort,
+    &dbx_commit,
     /* private -- used in datastore_db_*.c */
-    &txn_get_env_dbe,
-    &txn_database_name,
-    &txn_recover_open,
-    &txn_auto_commit_flags,
-    &txn_get_rmw_flag,
-    &txn_lock,
-    &txn_common_close,
-    &txn_sync,
-    &txn_log_flush
+    &dbx_get_env_dbe,
+    &dbx_database_name,
+    &dbx_recover_open,
+    &dbx_auto_commit_flags,
+    &dbx_get_rmw_flag,
+    &dbx_lock,
+    &dbx_common_close,
+    &dbx_sync,
+    &dbx_log_flush
 };
 
 /* non-OO static function prototypes */
@@ -97,12 +97,12 @@ static ex_t dbe_common_close(DB_ENV *env, const char *directory);
 
 /* non-OO static functions */
 
-DB_ENV *txn_get_env_dbe(dbe_t *env)
+DB_ENV *dbx_get_env_dbe(dbe_t *env)
 {
     return env->dbe;
 }
 
-const char *txn_database_name(const char *db_file)
+const char *dbx_database_name(const char *db_file)
 {
     const char *t;
 
@@ -113,7 +113,7 @@ const char *txn_database_name(const char *db_file)
     return t;
 }
 
-int  txn_auto_commit_flags(void)
+int  dbx_auto_commit_flags(void)
 {
 #if DB_AT_LEAST(4,1)
     return DB_AUTO_COMMIT;
@@ -122,7 +122,7 @@ int  txn_auto_commit_flags(void)
 #endif
 }
 
-int txn_lock(void *vhandle, int open_mode)
+int dbx_lock(void *vhandle, int open_mode)
 {
     (void) vhandle;
     (void) open_mode;
@@ -130,7 +130,7 @@ int txn_lock(void *vhandle, int open_mode)
     return 0;
 }
 
-int txn_get_rmw_flag(int open_mode)
+int dbx_get_rmw_flag(int open_mode)
 {
     int flag;
 
@@ -199,7 +199,7 @@ static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
     return env;
 }
 
-static DB_ENV *txn_recover_open(const char *dir, DB **dbp)
+static DB_ENV *dbx_recover_open(const char *dir, DB **dbp)
 {
     int e;
     DB_ENV *env;
@@ -217,7 +217,7 @@ static DB_ENV *txn_recover_open(const char *dir, DB **dbp)
     return env;
 }
 
-static ex_t txn_common_close(DB_ENV *env, const char *directory)
+static ex_t dbx_common_close(DB_ENV *env, const char *directory)
 {
     int e;
 
@@ -233,7 +233,7 @@ static ex_t txn_common_close(DB_ENV *env, const char *directory)
     return EX_OK;
 }
 
-static int txn_begin(void *vhandle)
+static int dbx_begin(void *vhandle)
 {
     DB_TXN *t;
     int ret;
@@ -259,13 +259,13 @@ static int txn_begin(void *vhandle)
     dbh->txn = t;
 
     if (DEBUG_DATABASE(2))
-	fprintf(dbgout, "DB_ENV->txn_begin(%p), tid: %lx\n",
+	fprintf(dbgout, "DB_ENV->dbx_begin(%p), tid: %lx\n",
 		(void *)env->dbe, (unsigned long)BF_TXN_ID(t));
 
     return 0;
 }
 
-static int txn_abort(void *vhandle)
+static int dbx_abort(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;
@@ -299,7 +299,7 @@ static int txn_abort(void *vhandle)
     }
 }
 
-static int txn_commit(void *vhandle)
+static int dbx_commit(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;
@@ -566,9 +566,9 @@ static void dbe_cleanup_lite(dbe_t *env)
 	 * or 120 min have passed since the previous checkpoint */
 	/*                                kB  min flags */
 	ret = BF_TXN_CHECKPOINT(env->dbe, 64, 120, 0);
-	ret = txn_sync(env->dbe, ret);
+	ret = dbx_sync(env->dbe, ret);
 	if (ret)
-	    print_error(__FILE__, __LINE__, "DBE->txn_checkpoint returned %s", db_strerror(ret));
+	    print_error(__FILE__, __LINE__, "DBE->dbx_checkpoint returned %s", db_strerror(ret));
 
 	ret = env->dbe->close(env->dbe, 0);
 	if (DEBUG_DATABASE(1) || ret)
@@ -579,7 +579,7 @@ static void dbe_cleanup_lite(dbe_t *env)
     free(env);
 }
 
-static int txn_sync(DB_ENV *env, int ret)
+static int dbx_sync(DB_ENV *env, int ret)
 {
 #if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
     /* flush dirty pages in buffer pool */
@@ -662,9 +662,9 @@ void *dbe_init(const char *directory)
 	flags ^= DB_LOG_AUTOREMOVE;
 #endif
 
-#ifdef	DB_TXN_NOT_DURABLE
+#ifdef	DB_BF_TXN_NOT_DURABLE
     if (db_txn_durable)
-	flags ^= DB_TXN_NOT_DURABLE;
+	flags ^= DB_BF_TXN_NOT_DURABLE;
 #endif
 #endif
 
@@ -750,7 +750,7 @@ ex_t dbe_purgelogs(const char *directory)
 
     /* checkpoint the transactional system */
     e = BF_TXN_CHECKPOINT(env, 0, 0, 0);
-    e = txn_sync(env, e);
+    e = dbx_sync(env, e);
     if (e) {
 	print_error(__FILE__, __LINE__, "DB_ENV->txn_checkpoint failed: %s",
 		db_strerror(e));
@@ -798,7 +798,7 @@ ex_t dbe_remove(const char *directory)
     return dbe_common_close(env, directory);
 }
 
-void txn_log_flush(DB_ENV *dbe)
+void dbx_log_flush(DB_ENV *dbe)
 {
     int ret;
 
