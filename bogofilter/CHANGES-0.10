@@ -4,6 +4,17 @@
 
 $Id$
      
+0.10.3  2003-02-14
+
+	* Database access efficiency changes.
+	* Database properly closed at end of maintenance pass.
+	* Improvements in html comment handling code.
+
+0.10.2	2003-02-03
+
+	* Support option '-?'
+	* Fix handling of consecutive html comments.
+
 0.10.1.5 2003-02-01
 
 	* Locking: use random sleep interval in case of lock conflict.

@@ -47,9 +47,9 @@ extern int get_decoded_line(byte *buf, size_t size);
 /* Function Definitions */
 static int lgetsl(byte *buf, size_t size)
 {
-    size_t count = xfgetsl((char *)buf, size, fpin, 1);
+    int count = xfgetsl((char *)buf, size, fpin, 1);
     yylineno += 1;
-    if (DEBUG_LEXER(0)) {
+    if (count > 0 && DEBUG_LEXER(0)) {
 	fprintf(dbgout, "*** %2d %c,%c %d ", yylineno,
 		HORB(msg_header), HORB(msg_state->mime_header), count);
 	fwrite(buf, 1, count, dbgout);
@@ -234,7 +234,8 @@ int yyredo(const byte *text, char del)
 {
     char *tmp;
 
-    if (DEBUG_LEXER(1)) fprintf(dbgout, "yyredo:  \"%s\"\n", text);
+    if (DEBUG_LEXER(1)) fprintf(dbgout, "yyredo:  %d \"%s\"\n", 
+				strlen(text), text);
 
     /* if already processing saved text, concatenate new after old */
     if (yysave == NULL) {
