@@ -19,6 +19,21 @@ $Id$
 	  tokens based on count, age, or length.  Can replace nonascii with
 	  question marks.
 
+	2002-12-28
+	* Added mime processing capability, with decoding of base64, quoted-printable
+	  and uuencoded sections.  Ignores attachments when computing spamicity.
+	* lexer is now case insensitive
+
+	2002-12-24
+	* Cleaned up code for specifying worlist directory(s).
+
+	2002-12-15
+	* Added dates to wordlist tokens.  Option "datestamp_tokens=true|false"
+	  can be used to enable/disable them.
+	* Added wordlist maintenance capability to bogoutil.  Can discard 
+	  tokens based on count, age, or length.  Can replace nonascii with
+	  question marks.
+
 	2002-12-08
 	* Increase MAXTOKENLEN from 20 to 30, allowing more and longer
 	  tokens to be processed.
