@@ -171,7 +171,7 @@ token_t got_from(const char *text)
     }
 }
 
-#define	DEBUG	1
+#define	DEBUG	0
 
 #if	!DEBUG
 
