@@ -76,6 +76,7 @@ BCHARSNOSPC	[0-9a-zA-Z'()+_,-./:=?]
 BCHARS		[ 0-9a-zA-Z'()+_,-./:=?]
 MIME_BOUNDARY	{BCHARS}*{BCHARSNOSPC}
 
+ID		[0-9a-zA-Z-]*
 MTYPE		[ \t]*[0-9a-zA-Z/-]*
 TOKEN		[^[:blank:][:cntrl:][:digit:][:punct:]][^][:blank:]<>;=():&%$#@!+|/\\{}^\"\?\*,[:cntrl:][]+[^[:blank:][:punct:][:cntrl:]]
 
@@ -252,9 +253,9 @@ width	;
 						  } }
 ^Date:.*|Delivery-Date:.*			;
 ^Message-ID:.*					;
-^\tid\ .*					;
+^\tid\ {ID}					;
 
-E?SMTP\ id\ [0-9a-zA-z]*			;
+E?SMTP\ id\ {ID}				;
 boundary=.*					{ if (mime_lexer) { mime_boundary(); }}
 name=\"?					;
 filename=\"?					;
