@@ -38,6 +38,7 @@ void mime_boundary(void);
 void mime_disposition(void);
 void mime_encoding(void);
 void mime_type(void);
+void get_mime_type(void);
 void mime_version(void);
 size_t mime_decode(char *buff, size_t size);
 

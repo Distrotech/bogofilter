@@ -209,6 +209,11 @@ void mime_encoding(void)
     return;
 }
 
+void get_mime_type(void)
+{
+    return msg_state->mime_type;
+}
+
 void mime_type(void)
 {
     size_t l = strlen("Content-Type:");
@@ -246,29 +251,37 @@ void mime_boundary(void)
 {
     char *boundary;
     size_t len;
-    
+
+    if (DEBUG_MIME(1))
+	fprintf(stderr, "*** enter_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
+
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
 	boundary = getmimew(yytext+len, yytext + yyleng);
 	msg_state->boundary = boundary;
 	msg_state->boundary_len = strlen(boundary);
-    }
-    else {			/* verify that it's really a boundary line */
+	msg_state->mime_type = MIME_TEXT;
+	msg_state->mime_encoding  = MIME_7BIT;
+	msg_state->mime_header = 1;
+    } else {			/* verify that it's really a boundary line */
 	boundary = msg_state->boundary;
 	if (boundary == NULL )
 	    return;
 	len = strlen(boundary);
+	/* XXX FIXME: recover from missing end boundaries? */
 	if (memcmp(yytext+2, boundary, len) == 0) {
-	    stackp += 1;
 	    msg_state = &msg_stack[stackp];
 	    memset(msg_state, 0, sizeof(*msg_state));
+	    msg_state->mime_type = MIME_TEXT;
+	    msg_state->mime_encoding  = MIME_7BIT;
 	    msg_state->mime_header = 1;
 	    msg_state->boundary = boundary;
 	    msg_state->boundary_len = len;
 	}
     }
 
-    if (DEBUG_MIME(1)) fprintf(stderr, "*** mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
+    if (DEBUG_MIME(1))
+	fprintf(stderr, "*** mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
     return;
 }
 
@@ -276,15 +289,23 @@ size_t mime_decode(char *buff, size_t size)
 {
     size_t count = size;
 
+    if (DEBUG_MIME(3)) fprintf(stderr, "*** mime_decode %d \"%s\"\n", size, buff);
     if (msg_state->mime_header)	/* do nothing if in header */
 	return count;
-     
-    /*Don't try to decode boundary */
-    if (size > 1 &&
-	buff[0] == '-' && buff[1] == '-' &&
-        memcmp(msg_state->boundary, buff+2,msg_state->boundary_len) == 0)
-	return count;
-    
+
+    /* Don't try to decode boundary */
+    if (size > 2 && buff[0] == '-' && buff[1] == '-') {
+
+	if (DEBUG_MIME(3)) fprintf(stderr, "*** try_boundar %d \"%s\" == %d \"%s\"\n", size, buff+2, msg_state->boundary_len, msg_state->boundary);
+
+	if (memcmp(msg_state->boundary, buff+2, msg_state->boundary_len) == 0) {
+	    msg_state->mime_header  = 1;
+	    msg_state->mime_type  = MIME_TEXT;
+	    msg_state->mime_encoding  = MIME_7BIT;
+	    return count;
+	}
+    }
+
     switch(msg_state->mime_encoding) {
     case MIME_7BIT:
 	/* do nothing */
@@ -299,7 +320,7 @@ size_t mime_decode(char *buff, size_t size)
 	count = qp_decode(buff, size);
 	break;
     case MIME_BASE64:
-	count = base64_decode(buff, size);
+	if (size > 4) count = base64_decode(buff, size);
 	break;
     case MIME_UUENCODE:
 	count = uudecode(buff, size);
