@@ -39,7 +39,7 @@ void *open_wordlist( const char *name, const char *filepath )
 
 /* returns -1 for error, 0 for success */
 static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const char* path,
-			 double weight, bool bad, int override)
+			 double weight, bool bad, int override, bool ignore)
 {
     wordlist_t *new = (wordlist_t *)xmalloc(sizeof(*new));
     wordlist_t* list_ptr;
@@ -99,11 +99,11 @@ int setup_wordlists(const char* dir)
     }
 
     if ((build_path(filepath, sizeof(filepath), dir, GOODFILE) < 0) ||
-	init_wordlist(&good_list, "good", filepath, good_weight, false, 0) != 0)
+	init_wordlist(&good_list, "good", filepath, good_weight, false, 0, false) != 0)
 	rc = -1;
 
     if ((build_path(filepath, sizeof(filepath), dir, SPAMFILE) < 0) ||
-	init_wordlist(&spam_list, "spam", filepath, bad_weight, true, 0) != 0)
+	init_wordlist(&spam_list, "spam", filepath, bad_weight, true, 0, false) != 0)
 	rc = -1;
 
     return rc;
@@ -215,7 +215,8 @@ bool configure_wordlist(const char *val)
     char* path;
     double weight = 0.0f;
     bool bad = false;
-    int override = 0;
+    bool override = false;
+    bool ignore = false;
 
     char *tmp = xstrdup(val);
 	
@@ -257,7 +258,26 @@ bool configure_wordlist(const char *val)
     *tmp++ = '\0';
     while (isspace((unsigned char)*tmp)) tmp += 1;
 
-    rc = init_wordlist(&list, name, path, weight, bad, override);
+    if (isdigit(*tmp))
+	ignore=atoi(tmp);
+    else {
+	ignore = false;		/* default is "don't ignore" */
+	switch (tolower(*tmp)) {
+	case 'n':		/* no */
+	case 'f':		/* false */
+	    ignore = false;
+	    break;
+	case 'y':		/* yes */
+	case 't':		/* true */
+	    ignore = true;
+	    break;
+	}
+    }
+    while (isalnum(*tmp))
+	tmp++;
+    while (isspace((unsigned char)*tmp)) tmp += 1;
+
+    rc = init_wordlist(&list, name, path, weight, bad, override, ignore);
     ok = rc == 0;
 
     return ok;
