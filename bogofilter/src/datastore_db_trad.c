@@ -29,11 +29,14 @@ David Relson	<relson@osagesoftware.com> 2003 - 2005
 
 #include "db_lock.h"
 #include "error.h"
+#include "xmalloc.h"
+#include "xstrdup.h"
 
 /* public -- used in datastore.c */
 static int	   bft_begin		(void *vhandle);
 static int  	   bft_abort		(void *vhandle);
 static int  	   bft_commit		(void *vhandle);
+static dbe_t	  *bft_init		(const char *directory);
 /* private -- used in datastore_db_*.c */
 static DB_ENV	  *bft_get_env_dbe	(dbe_t *env);
 static const char *bft_database_name	(const char *db_file);
@@ -52,6 +55,7 @@ dsm_t dsm_traditional = {
     &bft_begin,
     &bft_abort,
     &bft_commit,
+    &bft_init,
     /* private -- used in datastore_db_*.c */
     &bft_get_env_dbe,
     &bft_database_name,
@@ -168,3 +172,12 @@ int  bft_begin	(void *vhandle) { (void) vhandle; return 0; }
 int  bft_abort	(void *vhandle) { (void) vhandle; return 0; }
 int  bft_commit	(void *vhandle) { (void) vhandle; return 0; }
 
+dbe_t *bft_init(const char *directory)
+{
+    dbe_t *env = xcalloc(1, sizeof(dbe_t));
+
+    env->magic = MAGIC_DBE;	    /* poor man's type checking */
+    env->directory = xstrdup(directory);
+
+    return env;
+}

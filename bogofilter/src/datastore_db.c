@@ -52,6 +52,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_dbcommon.h"
 #include "datastore_db_private.h"
 
+#include "bogohome.h"
 #include "error.h"
 #include "paths.h"		/* for build_path */
 #include "rand_sleep.h"
@@ -161,19 +162,24 @@ int db_lock(int fd, int cmd, short int type)
     return (fcntl(fd, cmd, &lock));
 }
 
+static void dsm_init(void)
+{
+    if (!fTransaction)
+	dsm = &dsm_traditional;
+    else
+	dsm = &dsm_transactional;
+}
 
 /** "constructor" - allocate our handle and initialize its contents */
 static dbh_t *handle_init(const char *db_path, const char *db_name)
 {
     dbh_t *handle;
 
-    if (!fTransaction)
-	dsm = &dsm_traditional;
-    else
-	dsm = &dsm_transactional;
-
     handle = xmalloc(sizeof(dbh_t));
     memset(handle, 0, sizeof(dbh_t));	/* valgrind */
+
+    handle->dsm = dsm;
+    handle->txn = NULL;
 
     handle->magic= MAGIC_DBH;		/* poor man's type checking */
     handle->fd   = -1;			/* for lock */
@@ -184,9 +190,6 @@ static dbh_t *handle_init(const char *db_path, const char *db_name)
     handle->locked     = false;
     handle->is_swapped = false;
     handle->created    = false;
-
-    handle->txn = NULL;
-    handle->dsm = dsm;
 
     return handle;
 }
@@ -201,6 +204,89 @@ static void handle_free(/*@only@*/ dbh_t *handle)
 	xfree(handle);
     }
     return;
+}
+
+/* initialize data base, configure some lock table sizes
+ * (which can be overridden in the DB_CONFIG file)
+ * and lock the file to tell other parts we're initialized and
+ * do not want recovery to stomp over us
+ */
+void *dbe_init(const char *directory)
+{
+    char norm_dir[PATH_MAX+1]; /* check normalized directory names */
+    char norm_home[PATH_MAX+1];/* see man realpath(3) for details */
+
+    dbe_t *env;
+
+    if (NULL == realpath(directory, norm_dir)) {
+	    print_error(__FILE__, __LINE__,
+		    "error: cannot normalize path \"%s\": %s",
+		    directory, strerror(errno));
+	    exit(EX_ERROR);
+    }
+
+    if (NULL == realpath(bogohome, norm_home)) {
+	    print_error(__FILE__, __LINE__,
+		    "error: cannot normalize path \"%s\": %s",
+		    bogohome, strerror(errno));
+	    exit(EX_ERROR);
+    }
+
+    if (0 != strcmp(norm_dir, norm_home))
+    {
+	fprintf(stderr,
+		"ERROR: only one database _environment_ (directory) can be used at a time.\n"
+		"You CAN use multiple wordlists that are in the same directory.\n\n");
+	fprintf(stderr,
+		"If you need multiple wordlists in different directories,\n"
+		"you cannot use the transactional interface, but you must configure\n"
+		"the non-transactional interface, i. e. ./configure --disable-transactions\n"
+		"then type make clean, after that rebuild and install as usual.\n"
+		"Note that the data base will no longer be crash-proof in that case.\n"
+		"Please accept our apologies for the inconvenience.\n");
+	fprintf(stderr,
+		"\nAborting program\n");
+	exit(EX_ERROR);
+    }
+
+    if (NULL == realpath(directory, norm_dir)) {
+	    print_error(__FILE__, __LINE__,
+		    "error: cannot normalize path \"%s\": %s",
+		    directory, strerror(errno));
+	    exit(EX_ERROR);
+    }
+
+    if (NULL == realpath(bogohome, norm_home)) {
+	    print_error(__FILE__, __LINE__,
+		    "error: cannot normalize path \"%s\": %s",
+		    bogohome, strerror(errno));
+	    exit(EX_ERROR);
+    }
+
+    if (0 != strcmp(norm_dir, norm_home))
+    {
+	fprintf(stderr,
+		"ERROR: only one database _environment_ (directory) can be used at a time.\n"
+		"You CAN use multiple wordlists that are in the same directory.\n\n");
+	fprintf(stderr,
+		"If you need multiple wordlists in different directories,\n"
+		"you cannot use the transactional interface, but you must configure\n"
+		"the non-transactional interface, i. e. ./configure --disable-transactions\n"
+		"then type make clean, after that rebuild and install as usual.\n"
+		"Note that the data base will no longer be crash-proof in that case.\n"
+		"Please accept our apologies for the inconvenience.\n");
+	fprintf(stderr,
+		"\nAborting program\n");
+	exit(EX_ERROR);
+    }
+
+    assert(directory);
+
+    dsm_init();
+
+    env = dsm->dsm_init(directory);
+
+    return env;
 }
 
 /* Returns is_swapped flag */
@@ -366,7 +452,6 @@ void *db_open(void *vhandle,
      */
 
     assert(env);
-    assert(env->dbe);
 
     check_db_version();
 
@@ -763,7 +848,6 @@ ex_t db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
     dbv_t dbv_key, dbv_data;
 
     assert(handle->magic == MAGIC_DBH);
-    assert(handle->dbenv->dbe);
     assert((fTransaction == false) == (handle->txn == NULL));
 
     memset(&key, 0, sizeof(key));

@@ -29,7 +29,6 @@ David Relson	<relson@osagesoftware.com> 2005
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
-#include "bogohome.h"
 #include "db_lock.h"
 #include "mxcat.h"
 #include "rand_sleep.h"
@@ -64,6 +63,7 @@ static int	   dbx_lock		(void *handle, int open_mode);
 static ex_t	   dbx_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   dbx_sync		(DB_ENV *env, int ret);
 static void	   dbx_log_flush	(DB_ENV *env);
+static dbe_t 	  *dbx_init		(const char *dir);
 
 /* OO function lists */
 
@@ -72,6 +72,8 @@ dsm_t dsm_transactional = {
     &dbx_begin,
     &dbx_abort,
     &dbx_commit,
+    &dbx_init,
+
     /* private -- used in datastore_db_*.c */
     &dbx_get_env_dbe,
     &dbx_database_name,
@@ -90,7 +92,7 @@ static int plock(const char *path, short locktype, int mode);
 static int db_try_glock(const char *directory, short locktype, int lockcmd);
 static int bf_dbenv_create(DB_ENV **env);
 static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
-static dbe_t *dbe_xinit(const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
+static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
 static void dbe_cleanup_lite(dbe_t *env);
 static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
 static ex_t dbe_common_close(DB_ENV *env, const char *directory);
@@ -239,13 +241,11 @@ static int dbx_begin(void *vhandle)
     int ret;
 
     dbh_t *dbh = vhandle;
-    dbe_t *env;
+    dbe_t *env = dbh->dbenv;
 
     assert(dbh);
     assert(dbh->magic == MAGIC_DBH);
     assert(dbh->txn == 0);
-
-    env = dbh->dbenv;
 
     assert(env);
     assert(env->dbe);
@@ -477,12 +477,55 @@ static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs)
 	fprintf(dbgout, "DB_ENV->set_lg_max(%lu)\n", (unsigned long)logsize);
 }
 
+static dbe_t *dbx_init(const char *directory)
+{
+    u_int32_t flags = 0;
+    dbe_t *env = xcalloc(1, sizeof(dbe_t));
+
+    env->magic = MAGIC_DBE;	    /* poor man's type checking */
+    env->directory = xstrdup(directory);
+
+    /* open lock file, needed to detect previous crashes */
+    if (init_dbl(directory))
+	exit(EX_ERROR);
+
+    /* run recovery if needed */
+    if (needs_recovery())
+	dbe_recover(directory, false, false); /* DO NOT set force flag here, may cause
+						 multiple recovery! */
+
+    /* set (or demote to) shared/read lock for regular operation */
+    db_try_glock(directory, F_RDLCK, F_SETLKW);
+
+    /* set our cell lock in the crash detector */
+    if (set_lock()) {
+	exit(EX_ERROR);
+    }
+
+    /* initialize */
+
+#ifdef	FUTURE_DB_OPTIONS
+#ifdef	DB_LOG_AUTOREMOVE
+    if (db_log_autoremove)
+	flags ^= DB_LOG_AUTOREMOVE;
+#endif
+
+#ifdef	DB_BF_TXN_NOT_DURABLE
+    if (db_txn_durable)
+	flags ^= DB_BF_TXN_NOT_DURABLE;
+#endif
+#endif
+
+    dbe_xinit(env, directory, db_max_locks, db_max_objects, flags);
+
+    return env;
+}
+
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
-static dbe_t *dbe_xinit(const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags)
+static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags)
 {
     int ret;
-    dbe_t *env = xcalloc(1, sizeof(dbe_t));
 
     assert(directory);
 
@@ -595,85 +638,9 @@ static int dbx_sync(DB_ENV *env, int ret)
     return ret;
 }
 
-/* initialize data base, configure some lock table sizes
- * (which can be overridden in the DB_CONFIG file)
- * and lock the file to tell other parts we're initialized and
- * do not want recovery to stomp over us
- */
-void *dbe_init(const char *directory)
-{
-    u_int32_t flags = 0;
-    char norm_dir[PATH_MAX+1]; /* check normalized directory names */
-    char norm_home[PATH_MAX+1];/* see man realpath(3) for details */
-
-    if (NULL == realpath(directory, norm_dir)) {
-	    print_error(__FILE__, __LINE__,
-		    "error: cannot normalize path \"%s\": %s",
-		    directory, strerror(errno));
-	    exit(EX_ERROR);
-    }
-
-    if (NULL == realpath(bogohome, norm_home)) {
-	    print_error(__FILE__, __LINE__,
-		    "error: cannot normalize path \"%s\": %s",
-		    bogohome, strerror(errno));
-	    exit(EX_ERROR);
-    }
-
-    if (0 != strcmp(norm_dir, norm_home))
-    {
-	fprintf(stderr,
-		"ERROR: only one database _environment_ (directory) can be used at a time.\n"
-		"You CAN use multiple wordlists that are in the same directory.\n\n");
-	fprintf(stderr,
-		"If you need multiple wordlists in different directories,\n"
-		"you cannot use the transactional interface, but you must configure\n"
-		"the non-transactional interface, i. e. ./configure --disable-transactions\n"
-		"then type make clean, after that rebuild and install as usual.\n"
-		"Note that the data base will no longer be crash-proof in that case.\n"
-		"Please accept our apologies for the inconvenience.\n");
-	fprintf(stderr,
-		"\nAborting program\n");
-	exit(EX_ERROR);
-    }
-
-    /* open lock file, needed to detect previous crashes */
-    if (init_dbl(directory))
-	exit(EX_ERROR);
-
-    /* run recovery if needed */
-    if (needs_recovery())
-	dbe_recover(directory, false, false); /* DO NOT set force flag here, may cause
-						 multiple recovery! */
-
-    /* set (or demote to) shared/read lock for regular operation */
-    db_try_glock(directory, F_RDLCK, F_SETLKW);
-
-    /* set our cell lock in the crash detector */
-    if (set_lock()) {
-	exit(EX_ERROR);
-    }
-
-    /* initialize */
-
-#ifdef	FUTURE_DB_OPTIONS
-#ifdef	DB_LOG_AUTOREMOVE
-    if (db_log_autoremove)
-	flags ^= DB_LOG_AUTOREMOVE;
-#endif
-
-#ifdef	DB_BF_TXN_NOT_DURABLE
-    if (db_txn_durable)
-	flags ^= DB_BF_TXN_NOT_DURABLE;
-#endif
-#endif
-
-    return dbe_xinit(directory, db_max_locks, db_max_objects, flags);
-}
-
 ex_t dbe_recover(const char *directory, bool catastrophic, bool force)
 {
-    dbe_t *env;
+    dbe_t *env = xcalloc(1, sizeof(dbe_t));
 
     /* set exclusive/write lock for recovery */
     while((force || needs_recovery())
@@ -689,8 +656,9 @@ retry:
     if (DEBUG_DATABASE(0))
         fprintf(dbgout, "running %s data base recovery\n",
 	    catastrophic ? "catastrophic" : "regular");
-    env = dbe_xinit(directory, db_max_locks, db_max_objects,
-	    catastrophic ? DB_RECOVER_FATAL : DB_RECOVER);
+    env = dbe_xinit(env, directory, 
+		    db_max_locks, db_max_objects,
+		    catastrophic ? DB_RECOVER_FATAL : DB_RECOVER);
     if (env == NULL) {
 	if(!catastrophic) {
 	    catastrophic = true;
