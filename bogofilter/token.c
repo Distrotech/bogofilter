@@ -48,20 +48,7 @@ token_t get_token(void)
     }
 
     while ((class = yylex()) > 0) {
-	/* when we have a boundary line, eliminate the distinction between
-	 * start and end boundary, chopping of the distinct trailing -- of
-	 * the end boundary. */
-
-#if	0
-	if (class == FROM) {
-	    const char *prefix="From ";
-	    size_t len = strlen(prefix);
-	    save_class = FROM;
-	    strlcpy( save_text, yytext+len, sizeof(save_text));
-	    break;
-	}
-#endif
-
+	/* don't return boundary tokens to the user */
 	if (class == BOUNDARY && yyleng >= 4)
 	    continue;
 
@@ -81,16 +68,6 @@ token_t get_token(void)
 	{			/* Get name; call got_charset(); return name. */
 	    get_token();
 	    got_charset(yytext);
-	}
-
-	switch (class)
-	{
-	case IPADDR:
-	    break;
-	case FROM:
-	    break;
-	case BOUNDARY:
-	    break;
 	}
 
 	/* eat all long words */
