@@ -2,7 +2,7 @@
 AC_INIT
 AC_PREREQ(2.55)
 AC_CONFIG_SRCDIR([bogofilter.c])
-AM_INIT_AUTOMAKE(bogofilter, 0.8.90.cvs)
+AM_INIT_AUTOMAKE(bogofilter, 0.9.0.1)
 AM_CONFIG_HEADER(config.h:config.in)
 AC_PROG_CC
 AC_PROG_RANLIB
@@ -23,11 +23,12 @@ then
       -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings \
       -Waggregate-return -Wmissing-declarations \
       -Wmissing-format-attribute -Wnested-externs \
-      -ggdb -fno-common -Wchar-subscripts -Wcomment -pedantic \
+      -ggdb -fno-common -Wchar-subscripts -Wcomment \
       -Wformat=2 -Wimplicit -Wsequence-point -Wreturn-type \
-      -Wfloat-equal -Wpointer-arith -Wconversion  \
+      -Wfloat-equal -Wpointer-arith \
       -Wmissing-noreturn -Wmissing-format-attribute -Wredundant-decls
-   do
+      # -Wconversion -pedantic
+  do
        if $CC $i $ac_cv_prog_gcc_flags -c configure-dummy.c >/dev/null 2>&1 
        then ac_cv_prog_gcc_flags="$ac_cv_prog_gcc_flags $i"
        else echo "ignoring $i"
@@ -169,7 +170,8 @@ AM_CONDITIONAL(ENABLE_ROBINSON_FISHER, test x$USE_FISHER != xNO)
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([syslog.h sys/param.h fcntl.h limits.h stdlib.h string.h sys/socket.h unistd.h sys/file.h values.h float.h])
+AC_CHECK_HEADERS([syslog.h sys/param.h fcntl.h stdlib.h string.h sys/socket.h unistd.h sys/file.h])
+AC_CHECK_HEADERS([limits.h float.h],,[AC_CHECK_HEADERS(values.h)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
