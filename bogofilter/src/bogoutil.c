@@ -82,8 +82,11 @@ static int dump_file(char *ds_file)
     set_bogohome(ds_file);
     rc = ds_oper(ds_file, DB_READ, ds_dump_hook, NULL);
 
-    if (verbose)
-	fprintf(dbgout, "%d tokens dumped\n", token_count);
+    if (rc)
+	fprintf(stderr, "error dumping tokens!\n");
+    else
+	if (verbose)
+	    fprintf(dbgout, "%d tokens dumped\n", token_count);
 
     return rc;
 }
