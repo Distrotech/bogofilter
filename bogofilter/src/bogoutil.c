@@ -62,15 +62,6 @@ static int process_arg(int option, const char *name, const char *arg);
 double msg_spamicity(void) { return .0; }
 rc_t msg_status(void) { return RC_OK; }
 
-static bool get_bool(const char *name, const char *arg)
-{
-    bool b = str_to_bool(arg);
-    if (DEBUG_CONFIG(2))
-	fprintf(dbgout, "%s -> %s\n", name,
-		b ? "Yes" : "No");
-    return b;
-}
-
 static int ds_dump_hook(word_t *key, dsv_t *data,
 			/*@unused@*/ void *userdata)
 /* returns 0 if ok, 1 if not ok */
@@ -510,25 +501,7 @@ static const char *help_text[] = {
     "  -s l,h                      - exclude tokens with lengths between 'l' and 'h'\n"
     "                                (low and high).\n",
     "  -y, --timestamp-date=date   - set default date (format YYYYMMDD).\n",
-    "      --db-verify=file        - verify data file.\n",
-    "\n",
-
-    "environment maintenance:\n",
     "  -k, --db-cachesize=size     - set Berkeley DB cache size (MB).\n",
-    "      --db-prune=dir          - remove inactive log files in dir.\n",
-    "      --db-recover=dir        - run recovery on database in dir.\n",
-    "      --db-recover-harder=dir - run catastrophic recovery on database.\n",
-    "      --db-remove-environment - remove environment.\n",
-
-#ifdef	HAVE_DECL_DB_CREATE
-    "      --db-lk-max-locks       - set max lock count.\n",
-    "      --db-lk-max-objects     - set max object count.\n",
-#ifdef	FUTURE_DB_OPTIONS
-    "      --db-log-autoremove     - set autoremoving of logs.\n",
-    "      --db-txn-durable        - set durable mode.\n",
-#endif
-#endif
-
     "\n",
     NULL
     };
@@ -536,9 +509,14 @@ static const char *help_text[] = {
 static void help(void)
 {
     uint i;
+    const char **messages;
     usage();
-    for (i=0; help_text[i] != NULL; i++)
-	(void)fprintf(stderr, "%s", help_text[i]);
+    messages = help_text;
+    for (i=0; messages[i] != NULL; i++)
+	(void)fprintf(stderr, "%s", messages[i]);
+    messages = dsm_help_bogoutil();
+    for (i=0; messages[i] != NULL; i++)
+	(void)fprintf(stderr, "%s", messages[i]);
     (void)fprintf(stderr,
 		  "%s (version %s) is part of the bogofilter package.\n",
                   progname, version
@@ -548,8 +526,6 @@ static void help(void)
 static const char *ds_file = NULL;
 static bool  prob = false;
 
-typedef enum { M_NONE, M_DUMP, M_LOAD, M_WORD, M_MAINTAIN, M_ROBX, M_HIST,
-    M_RECOVER, M_CRECOVER, M_PURGELOGS, M_VERIFY, M_REMOVEENV } cmd_t;
 static cmd_t flag = M_NONE;
 
 #define	OPTIONS	":a:c:Cd:DhH:I:k:l:m:np:r:R:s:u:vVw:x:X:y:"
@@ -750,39 +726,11 @@ static int process_arg(int option, const char *name, const char *val)
 	break;
 
     case O_DB_TRANSACTION:
-	fTransaction = get_bool(name, val);
-	break;
-
     case O_DB_VERIFY:
-	flag = M_VERIFY;
-	count += 1;
-	ds_file = val;
-	break;
-
     case O_DB_RECOVER:
-	flag = M_RECOVER;
-	count += 1;
-	ds_file = val;
-	break;
-
     case O_DB_RECOVER_HARDER:
-	flag = M_CRECOVER;
-	count += 1;
-	ds_file = val;
-	break;
-
     case O_DB_PRUNE:
-	flag = M_PURGELOGS;
-	count += 1;
-	ds_file = val;
-	break;
-
     case O_DB_REMOVE_ENVIRONMENT:
-	flag = M_REMOVEENV;
-	ds_file = val;
-	count += 1;
-	break;
-
 #ifdef	HAVE_DECL_DB_CREATE
     case O_DB_MAX_OBJECTS:	
 	db_max_objects = atoi(val);
@@ -792,13 +740,11 @@ static int process_arg(int option, const char *name, const char *val)
 	break;
 #ifdef	FUTURE_DB_OPTIONS
     case O_DB_LOG_AUTOREMOVE:
-	db_log_autoremove = get_bool(name, val);
-	break;
     case O_DB_TXN_DURABLE:
-	db_txn_durable    = get_bool(name, val);
+#endif
+#endif
+	dsm_options_bogoutil(option, &flag, &count, &ds_file, name, val);
 	break;
-#endif
-#endif
 
     /* ignore options that don't apply to bogoutil */
     case O_BLOCK_ON_SUBNETS:

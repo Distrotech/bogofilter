@@ -29,6 +29,7 @@ David Relson	<relson@osagesoftware.com> 2003 - 2005
 
 #include "db_lock.h"
 #include "error.h"
+#include "longoptions.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
 

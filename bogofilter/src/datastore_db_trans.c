@@ -29,7 +29,9 @@ David Relson	<relson@osagesoftware.com> 2005
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
+#include "bool.h"
 #include "db_lock.h"
+#include "longoptions.h"
 #include "mxcat.h"
 #include "rand_sleep.h"
 #include "xmalloc.h"
@@ -99,6 +101,17 @@ static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
 static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
 static ex_t dbe_common_close(DB_ENV *dbe, const char *directory);
+
+/* support functions */
+
+static bool get_bool(const char *name, const char *arg)
+{
+    bool b = str_to_bool(arg);
+    if (DEBUG_CONFIG(2))
+	fprintf(dbgout, "%s -> %s\n", name,
+		b ? "Yes" : "No");
+    return b;
+}
 
 /* non-OO static functions */
 
@@ -774,4 +787,115 @@ void dbx_log_flush(DB_ENV *dbe)
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", (void *)dbe,
 		db_strerror(ret));
+}
+
+const char **dsm_help_bogofilter(void)
+{
+    static const char *help_text[] = {
+	NULL
+    };
+    return &help_text[0]; 
+}
+
+const char **dsm_help_bogoutil(void)
+{
+    static const char *help_text[] = {
+	"environment maintenance:\n",
+	"      --db-verify=file        - verify data file.\n",
+	"      --db-prune=dir          - remove inactive log files in dir.\n",
+	"      --db-recover=dir        - run recovery on database in dir.\n",
+	"      --db-recover-harder=dir - run catastrophic recovery on database.\n",
+	"      --db-remove-environment - remove environment.\n",
+
+#ifdef	HAVE_DECL_DB_CREATE
+	"      --db-lk-max-locks       - set max lock count.\n",
+	"      --db-lk-max-objects     - set max object count.\n",
+#ifdef	FUTURE_DB_OPTIONS
+	"      --db-log-autoremove     - set autoremoving of logs.\n",
+	"      --db-txn-durable        - set durable mode.\n",
+#endif
+#endif
+	"\n",
+	NULL
+    };
+    return &help_text[0]; 
+}
+
+void dsm_options_bogofilter(int option, const char *name, const char *val)
+{
+    switch (option) {
+    case O_DB_TRANSACTION:		fTransaction = get_bool(name, val);			break;
+
+	/* ignore options that don't apply to bogofilter */
+    case O_DB_PRUNE:
+    case O_DB_RECOVER:
+    case O_DB_RECOVER_HARDER:
+    case O_DB_REMOVE_ENVIRONMENT:
+    case O_DB_VERIFY:			break;
+
+#ifdef	HAVE_DECL_DB_CREATE
+    case O_DB_MAX_OBJECTS:		db_max_objects = atoi(val);				break;
+    case O_DB_MAX_LOCKS:		db_max_locks   = atoi(val);				break;
+#ifdef	FUTURE_DB_OPTIONS
+    case O_DB_LOG_AUTOREMOVE:		db_log_autoremove  = get_bool(name, val);		break;
+    case O_DB_TXN_DURABLE:		db_txn_durable = get_bool(name, val);			break;
+#endif
+#endif
+    }
+}
+
+void dsm_options_bogoutil(int option, cmd_t *flag, int *count, const char **ds_file, const char *name, const char *val)
+{
+    switch (option) {
+    case O_DB_TRANSACTION:
+	fTransaction = get_bool(name, val);
+	break;
+
+    case O_DB_VERIFY:
+	*flag = M_VERIFY;
+	*count += 1;
+	*ds_file = val;
+	break;
+
+    case O_DB_RECOVER:
+	*flag = M_RECOVER;
+	*count += 1;
+	*ds_file = val;
+	break;
+
+    case O_DB_RECOVER_HARDER:
+	*flag = M_CRECOVER;
+	*count += 1;
+	*ds_file = val;
+	break;
+
+    case O_DB_PRUNE:
+	*flag = M_PURGELOGS;
+	*count += 1;
+	*ds_file = val;
+	break;
+
+    case O_DB_REMOVE_ENVIRONMENT:
+	*flag = M_REMOVEENV;
+	*ds_file = val;
+	*count += 1;
+	break;
+
+#ifdef	HAVE_DECL_DB_CREATE
+    case O_DB_MAX_OBJECTS:	
+	db_max_objects = atoi(val);
+	break;
+    case O_DB_MAX_LOCKS:
+	db_max_locks   = atoi(val);
+	break;
+#ifdef	FUTURE_DB_OPTIONS
+    case O_DB_LOG_AUTOREMOVE:
+	db_log_autoremove = get_bool(name, val);
+	break;
+    case O_DB_TXN_DURABLE:
+	db_txn_durable    = get_bool(name, val);
+	break;
+#endif
+#endif
+}
 }
