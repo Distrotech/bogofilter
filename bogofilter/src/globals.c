@@ -47,7 +47,7 @@ const char	*stats_prefix;
 bool	header_line_markup = true;	/* -H */
 
 /* for  transactions */
-bool fTransaction = false;		/* true */
+bool fTransaction = false;
 
 /* for  bogotune */
 bool fBogotune = false;
