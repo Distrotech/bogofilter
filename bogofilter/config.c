@@ -96,7 +96,7 @@ enum algorithm_e {
 
 static enum algorithm_e algorithm = AL_DEFAULT;
 
-double	spam_cutoff;
+double	spam_cutoff = 0.0;	/* set during method initialization */
 double	min_dev = 0.0f;
 
 double	thresh_stats = 0.0f;
@@ -135,6 +135,9 @@ static const parm_desc sys_parms[] =
     { "robx",		  CP_DOUBLE,	{ (void *) NULL } },	/* Robinson */
     { "robs",		  CP_DOUBLE,	{ (void *) NULL } },	/* Robinson */
 #endif
+#ifdef ENABLE_ROBINSON_FISHER
+    { "ham_cutoff",	  CP_FUNCTION,	{ (void *) NULL } },	/* Robinson-Fisher */
+#endif
     { NULL,		  CP_NONE,	{ (void *) NULL } },
 };
 
@@ -142,7 +145,7 @@ static const parm_desc *usr_parms = NULL;
 
 static bool select_algorithm(const unsigned char *s)
 {
-    enum algorithm_e al = tolower(*s);
+    enum algorithm_e al = s ? (unsigned) tolower(*s) : algorithm;
     bool ok = true;
     switch (al)
     {
@@ -203,7 +206,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		int sign = (*val == '-') ? -1 : 1;
 		if (*val == '-' || *val == '+')
 		    val += 1;
-		*arg->addr.i = atoi(val) * sign;
+		*arg->addr.i = atoi((const char *)val) * sign;
 		if (DEBUG_CONFIG(0))
 		    fprintf( stderr, "%s -> %d\n", arg->name, *arg->addr.i );
 		break;
@@ -213,7 +216,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		double sign = (*val == '-') ? -1.0f : 1.0f;
 		if (*val == '-' || *val == '+')
 		    val += 1;
-		*arg->addr.d = atof(val) * sign;
+		*arg->addr.d = atof((const char *)val) * sign;
 		if (DEBUG_CONFIG(0))
 		    fprintf( stderr, "%s -> %f\n", arg->name, *arg->addr.d );
 		break;
@@ -267,7 +270,7 @@ static bool process_config_line( const unsigned char *line, const parm_desc *par
     {
 	if (DEBUG_CONFIG(1))
 	    fprintf( stderr, "Testing:  %s\n", arg->name);
-	if (strncmp(arg->name, line, len) == 0)
+	if (strncmp(arg->name, (const char *)line, len) == 0)
 	{
 	    bool ok = process_config_parameter(arg, val);
 	    if (DEBUG_CONFIG(1) && ok )
@@ -309,10 +312,12 @@ static void read_config_file(const char *fname, bool tilde_expand)
 	size_t len;
 	unsigned char buff[MAXBUFFLEN];
 
+	memset(buff, '\0', sizeof(buff));		/* for debugging */
+
 	lineno += 1;
 	if (fgets((char *)buff, sizeof(buff), fp) == NULL)
 	    break;
-	len = strlen(buff);
+	len = strlen((char *)buff);
 	if ( buff[0] == '#' || buff[0] == ';' || buff[0] == '\n' )
 	    continue;
 	while (iscntrl(buff[len-1]))
@@ -387,6 +392,7 @@ static void help(void)
     (void)printf( "\t-e\t- in -p mode, exit with code 0 when the mail is not spam.\n");
     (void)printf( "\t-s\t- register message as spam.\n" );
     (void)printf( "\t-n\t- register message as non-spam.\n" );
+    (void)printf( "\t-o cutoff\t- set user defined spamicity cutoff.\n" );
     (void)printf( "\t-u\t- classify message as spam or non-spam and register appropriately.\n" );
     (void)printf( "\t-S\t- move message's words from non-spam list to spam list.\n" );
     (void)printf( "\t-N\t- move message's words from spam list to spam non-list.\n" );
@@ -440,12 +446,14 @@ int process_args(int argc, char **argv)
     int option;
     int exitcode;
 
-    while ((option = getopt(argc, argv, "d:ehlsnSNvVpuc:CgrRx:fqt" G R F)) != EOF)
+    select_algorithm(NULL);	/* select default algorithm */
+
+    while ((option = getopt(argc, argv, "d:eFhlo:snSNvVpuc:CgrRx:fqt" G R F)) != EOF)
     {
 	switch(option)
 	{
 	case 'd':
-	    strncpy(directory, optarg, PATH_LEN);
+	    strlcpy(directory, optarg, PATH_LEN);
 	    break;
 
 	case 'e':
@@ -498,6 +506,7 @@ int process_args(int argc, char **argv)
 #ifdef	GRAHAM_AND_ROBINSON
 	case 'g':
 	    algorithm = AL_GRAHAM;
+	    select_algorithm(NULL);
 	    break;
 #endif
 
@@ -509,6 +518,7 @@ int process_args(int argc, char **argv)
 	/* fall through to force Robinson calculations */
 	case 'r':
 	    algorithm = AL_ROBINSON;
+	    select_algorithm(NULL);
 #endif
 	    break;
 #endif
@@ -516,6 +526,7 @@ int process_args(int argc, char **argv)
 #ifdef ENABLE_ROBINSON_FISHER
 	case 'f':
 	    algorithm = AL_FISHER;
+	    select_algorithm(NULL);
 	    break;
 #endif
 
@@ -540,6 +551,10 @@ int process_args(int argc, char **argv)
 	    suppress_config_file = true;
 	    break;
 
+	case 'o':
+	    spam_cutoff = atof( optarg );
+	    break;
+
 	case 't':
 	    terse = true;
 	    break;
@@ -559,10 +574,6 @@ int process_args(int argc, char **argv)
 /* exported */
 void process_config_files(void)
 {
-    char buff[2];
-    sprintf(buff, "%c", algorithm);
-    select_algorithm(buff);
-
     if (! suppress_config_file)
     {
 	read_config_file(system_config_file, false);
