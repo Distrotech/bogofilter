@@ -86,7 +86,7 @@ struct robhook_data {
 static int robx_hook(word_t *key, dsv_t *data, 
 		     void *userdata)
 {
-    struct robhook_data *rd = userdata;
+    struct robhook_data *rh = userdata;
 
     uint32_t goodness;
     uint32_t spamness;
@@ -114,16 +114,16 @@ static int robx_hook(word_t *key, dsv_t *data,
 /*
     if (goodness == 0) {
 */
-    prob = spamness / (goodness * rd->scalefactor + spamness);
+    prob = spamness / (goodness * rh->scalefactor + spamness);
     if (goodness + spamness >= 10) {
-	(*rd->sum) += prob;
-	(*rd->count) += 1;
+	(*rh->sum) += prob;
+	(*rh->count) += 1;
     }
     /* print if -vv and token in both word lists, or -vvv */
     if ((verbose > 1 && goodness && spamness) || verbose > 2) {
 	printf("cnt: %4lu,  sum: %11.6f,  ratio: %9.6f,"
 	       "  sp: %3lu,  gd: %3lu,  p: %9.6f,  t: ", 
-	       (unsigned long)*rd->count, *rd->sum, *rd->sum / *rd->count,
+	       (unsigned long)*rh->count, *rh->sum, *rh->sum / *rh->count,
 	       (unsigned long)spamness, (unsigned long)goodness, prob);
 	word_puts(x, 0, stdout);
 	fputc('\n', stdout);
