@@ -39,6 +39,7 @@ void mime_init(mime_t *parent);
 void mime_push(mime_t *parent);
 void mime_pop(void);
 void mime_free(mime_t *);
+bool get_boundary_props(char *boundary, int boundary_len, boundary_t *b);
 */
 
 void mime_reset(void);

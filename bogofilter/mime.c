@@ -85,6 +85,13 @@ dispositions[] =
   { MIME_ATTACHMENT, "attachment",} ,
 };
 
+/* boundary properties */
+typedef struct {
+  bool is_valid;
+  bool is_final;
+  int depth;
+} boundary_t;
+
 /* Function Prototypes */
 
 static const char *skipws (const char *t, const char *e);
@@ -224,44 +231,55 @@ mime_add_child (mime_t * parent)
   mime_push (parent);
 }
 
+static
+bool get_boundary_props(char *boundary, int boundary_len, boundary_t *b)
+{
+  int i;
+  
+  b->is_valid = false;
+
+  while (*(boundary + boundary_len - 1) == '\r' ||
+         *(boundary + boundary_len - 1) == '\n')
+    boundary_len--;
+
+  if (boundary_len > 2 && *(boundary) == '-' && *(boundary + 1) == '-'){
+    /* skip initial -- */
+    boundary += 2;
+    boundary_len -= 2;
+      
+    /* skip and note ending --, if any */
+    if (*(boundary + boundary_len - 1) == '-' && *(boundary + boundary_len - 2) == '-'){
+      b->is_final = true;
+      boundary_len -= 2;
+    }
+    else {
+      b->is_final = false;
+    }
+  
+    for (i = stackp; i > -1; i--){
+	   
+      if (is_mime_container (&msg_stack[i]) &&
+          msg_stack[i].boundary &&
+          (memcmp (msg_stack[i].boundary, boundary, boundary_len) == 0)){
+        b->depth = i;
+        b->is_valid = true;
+        break;
+      }
+    }
+  }
+  
+  return b->is_valid;
+}
+
 void
 got_mime_boundary (const char *boundary, int boundary_len)
 {
   mime_t *parent;
-  int depth = -1;
-  int i;
-  bool is_end_boundary = false;
-
-  if (boundary_len < 3)
-    return;
-
-  /* skip initial -- */
-  boundary += 2;
-  boundary_len -= 2;
-
-  /* skip and note ending --, if any */
-  if ((*(boundary + boundary_len - 1) == '-') &&
-	(*(boundary + boundary_len - 2) == '-')){
-	is_end_boundary = true;
-	boundary_len -= 2;
-  }
-
-  /* find parent that declared this boundary */
-  for (i = stackp; i > -1; i--)
-  {
-    if (is_mime_container (&msg_stack[i]) &&
-	msg_stack[i].boundary &&
-	(memcmp (msg_stack[i].boundary, boundary, boundary_len) == 0))
-    {
-      depth = i;
-      break;
-    }
-  }
-
-  /* boundary is a fake or not declared */
-  if (depth == -1)
-    return;
-
+  boundary_t b;
+ 
+  if (get_boundary_props(boundary, boundary_len, &b) == false)
+	 return; 
+  
   if (DEBUG_MIME (1))
     fprintf (stdout, "*** got_mime_boundary. stackp: %d. boundary: %s\n",
 	     stackp, boundary);
@@ -269,11 +287,11 @@ got_mime_boundary (const char *boundary, int boundary_len)
   if (stackp > 0)
   {
     /* This handles explicit and implicit boundaries */
-    while (stackp > 0 && stackp > depth)
+    while (stackp > 0 && stackp > b.depth)
       mime_pop ();
 
     /* explicit end boundary */
-    if (is_end_boundary)
+    if (b.is_final)
       return;
   }
 
@@ -479,14 +497,25 @@ size_t
 mime_decode (char *buff, size_t size)
 {
   size_t count = size;
-
+  boundary_t b;
+   
   if (DEBUG_MIME (3))
     fprintf (stdout, "*** mime_decode %d \"%-.*s\"\n", size, (int) size - 1,
 	     buff);
 
   if (msg_state->mime_header)	/* do nothing if in header */
     return count;
-
+  
+  /* Do not decode "real" boundary lines */
+  switch (msg_state->mime_encoding)
+  {
+  case MIME_QP:
+  case MIME_BASE64:
+  case MIME_UUENCODE:
+      if (get_boundary_props(buff, size, &b) == true)
+            return count;
+  }
+  
   switch (msg_state->mime_encoding)
   {
   case MIME_7BIT:
