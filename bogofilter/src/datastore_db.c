@@ -24,15 +24,13 @@ Matthias Andree <matthias.andree@gmx.de> 2003
  * - make sure that db_open can be part of a transaction
  * - implement proper retry when our transaction is aborted after a
  *   deadlock
- * - fix assertion failures in t.maint and t.nonascii_replace
- *   (DB operation called outside a transaction, probably simple code
- *   ordering issue; they fail in db_delete)
  * - track down and fix a DB_RUNRECOVERY fault with subsequent lockup
  *   in t.bulkmode (no ideas yet what's wrong here)
  * - document code changes
  * - conduct massive tests
  * - check if we really need the log files for "catastrophic recovery"
  *   or if we can remove them (see db_archive documentation)
+ *   as the log files are *HUGE* even compared with the data base
  */
 
 #define DONT_TYPEDEF_SSIZE_T 1
@@ -74,7 +72,6 @@ typedef struct {
     int		fd;
     dbmode_t	open_mode;
     DB		*dbp;
-    bool	locked;
     bool	is_swapped;
     DB_TXN	*txn;
 } dbh_t;
@@ -104,9 +101,13 @@ static int DB_OPEN(DB *db, const char *file,
 {
     int ret;
 
+#if DB_AT_LEAST(4,1)
+    flags |= DB_AUTO_COMMIT;
+#endif
+
     ret = db->open(db,
 #if DB_AT_LEAST(4,1)
-	    NULL,
+	    0,
 #endif
 	    file, database, type, flags, mode);
 
@@ -130,7 +131,6 @@ static dbh_t *dbh_init(const char *path, const char *name)
     handle->name = xmalloc(len);
     build_path(handle->name, len, path, name);
 
-    handle->locked     = false;
     handle->is_swapped = false;
 
     handle->txn = NULL;
@@ -290,16 +290,8 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 
 	handle->dbp = dbp;
 
-	/* set cache size, but only unless we're using an environment */
-	if (dbe == NULL && db_cachesize != 0 &&
-	    (ret = dbp->set_cachesize(dbp, db_cachesize/1024, (db_cachesize % 1024) * 1024*1024, 1)) != 0) {
-	    print_error(__FILE__, __LINE__, "(db) DB(%s)->set_cachesize(%u,%u,%u), err: %d, %s",
-			handle->name, db_cachesize/1024u, (db_cachesize % 1024u) * 1024u*1024u, 1u, ret, db_strerror(ret));
-	    goto open_err;
-	}
-
 	/* open data base */
-	if (dbe && (t = strrchr(handle->name, DIRSEP_C)))
+	if ((t = strrchr(handle->name, DIRSEP_C)))
 	    t++;
 	else
 	    t = handle->name;
@@ -365,9 +357,6 @@ retry_db_open:
 
     if (handle) {
 	dsh_t *dsh;
-	handle->locked = true;
-	if (handle->fd < 0)
-	    handle->locked=false;
 	dsh = dsh_init(handle, handle->is_swapped);
 	return (void *)dsh;
     }
@@ -386,21 +375,22 @@ retry_db_open:
 
 int db_txn_begin(dsh_t *dsh)
 {
-    DB_TXN *txn;
+    DB_TXN *t;
     int ret;
 
     assert(dbe);
-    assert(((dbh_t *)dsh->dbh)->txn == NULL);
-
-    ret = dbe->txn_begin(dbe, NULL, &txn, 0);
-    if (ret) {
-	print_error(__FILE__, __LINE__, "(db) txn_begin, err: %s",
-    		    db_strerror(ret));
+    if (((dbh_t *)dsh->dbh)->txn) return 0;
+    else {
+	ret = dbe->txn_begin(dbe, NULL, &t, 0);
+	if (ret) {
+	    print_error(__FILE__, __LINE__, "(db) txn_begin, err: %s",
+		    db_strerror(ret));
+	}
     }
-    ((dbh_t *)dsh->dbh)->txn = txn;
+    ((dbh_t *)dsh->dbh)->txn = t;
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "db_txn_begin, id: %lx\n",
-		(unsigned long)txn->id(txn));
+		(unsigned long)t->id(t));
 
     return ret;
 }
@@ -409,13 +399,14 @@ int db_txn_abort(dsh_t *dsh)
 {
     int ret;
     assert(dbe);
-    DB_TXN *txn = ((dbh_t *)dsh->dbh)->txn;
-    assert(txn);
+    assert(dsh->dbh);
+    DB_TXN *t = ((dbh_t *)dsh->dbh)->txn;
+    assert(t);
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "db_txn_abort, id: %lx\n",
-		(unsigned long)txn->id(txn));
-    ret = txn->abort(txn);
+		(unsigned long)t->id(t));
+    ret = t->abort(t);
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) txn_abort, err: %s",
 		db_strerror(ret));
@@ -426,14 +417,14 @@ int db_txn_abort(dsh_t *dsh)
 int db_txn_commit(dsh_t *dsh)
 {
     int ret;
-    DB_TXN *txn = ((dbh_t *)dsh->dbh)->txn;
+    DB_TXN *t = ((dbh_t *)dsh->dbh)->txn;
     assert(dbe);
-    assert(txn);
+    assert(t);
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "db_txn_commit, id: %lx\n",
-		(unsigned long)txn->id(txn));
-    ret = txn->commit(txn, 0);
+		(unsigned long)t->id(t));
+    ret = t->commit(t, 0);
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) txn_commit, err: %s",
 		db_strerror(ret));
@@ -452,7 +443,7 @@ int db_txn_commit(dsh_t *dsh)
     }
 }
 
-int db_checkpoint(void)
+int db_checkpoint(dsh_t *dsh)
 {
     int ret;
     assert(dbe);
@@ -467,6 +458,11 @@ int db_checkpoint(void)
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) checkpoint, err: %s",
 		db_strerror(ret));
+    switch (ret) {
+	case DB_RUNRECOVERY:
+	    db_txn_abort(dsh);
+	    abort();
+    }
     return ret;
 }
 
@@ -517,7 +513,8 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_data.ulen = val->leng;		/* max size */
     db_data.flags = DB_DBT_USERMEM;	/* saves the memcpy */
 
-    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, 0);
+    /* DB_RMW can avoid deadlocks */
+    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, handle->open_mode == DB_READ ? 0 : DB_RMW);
 
     val->leng = db_data.size;		/* read count */
 
@@ -532,7 +529,7 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 	}
 	break;
     default:
-	print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%.*s' ), err: %d, %s",
+	print_error(__FILE__, __LINE__, "(db) db->get( '%.*s' ), err: %d, %s",
 		    CLAMP_INT_MAX(token->leng), (char *) token->data, ret, db_strerror(ret));
 	exit(EX_ERROR);
     }
@@ -549,8 +546,8 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     DBT db_data;
 
     dbh_t *handle = dsh->dbh;
-    assert(handle->txn);
     DB *dbp = handle->dbp;
+    assert(handle->txn);
 
     DBT_init(db_key);
     DBT_init(db_data);
@@ -562,6 +559,9 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     db_data.size = val->leng;		/* write count */
 
     ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
+
+    if (ret == DB_LOCK_DEADLOCK)
+	db_txn_abort(dsh);
 
     if (ret != 0) {
 	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%.*s' ), err: %d, %s",
@@ -580,6 +580,11 @@ void db_close(void *vhandle, bool nosync)
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
     uint32_t f = nosync ? DB_NOSYNC : 0;
+
+    if (handle->txn) {
+	print_error(__FILE__, __LINE__, "(db) db_close called with transaction still open, aborting transaction.");
+	db_txn_abort(vhandle);
+    }
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "db_close (%s) %s\n",
@@ -607,7 +612,14 @@ void db_flush(dsh_t *dsh)
     dbh_t *handle = dsh->dbh;
     DB *dbp = handle->dbp;
 
+#if 0
+    /* old code */
     ret = dbp->sync(dbp, 0);
+#else
+    (void)dbp;
+    /* flushing the log is sufficient for us */
+    ret = dbe->log_flush(dbe, NULL);
+#endif
 #if DB_AT_LEAST(3,2) && DB_AT_MOST(4,0)
     /* ignore dirty pages in buffer pool */
     if (ret == DB_INCOMPLETE)
@@ -616,7 +628,6 @@ void db_flush(dsh_t *dsh)
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));
 }
-
 
 int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 {
@@ -678,7 +689,7 @@ int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 	dbp->err(dbp, ret, "(c_get)");
 	ret = -1;
     }
-    if (dbcp->c_close(dbcp)) {
+    if ((ret = dbcp->c_close(dbcp))) {
 	dbp->err(dbp, ret, "(c_close)");
 	ret = -1;
     }
@@ -694,8 +705,8 @@ const char *db_str_err(int e) {
  * or transactional initialization/shutdown */
 static bool init = false;
 int db_init(void) {
-    if (!bogohome)
-	abort();
+    assert(bogohome);
+    assert(dbe == NULL);
 
     {
 	int ret = db_env_create(&dbe, 0);
@@ -722,6 +733,8 @@ int db_init(void) {
 	    print_error(__FILE__, __LINE__, "DBENV->open, err: %d, %s", ret, db_strerror(ret));
 	    exit(EXIT_FAILURE);
 	}
+
+	dbe->set_errfile(dbe, dbgout ? dbgout : stderr);
     }
     init = true;
     return 0;
