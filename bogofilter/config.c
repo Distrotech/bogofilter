@@ -96,10 +96,14 @@ enum algorithm_e {
 };
 
 /* define default */
-#ifdef ENABLE_ROBINSON_METHOD
+#if defined (ENABLE_ROBINSON_METHOD)
 #define AL_DEFAULT AL_ROBINSON
-#else
+#elif defined (ENABLE_GRAHAM_METHOD)
 #define AL_DEFAULT AL_GRAHAM
+#elif defined (ENABLE_ROBINSON_FISHER)
+#define AL_DEFAULT AL_FISHER
+#else
+#error No algorithms compiled in. See configure --help.
 #endif
 
 double	spam_cutoff = 0.0;			/* set during method initialization */
