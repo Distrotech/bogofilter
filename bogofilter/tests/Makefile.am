@@ -4,9 +4,10 @@ SUBDIRS=. bogoutil
 
 SYSTEM_TESTS=t.systest t.grftest
 
-check_PROGRAMS=dehex spam_header_name dumbhead
+check_PROGRAMS=dehex spam_header_name dumbhead deqp
 dehex_SOURCES=dehex.c
 dumbhead_SOURCES=dumbhead.c
+deqp_SOURCES=deqp.c ../qp.c
 spam_header_name_SOURCES=spam_header_name.c
 
 t.integrity: dehex dumbhead
