@@ -44,7 +44,7 @@ EXTRA_DIST = $(man1_MANS) \
 	     bogoupgrade bogo.R \
 	     doc/integrating-with-qmail contrib/bogofilter-qfe \
 	     contrib/unbase64 contrib/README.unbase64 \
-	     version.sh README.BUGS README.freebsd
+	     version.sh README.BUGS README.freebsd README.solaris
 #
 VERSION_FROM=main.c bogofilter.c bogoutil.c lexer.l
 version.h:	version.sh $(VERSION_FROM)
