@@ -32,6 +32,7 @@ extern	int	Rtable;			/* '-R' */
 extern	bool	terse;			/* '-t' */
 extern	int	bogotest;		/* '-X', env("BOGOTEST") */
 extern	int	verbose;		/* '-v' */
+extern	wl_t	wl_mode;		/* '-W' */
 
 /* config file options */
 extern	int	max_repeats;

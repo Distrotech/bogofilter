@@ -12,6 +12,7 @@ typedef void *dsh_t;
 typedef struct wordlist_s wordlist_t;
 struct wordlist_s
 {
+    /*@null@*/ wordlist_t *next;
     int index;
     /*@owned@*/ char *filename;	/* resource name (for debug/verbose messages) */
     /*@owned@*/ char *filepath;	/* resource path (for debug/verbose messages) */
@@ -23,6 +24,9 @@ struct wordlist_s
     int		override;
     bool	ignore;
 };
+
+extern	wl_t	wl_default;
+extern	wl_t	wl_mode   ;
 
 /*@null@*/ 
 extern wordlist_t *word_list;
