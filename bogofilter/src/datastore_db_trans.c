@@ -61,8 +61,8 @@ static int	   dbx_auto_commit_flags(void);
 static int	   dbx_get_rmw_flag	(int open_mode);
 static int	   dbx_lock		(void *handle, int open_mode);
 static ex_t	   dbx_common_close	(DB_ENV *dbe, const char *db_file);
-static int	   dbx_sync		(DB_ENV *env, int ret);
-static void	   dbx_log_flush	(DB_ENV *env);
+static int	   dbx_sync		(DB_ENV *dbe, int ret);
+static void	   dbx_log_flush	(DB_ENV *dbe);
 static dbe_t 	  *dbx_init		(const char *dir);
 static void 	   dbx_cleanup_lite	(dbe_t *env);
 
@@ -97,7 +97,7 @@ static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
 static void dbx_cleanup_lite(dbe_t *env);
 static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
-static ex_t dbe_common_close(DB_ENV *env, const char *directory);
+static ex_t dbe_common_close(DB_ENV *dbe, const char *directory);
 
 /* non-OO static functions */
 
@@ -149,7 +149,7 @@ int dbx_get_rmw_flag(int open_mode)
 static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
 {
     const uint32_t local_flags = flags | DB_CREATE;
-    DB_ENV *env;
+    DB_ENV *dbe;
     int e;
 
     char *dir;
@@ -168,7 +168,7 @@ static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
     db_try_glock(tmp, F_WRLCK, F_SETLKW); /* wait for exclusive lock */
 
     /* run recovery */
-    bf_dbenv_create(&env);
+    bf_dbenv_create(&dbe);
 
     if (DEBUG_DATABASE(0))
         fprintf(dbgout, "running regular data base recovery%s\n",
@@ -182,13 +182,13 @@ static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
      * environment in heap memory, so we don't need to remove it.
      */
 
-    e = env->open(env, tmp,
+    e = dbe->open(dbe, tmp,
 		  dbenv_defflags | local_flags | DB_RECOVER, DS_MODE);
     if (e == DB_RUNRECOVERY) {
 	/* that didn't work, try harder */
 	if (DEBUG_DATABASE(0))
 	    fprintf(dbgout, "running catastrophic data base recovery\n");
-	e = env->open(env, tmp,
+	e = dbe->open(dbe, tmp,
 		      dbenv_defflags | local_flags | DB_RECOVER_FATAL, DS_MODE);
     }
     if (e) {
@@ -200,15 +200,15 @@ static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
 
     free(tmp);
 
-    return env;
+    return dbe;
 }
 
 static DB_ENV *dbx_recover_open(const char *dir, DB **dbp)
 {
     int e;
-    DB_ENV *env;
+    DB_ENV *dbe;
 
-    env = dbe_recover_open(dir, 0); /* this sets an exclusive lock */
+    dbe = dbe_recover_open(dir, 0); /* this sets an exclusive lock */
     e = db_create(dbp, NULL, 0);    /* do not use environment here, verify
 				       does not lock by itself, we hold the
 				       global lock instead! */
@@ -218,14 +218,14 @@ static DB_ENV *dbx_recover_open(const char *dir, DB **dbp)
 	return NULL;
     }
 
-    return env;
+    return dbe;
 }
 
-static ex_t dbx_common_close(DB_ENV *env, const char *directory)
+static ex_t dbx_common_close(DB_ENV *dbe, const char *directory)
 {
     int e;
 
-    e = env->close(env, 0);
+    e = dbe->close(dbe, 0);
     if (e != 0) {
 	print_error(__FILE__, __LINE__, "Error closing environment \"%s\": %s",
 		directory, db_strerror(e));
@@ -624,16 +624,16 @@ static void dbx_cleanup_lite(dbe_t *env)
     }
 }
 
-static int dbx_sync(DB_ENV *env, int ret)
+static int dbx_sync(DB_ENV *dbe, int ret)
 {
 #if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
     /* flush dirty pages in buffer pool */
     while (ret == DB_INCOMPLETE) {
 	rand_sleep(10000,1000000);
-	ret = BF_MEMP_SYNC(env, NULL);
+	ret = BF_MEMP_SYNC(dbe, NULL);
     }
 #else
-    (void)env;
+    (void)dbe;
     ret = 0;
 #endif
 
@@ -678,11 +678,11 @@ rec_fail:
     exit(EX_ERROR);
 }
 
-static ex_t dbe_common_close(DB_ENV *env, const char *directory)
+static ex_t dbe_common_close(DB_ENV *dbe, const char *directory)
 {
     int e;
 
-    e = env->close(env, 0);
+    e = dbe->close(dbe, 0);
     if (e != 0) {
 	print_error(__FILE__, __LINE__, "Error closing environment \"%s\": %s",
 		directory, db_strerror(e));
@@ -696,18 +696,18 @@ static ex_t dbe_common_close(DB_ENV *env, const char *directory)
 ex_t dbe_purgelogs(const char *directory)
 {
     int e;
-    DB_ENV *env = dbe_recover_open(directory, 0);
+    DB_ENV *dbe = dbe_recover_open(directory, 0);
     char **i, **list;
 
-    if (!env)
+    if (!dbe)
 	exit(EX_ERROR);
 
     if (DEBUG_DATABASE(0))
 	fprintf(dbgout, "checkpoint database\n");
 
     /* checkpoint the transactional system */
-    e = BF_TXN_CHECKPOINT(env, 0, 0, 0);
-    e = dbx_sync(env, e);
+    e = BF_TXN_CHECKPOINT(dbe, 0, 0, 0);
+    e = dbx_sync(dbe, e);
     if (e) {
 	print_error(__FILE__, __LINE__, "DB_ENV->txn_checkpoint failed: %s",
 		db_strerror(e));
@@ -718,7 +718,7 @@ ex_t dbe_purgelogs(const char *directory)
 	fprintf(dbgout, "removing inactive logfiles\n");
 
     /* figure redundant log files and nuke them */
-    e = BF_LOG_ARCHIVE(env, &list, DB_ARCH_ABS);
+    e = BF_LOG_ARCHIVE(dbe, &list, DB_ARCH_ABS);
     if (e) {
 	print_error(__FILE__, __LINE__,
 		"DB_ENV->log_archive failed: %s",
@@ -742,17 +742,17 @@ ex_t dbe_purgelogs(const char *directory)
     if (DEBUG_DATABASE(0))
 	fprintf(dbgout, "closing environment\n");
 
-    return dbe_common_close(env, directory);
+    return dbe_common_close(dbe, directory);
 }
 
 ex_t dbe_remove(const char *directory)
 {
-    DB_ENV *env = dbe_recover_open(directory, DB_PRIVATE);
+    DB_ENV *dbe = dbe_recover_open(directory, DB_PRIVATE);
 
-    if (!env)
+    if (!dbe)
 	exit(EX_ERROR);
 
-    return dbe_common_close(env, directory);
+    return dbe_common_close(dbe, directory);
 }
 
 void dbx_log_flush(DB_ENV *dbe)

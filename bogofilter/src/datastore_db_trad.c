@@ -44,8 +44,8 @@ static int	   bft_auto_commit_flags(void);
 static int	   bft_get_rmw_flag	(int open_mode);
 static int	   bft_lock		(void *handle, int open_mode);
 static ex_t	   bft_common_close	(DB_ENV *dbe, const char *db_file);
-static int	   bft_sync		(DB_ENV *env, int ret);
-static void	   bft_log_flush	(DB_ENV *env);
+static int	   bft_sync		(DB_ENV *dbe, int ret);
+static void	   bft_log_flush	(DB_ENV *dbe);
 static dbe_t	  *bft_init		(const char *directory);
 static void 	   bft_cleanup_lite	(dbe_t *env);
 
@@ -94,9 +94,9 @@ ex_t bft_common_close(DB_ENV *dbe, const char *db_file)
     return EX_OK;
 }
 
-int bft_sync(DB_ENV *env, int ret)
+int bft_sync(DB_ENV *dbe, int ret)
 {
-    (void) env;
+    (void) dbe;
     (void) ret;
     return 0;
 }

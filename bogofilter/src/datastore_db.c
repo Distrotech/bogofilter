@@ -809,6 +809,7 @@ void db_flush(void *vhandle)
     int ret;
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
+    DB_ENV *dbe = handle->dbenv->dbe;
 
     assert(handle->magic == MAGIC_DBH);
 
@@ -822,7 +823,7 @@ void db_flush(void *vhandle)
 	ret = 0;
 #endif
 
-    ret = dsm->dsm_sync(handle->dbenv->dbe, ret);
+    ret = dsm->dsm_sync(dbe, ret);
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
@@ -830,7 +831,7 @@ void db_flush(void *vhandle)
     if (ret)
 	print_error(__FILE__, __LINE__, "db_sync: err: %s", db_strerror(ret));
 
-    dsm->dsm_log_flush(handle->dbenv->dbe);
+    dsm->dsm_log_flush(dbe);
 }
 
 ex_t db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
@@ -911,7 +912,7 @@ const char *db_str_err(int e) {
 
 ex_t db_verify(const char *db_file)
 {
-    DB_ENV *env = NULL;
+    DB_ENV *dbe = NULL;
     DB *db;
     int e;
 
@@ -920,8 +921,8 @@ ex_t db_verify(const char *db_file)
 	return EX_ERROR;
     }
 
-    env = dsm->dsm_recover_open(db_file, &db);
-    if (env == NULL) {
+    dbe = dsm->dsm_recover_open(db_file, &db);
+    if (dbe == NULL) {
 	exit(EX_ERROR);
     }
 
@@ -932,7 +933,7 @@ ex_t db_verify(const char *db_file)
 	exit(EX_ERROR);
     }
 
-    e = dsm->dsm_common_close(env, db_file);
+    e = dsm->dsm_common_close(dbe, db_file);
 
     if (e == 0 && verbose)
 	printf("%s OK.\n", db_file);
