@@ -90,30 +90,32 @@ void rob_print_stats(FILE *fp)
 }
 
 typedef struct {
-    double good;
-    double bad;
+    int good;
+    int bad;
 } wordprob_t;
 
 static void wordprob_init(/*@out@*/ wordprob_t* wordstats)
 {
-    wordstats->good = wordstats->bad = 0.0;
+    wordstats->good = wordstats->bad = 0;
 }
 
 static void wordprob_add(wordprob_t* wordstats, int count, int bad)
 {
     if (bad)
-	wordstats->bad += (double) count;
+	wordstats->bad += count;
     else
-	wordstats->good += (double) count;
+	wordstats->good += count;
 }
 
 static double wordprob_result(wordprob_t* wordstats)
 {
-    double n, fw, pw;
+    double fw, pw;
+    double g = wordstats->good;
+    double b = wordstats->bad;
+    double n = g + b;
 
-    n = wordstats->good + wordstats->bad;
-    pw = (n < EPS) ? 0.0 : ((wordstats->bad / msgs_bad) / 
-			    (wordstats->bad / msgs_bad + wordstats->good / msgs_good));
+    pw = (n < EPS) ? 0.0 : ((b / msgs_bad) / 
+			    (b / msgs_bad + g / msgs_good));
     fw = (robs * robx + n * pw) / (robs + n);
 
     return (fw);
@@ -161,6 +163,8 @@ static double compute_probability(const char *token)
 	    override=list->override;
 
 	    wordprob_add(&wordstats, count, list->bad);
+	    if (DEBUG_WORDLIST(1))
+		fprintf(dbgout, "%2d %2d %s\n", (int) wordstats.good, (int) wordstats.bad, token);
 	}
     }
 
