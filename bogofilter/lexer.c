@@ -43,7 +43,7 @@ int yygetline(char *buf, int max_size)
 	hdrlen=strlen(spam_header_name);
 
     if (yysave == NULL) {
-	count = fgetsl(buf, max_size, stdin);
+	count = fgetsl(buf, max_size, fpin);
 
 	/* Also, save the text on a linked list of lines.
 	 * Note that we store fixed-length blocks here, not lines.
@@ -68,7 +68,7 @@ int yygetline(char *buf, int max_size)
 	   && memcmp(buf,spam_header_name,hdrlen) == 0)
     {
 	do {
-	    count = fgetsl(buf, max_size, stdin);
+	    count = fgetsl(buf, max_size, fpin);
 	    if (passthrough)
 		textblock_add(textblocks, buf, count);
 	    yylineno += 1;
@@ -84,15 +84,15 @@ int yygetline(char *buf, int max_size)
 ** 	hence doesn't match lexer pattern which specifies beginning of line
 */
     while (0 && msg_header) {
-	int c = fgetc(stdin);
+	int c = fgetc(fpin);
 	if (c == EOF)
 	    break;
 	if (c == ' ' || c == '\t') {
 	    int add;
 	    /* continuation line */
-	    ungetc(c,stdin);
+	    ungetc(c,fpin);
 	    if (buf[count - 1] == '\n') count --;
-	    add = fgetsl(buf + count, max_size - count, stdin);
+	    add = fgetsl(buf + count, max_size - count, fpin);
 	    if (add == EOF) break;
 	    if (passthrough)
 		textblock_add(textblocks, buf+count, add);
@@ -100,13 +100,13 @@ int yygetline(char *buf, int max_size)
 	    if (DEBUG_LEXER(1)) fprintf(dbgout, "*** %2d %d %s\n", yylineno, msg_header, buf+count);
 	    count += add;
 	} else {
-	    ungetc(c,stdin);
+	    ungetc(c,fpin);
 	    break;
 	}
     }
 
     if (count == -1) {
-	if (ferror(stdin)) {
+	if (ferror(fpin)) {
 	    print_error(__FILE__, __LINE__, "input in flex scanner failed\n");
 	    exit(2);
 	} else {
