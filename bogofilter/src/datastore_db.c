@@ -455,13 +455,13 @@ int db_txn_begin(void *vhandle)
     ret = BF_TXN_BEGIN(dbe, NULL, &t, 0);
     if (ret) {
 	print_error(__FILE__, __LINE__, "DB_ENV->txn_begin(%p), err: %s",
-		dbe, db_strerror(ret));
+		(void *)dbe, db_strerror(ret));
 	return ret;
     }
     handle->txn = t;
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->txn_begin(%p), tid: %lx\n",
-		dbe, (unsigned long)BF_TXN_ID(t));
+		(void *)dbe, (unsigned long)BF_TXN_ID(t));
 
     return 0;
 }
@@ -691,7 +691,7 @@ void db_flush(void *vhandle)
 
     ret = dbp->sync(dbp, 0);
     if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "DB->sync(%p): %s\n", dbp, db_strerror(ret));
+	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
 
 #if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
     /* ignore dirty pages in buffer pool */
@@ -703,7 +703,8 @@ void db_flush(void *vhandle)
 
     ret = BF_LOG_FLUSH(dbe, NULL);
     if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", dbe, db_strerror(ret));
+	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", (void *)dbe,
+		db_strerror(ret));
 }
 
 int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
@@ -850,7 +851,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	exit(EX_ERROR);
     }
     if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "db_env_create: %p\n", dbe);
+	fprintf(dbgout, "db_env_create: %p\n", (void *)dbe);
 
     dbe->set_errfile(dbe, stderr);
 
@@ -866,21 +867,21 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 
     /* configure lock system size - locks */
     if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0) {
-	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", dbe,
+	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", (void *)dbe,
 		(unsigned long)numlocks, db_strerror(ret));
 	exit(EXIT_FAILURE);
     }
     if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", dbe, (unsigned long)numlocks);
+	fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", (void *)dbe, (unsigned long)numlocks);
 
     /* configure lock system size - objects */
     if ((ret = dbe->set_lk_max_objects(dbe, numobjs)) != 0) {
-	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", dbe,
+	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", (void *)dbe,
 		(unsigned long)numobjs, db_strerror(ret));
 	exit(EXIT_FAILURE);
     }
     if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", dbe, (unsigned long)numlocks);
+	fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", (void *)dbe, (unsigned long)numlocks);
 
     /* configure automatic deadlock detector */
     if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
@@ -962,7 +963,7 @@ void db_cleanup(void) {
     if (dbe) {
 	int ret = dbe->close(dbe, 0);
 	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", dbe, db_strerror(ret));
+	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", (void *)dbe, db_strerror(ret));
     }
     if (lockfd >= 0)
 	close(lockfd); /* release locks */
