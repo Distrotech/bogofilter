@@ -19,13 +19,18 @@ if test "$GCC" = yes
 then
   echo "void dummy(void);" >configure-dummy.c
   echo "void dummy(void) {}" >>configure-dummy.c
+  addopts=
+  case `$CC --version` in
+      *2.7*) ;;
+      *) addopts="$addopts -Wpointer-arith" ;;
+  esac
   for i in -Wall -W -Wstrict-prototypes -Wmissing-prototypes -Wshadow \
       -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings \
       -Waggregate-return -Wmissing-declarations \
       -Wmissing-format-attribute -Wnested-externs \
       -ggdb -fno-common -Wchar-subscripts -Wcomment \
       -Wimplicit -Wsequence-point -Wreturn-type \
-      -Wfloat-equal -Wpointer-arith \
+      -Wfloat-equal $addopts \
       -Wno-system-headers
       # -Wmissing-noreturn -Wconversion -pedantic -Wredundant-decls
   do
