@@ -278,7 +278,9 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
     /* retry when locking failed */
     for (idx = 0; idx < COUNTOF(retryflags); idx += 1)
     {
+#if DB_AT_LEAST(4,1)
 	int flags;
+#endif
 	DB *dbp;
 	uint32_t retryflag = retryflags[idx], pagesize;
 
@@ -313,8 +315,6 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 		dbp->close(dbp, 0);
 		goto open_err;
 	    }
-#else
-	    (void)flags;
 #endif
 
 	/* open data base */
