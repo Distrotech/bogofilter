@@ -75,7 +75,7 @@ struct disposition_s {
 
 static char *skipws(char *t, char *e);
 static char *skipsemi(char *t, char *e);
-static char *getmimew(char *t, char *e);
+static char *getword(char *t, char *e);
 #if	0
 static char *getparam(char *t, char *e, const char *param);
 #endif
@@ -124,15 +124,13 @@ char *skipsemi(char *t, char *e)
 
 /* get next MIME word, NULL when none found.
  * caller must free returned string with xfree() */
-char *getmimew(char *t, char *e)
+char *getword(char *t, char *e)
 {
     int quote = 0;
     int l;
     char *ts;
     char *n;
-#if	0
-    t = strchr(t, ':')+1;	/* skip field name */
-#endif
+
     t = skipws(t, e);
     if (!t) return NULL;
     if (*t == '"') {
@@ -162,7 +160,7 @@ char *getparam(char *t, char *e, const char *param)
 void mime_version(void)
 {
     size_t l = strlen("MIME-Version:");
-    char *w = getmimew(yytext+l, yytext + yyleng);
+    char *w = getword(yytext+l, yytext + yyleng);
     msg_state->mime_mail = 1;
     msg_state->mime_header = 1;
     msg_state->version = w;
@@ -171,7 +169,7 @@ void mime_version(void)
 void mime_disposition(void)
 {
     size_t l = strlen("Content-Disposition:");
-    char *w = getmimew(yytext+l, yytext + yyleng);
+    char *w = getword(yytext+l, yytext + yyleng);
     struct disposition_s *dis;
     for (dis = dispositions ; dis < dispositions+COUNTOF(dispositions); dis+= 1) {
 	if (strcasecmp(w, dis->name) == 0) {
@@ -197,7 +195,7 @@ void mime_disposition(void)
 void mime_encoding(void)
 {
     size_t l = strlen("Content-Transfer-Encoding:");
-    char *w = getmimew(yytext+l, yytext + yyleng);
+    char *w = getword(yytext+l, yytext + yyleng);
     struct encoding_s *enc;
     for (enc = encodings ; enc < encodings+COUNTOF(encodings); enc+= 1) {
 	if (strcasecmp(w, enc->name) == 0) {
@@ -217,7 +215,7 @@ enum mimetype get_mime_type(void)
 void mime_type(void)
 {
     size_t l = strlen("Content-Type:");
-    char *w = getmimew(yytext+l, yytext + yyleng);
+    char *w = getword(yytext+l, yytext + yyleng);
     struct type_s *typ;
 
     if (!w) return;
@@ -257,7 +255,7 @@ void mime_boundary(void)
 
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
-	boundary = getmimew(yytext+len, yytext + yyleng);
+	boundary = getword(yytext+len, yytext + yyleng);
 	msg_state->boundary = boundary;
 	msg_state->boundary_len = strlen(boundary);
 	msg_state->mime_type = MIME_TEXT;
