@@ -4,6 +4,9 @@
 
 0.8.0	2002-11-06
 
+	* Fixed portability to some systems, notably, Solaris and HP-UX,
+	  added README.* for some systems to describe build issues.
+	* Fixed "rpl_malloc" link failures.
 	* Fixed bogofilter 0.7.6 passthrough regression on some systems:
 	  The X-Bogofilter header would be added to the body and a bogus
 	  blank line would be added.
