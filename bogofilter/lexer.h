@@ -17,7 +17,9 @@ extern FILE *yyin;
 extern int yyleng;
 extern char *yytext;
 extern char *yylval;
+
 extern bool mime_lexer;
+extern bool block_on_subnets;
 
 /* lexer interface */
 typedef enum {
@@ -28,8 +30,6 @@ typedef enum {
     IPADDR,	/* ip address */
     CHARSET	/* charset="..." */
 } token_t;
-
-extern bool block_on_subnets;
 
 extern token_t yylex(void);
 
