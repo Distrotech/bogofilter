@@ -1,6 +1,6 @@
 #!/bin/sh
 
-relpath="`pwd`/../.." . ${srcdir:=.}/../t.frame
+relpath="`pwd`/../.." . ${srcdir:=.}/../t.frame -no-db
 
 set -e
 
@@ -80,12 +80,14 @@ for mth in g r f t ; do
     alg="$mth"
     if [ "$alg" = "t" ] ; then alg=f ; else : ; fi
     BOGOFILTER_DIR="${TMPDIR}/words.$mth"
-    CFG="-c ${TMPDIR}/cfg.$mth"
+    CFG="-c ${TMPDIR}/cfg.$mth -y 0"
     export BOGOFILTER_DIR
     if [   -d $BOGOFILTER_DIR ] ; then rm -f $BOGOFILTER_DIR/* ; else : ; fi
     mkdir -p $BOGOFILTER_DIR
     $BOGOFILTER -$alg $CFG -s < ${SYSTEST}/inputs/spam.mbx
     $BOGOFILTER -$alg $CFG -n < ${SYSTEST}/inputs/good.mbx
+    $BOGOUTIL -d $BOGOFILTER_DIR/spamlist.db > $BOGOFILTER_DIR/spamlist.txt
+    $BOGOUTIL -d $BOGOFILTER_DIR/goodlist.db > $BOGOFILTER_DIR/goodlist.txt
     [ $verbose -gt 0 ] && $BOGOUTIL -w $BOGOFILTER_DIR .MSG_COUNT
     #
     # run tests for msg.[1-8].txt
