@@ -238,6 +238,9 @@ bool get_boundary_props(char *boundary, int boundary_len, boundary_t *b)
   
   b->is_valid = false;
 
+  if (boundary_len <= 2 || boundary[0] != '-' || boundary[1] != '-')
+    return b->is_valid;
+
   while (*(boundary + boundary_len - 1) == '\r' ||
          *(boundary + boundary_len - 1) == '\n')
     boundary_len--;
