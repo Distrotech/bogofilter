@@ -121,7 +121,7 @@ double lookup_and_score(const word_t *token, wordprop_t *wordstats)
     for (list=word_lists; list != NULL ; list=list->next)
     {
 	size_t i;
-	dbv_t val;
+	dsv_t val;
 
 	if (list->ignore)
 	    return EVEN_ODDS;
@@ -130,13 +130,13 @@ double lookup_and_score(const word_t *token, wordprop_t *wordstats)
 	    break;
 	override=list->override;
 
-	db_getvalues(list->dbh, token, &val);
+	ds_read(list->dbh, token, &val);
 
 	for (i=0; i<COUNTOF(val.count); i++) {
 	    /* Protect against negatives */
 	    if ((int) val.count[i] < 0) {
 		val.count[i] = 0;
-		db_setvalues(list->dbh, token, &val);
+		ds_write(list->dbh, token, &val);
 	    }
 
 	    if (val.count[i] == 0)
@@ -329,15 +329,18 @@ void rob_initialize_with_parameters(rob_stats_t *stats, double _min_dev, double 
 
     if (fabs(robx) < EPS && word_list->dbh)
     {
-	dbv_t val;
-	long l_robx;
+	int ret;
+	dsv_t val;
 
 	/* Note: .ROBX is scaled by 1000000 in the wordlist */
-	db_getvalues(word_list->dbh, word_robx, &val);
-	l_robx = val.count[SPAM];
-
-	/* If found, unscale; else use predefined value */
-	robx = l_robx ? (double)l_robx / 1000000 : ROBX;
+	ret = ds_read(word_list->dbh, word_robx, &val);
+	if (ret != 0)
+	    robx = ROBX;
+	else {
+	    /* If found, unscale; else use predefined value */
+	    long l_robx = val.count[SPAM];
+	    robx = l_robx ? (double)l_robx / 1000000 : ROBX;
+	}
     }
 
     if (robx < 0.0 || 1.0 < robx) {
@@ -346,6 +349,8 @@ void rob_initialize_with_parameters(rob_stats_t *stats, double _min_dev, double 
     }
 
     word_free(word_robx);
+
+    return;
 }
 
 #ifdef	ENABLE_ROBINSON_METHOD

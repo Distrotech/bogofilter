@@ -19,9 +19,9 @@ Gyepi Sam <gyepi@praxis-sw.com>   2003
 #include <errno.h>
 
 #include "datastore.h"
+#include "datastore_tdb.h"
 #include "maint.h"
 #include "error.h"
-#include "word.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
 
@@ -142,7 +142,7 @@ void *db_open(const char *db_file, size_t count, const char **names, dbmode_t op
     return handle;
 }
 
-void db_delete(void *vhandle, const word_t *word)
+int db_delete(void *vhandle, const dbv_t *token)
 {
     int ret;
     size_t i;
@@ -150,8 +150,8 @@ void db_delete(void *vhandle, const word_t *word)
     TDB_DATA db_key;
     TDB_CONTEXT *dbp;
 
-    db_key.dptr = word->text;
-    db_key.dsize = word->leng;
+    db_key.dptr = token->data;
+    db_key.dsize = token->leng;
 
     for (i = 0; i < handle->count; i += 1) {
       dbp = handle->dbp[i];
@@ -159,117 +159,80 @@ void db_delete(void *vhandle, const word_t *word)
 
       if (ret != 0) {
           print_error(__FILE__, __LINE__, "(db) tdb_delete('%s'), err: %d, %s",
-                      word->text, ret, tdb_errorstr(dbp));
+                      (char *)token->data, ret, tdb_errorstr(dbp));
           exit(EX_ERROR);
       }
     }
 
-    return;
+    return ret;
 }
 
-int db_get_dbvalue(void *vhandle, const word_t *word,	/*@out@*/ dbv_t *val)
+int db_get_dbvalue(void *vhandle, const dbv_t *token,	/*@out@*/ dbv_t *val)
 {
     int ret = -1;
     bool found = false;
     size_t i;
     TDB_DATA db_key;
-    TDB_DATA db_val;
+    TDB_DATA db_data;
     TDB_CONTEXT *dbp;
 
     uint32_t cv[3] = { 0l, 0l, 0l };
 
     dbh_t *handle = vhandle;
 
-    db_key.dptr = word->text;
-    db_key.dsize = word->leng;
+    db_key.dptr = token->data;
+    db_key.dsize = token->leng;
 
     for (i = 0; i < handle->count; i += 1) {
       dbp = handle->dbp[i];
-      db_val = tdb_fetch(dbp, db_key);
+      db_data = tdb_fetch(dbp, db_key);
 
-      if (db_val.dptr != NULL) {
-          if (sizeof(cv) < db_val.dsize) {
-            print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%s' ), size error %d::%d",
-                  word->text, sizeof(cv), db_val.dsize);
+      if (db_data.dptr != NULL) {
+          if (val->size < db_data.dsize) {
+	      print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%s' ), size error %d::%d",
+			  (char *)token->data, sizeof(cv), db_data.dsize);
             exit(EX_ERROR);
           }
 
           found = true;
-          memcpy(cv, db_val.dptr, db_val.dsize);
+	  val->leng = db_data.dsize;
+          memcpy(val->data, db_data.dptr, db_data.dsize);
 
-          if (handle->count == 1) {
-            val->spamcount = cv[0];
-            val->goodcount = cv[1];
-            val->date = cv[2];
-          }
-          else {
-            uint32_t date;
-            val->count[i] = cv[0];
-            date = cv[1];
-            val->date = max(val->date, date);
-          }
-          free(db_val.dptr);
+          free(db_data.dptr);
           ret = 0;
       }
-    }
-
-    if (found && DEBUG_DATABASE(3)) {
-      fprintf(dbgout, "db_getvalues (%s): [", handle->name[0]);
-      word_puts(word, 0, dbgout);
-      fprintf(dbgout, "] has values %lu,%lu\n",
-              (unsigned long) val->spamcount, (unsigned long) val->goodcount);
     }
 
     return found ? 0 : ret;
 }
 
 
-void db_set_dbvalue(void *vhandle, const word_t *word, dbv_t *val)
+int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 {
     int ret;
     TDB_DATA db_key;
     TDB_DATA db_data;
     size_t i;
-    uint32_t cv[3];
     dbh_t *handle = vhandle;
 
-    db_key.dptr = word->text;
-    db_key.dsize = word->leng;
+    db_key.dptr = token->data;
+    db_key.dsize = token->leng;
 
     for (i = 0; i < handle->count; i += 1) {
       TDB_CONTEXT *dbp = handle->dbp[i];
-      if (handle->count == 1) {
-          cv[0] = val->spamcount;
-          cv[1] = val->goodcount;
-          cv[2] = val->date;
-      }
-      else {
-          cv[0] = val->count[i];
-          cv[1] = val->date;
-      }
-      db_data.dptr = (char *) &cv;	/* and save array in wordlist */
-      if (!datestamp_tokens || val->date == 0)
-          db_data.dsize = 2 * sizeof(cv[0]);
-      else
-          db_data.dsize = sizeof(cv);
+      db_data.dptr = val->data;
+      db_data.dsize = val->size;
 
       ret = tdb_store(dbp, db_key, db_data, TDB_REPLACE);
 
-      if (ret == 0) {
-          if (DEBUG_DATABASE(3)) {
-            dbh_print_names(handle, "db_set_dbvalue");
-            fputs(": [", dbgout);
-            word_puts(word, 0, dbgout);
-            fprintf(dbgout, "] has values %lu,%lu\n",
-              (unsigned long) val->spamcount, (unsigned long) val->goodcount);
-          }
-      }
-      else {
-          print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%s' ), err: %d, %s",
-          word->text, ret, tdb_errorstr(dbp));
+      if (ret != 0) {
+          print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%*s' ), err: %d, %s",
+			token->size, (char *)token->data, ret, tdb_errorstr(dbp));
           exit(EX_ERROR);
       }
     }
+
+    return ret;
 }
 
 
@@ -296,7 +259,7 @@ void db_close(void *vhandle, bool nosync)
     for (i = 0; i < handle->count; i += 1) {
         if ((ret = tdb_close(handle->dbp[i]))) {
             print_error(__FILE__, __LINE__, "(db) tdb_close on file %s failed with error %s",
-            handle->filename, tdb_errorstr(handle->dbp[i]));
+			handle->filename, tdb_errorstr(handle->dbp[i]));
         }
     }
 
@@ -320,17 +283,27 @@ typedef struct userdata_t {
 static int tdb_traversor(/*@unused@*/ __attribute__ ((unused)) TDB_CONTEXT * tdb_handle,
                          TDB_DATA key, TDB_DATA data, void *userdata)
 {
-    word_t w_key, w_data;
+    int rc;
+    dbv_t dbv_key, dbv_data;
     userdata_t *hookdata = userdata;
 
-    /* switch to "word_t *" variables */
-    w_key.text = key.dptr;
-    w_key.leng = key.dsize;
-    w_data.text = data.dptr;
-    w_data.leng = data.dsize;
+    /* Question: Is there a way to avoid using malloc/free? */
+
+    /* switch to "dbv_t *" variables */
+    dbv_key.leng = key.dsize;
+    dbv_key.data = xmalloc(dbv_key.leng+1);
+    memcpy(dbv_key.data, key.dptr, dbv_key.leng);
+    ((char *)dbv_key.data)[dbv_key.leng] = '\0';
+
+    dbv_data.data = data.dptr;
+    dbv_data.leng = data.dsize;
 
     /* call user function */
-    return hookdata->hook(&w_key, &w_data, hookdata->userdata);
+    rc = hookdata->hook(&dbv_key, &dbv_data, hookdata->userdata);
+
+    xfree(dbv_key.data);
+
+    return rc;
 }
 
 
@@ -351,7 +324,7 @@ int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
         ret = tdb_traverse(dbp, tdb_traversor, (void *) &hookdata);
         if (ret == -1) {
             print_error(__FILE__, __LINE__, "(db) db_foreach err: %d, %s",
-            ret, tdb_errorstr(dbp));
+			ret, tdb_errorstr(dbp));
             exit(EX_ERROR);
         }
         else {
@@ -362,3 +335,12 @@ int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
 
     return ret;
 }
+
+
+/* dummy routine - a real one may be needed one day */
+bool db_is_swapped(void *vhandle)
+{
+    (void) vhandle;	/* unused */
+    return false;
+}
+

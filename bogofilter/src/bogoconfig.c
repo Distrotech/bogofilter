@@ -437,7 +437,7 @@ static void print_version(void)
 #endif
 		  "\n"
 		  "    Database: %s\n",
-		  progtype, version, db_version_str());
+		  progtype, version, ds_version_str());
 
     (void)fprintf(stderr,
 		  "Copyright (C) 2002 Eric S. Raymond\n\n"

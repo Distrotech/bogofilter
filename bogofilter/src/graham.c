@@ -215,10 +215,10 @@ static double compute_probability(const word_t *token)
     for (list=word_lists; list != NULL ; list=list->next)
     {
 	int   i;
-	dbv_t val;
+	dsv_t val;
 	if (override > list->override)
 	    break;
-	db_getvalues(list->dbh, token, &val);
+	ds_read(list->dbh, token, &val);
 	if (val.count[0] == 0 && val.count[1] == 0)
 	    continue;
 
