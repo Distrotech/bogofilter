@@ -22,7 +22,7 @@ struct wordlist_s
 };
 
 /*@null@*/ extern wordlist_t *word_lists;
-extern wordlist_t good_list, spam_list, ignore_list;
+extern wordlist_t *good_list, *spam_list;
 
 int setup_wordlists(const char* dir);
 bool configure_wordlist(const char *val);
@@ -32,5 +32,6 @@ void *open_wordlist(const char *name, const char *filepath);
 void close_wordlists(void);
 
 void set_good_weight(double weight);
+void set_list_active_status(bool status);
 
 #endif	/* WORDLISTS_H */

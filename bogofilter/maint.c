@@ -112,7 +112,7 @@ void maintain_wordlists(void)
 {
     wordlist_t *list;
 
-    good_list.active = spam_list.active = true;
+    set_list_active_status(true);
 
     db_lock_writer_list(word_lists);
 

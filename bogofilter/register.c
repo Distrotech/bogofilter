@@ -49,26 +49,26 @@ void register_words(run_t _run_type, wordhash_t *h,
     (void)fprintf(stderr, "# %d word%s, %d message%s\n", 
 		  wordcount, PLURAL(wordcount), msgcount, PLURAL(msgcount));
 
-  good_list.active = spam_list.active = false;
+  set_list_active_status(false);
 
   switch(_run_type)
   {
     case REG_GOOD:
-      incr_list = &good_list;
+      incr_list = good_list;
       break;
 
     case REG_SPAM:
-      incr_list = &spam_list;
+      incr_list = spam_list;
       break;
 
     case  REG_GOOD_TO_SPAM:
-      decr_list = &good_list;
-      incr_list = &spam_list;
+      decr_list = good_list;
+      incr_list = spam_list;
       break;
 
     case REG_SPAM_TO_GOOD:
-      incr_list = &good_list;
-      decr_list = &spam_list;
+      incr_list = good_list;
+      decr_list = spam_list;
       break;
 
     default:

@@ -135,6 +135,7 @@ static double compute_scale(void)
 
     for(list=word_lists; list != NULL; list=list->next)
     {
+	list->msgcount = db_getcount(list->dbh);
 	if (list->bad)
 	    msgs_bad += list->msgcount;
 	else
@@ -197,7 +198,7 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
     if (fabs(robx) < EPS)
     {
 	/* Note: .ROBX is scaled by 1000000 in the wordlist */
-	long l_robx = db_getvalue(spam_list.dbh, ".ROBX");
+	long l_robx = db_getvalue(spam_list->dbh, ".ROBX");
 
 	/* If found, unscale; else use predefined value */
 	robx = l_robx ? (double)l_robx / 1000000 : ROBX;
@@ -272,9 +273,18 @@ void rob_print_summary(void)
 void rob_initialize_with_parameters(rob_stats_t *stats, double _min_dev, double _spam_cutoff)
 {
     mth_initialize( stats, ROBINSON_MAX_REPEATS, _min_dev, _spam_cutoff, ROBINSON_GOOD_BIAS );
-    scalefactor = compute_scale();
-    if (fabs(robs) < EPS)
-	robs = ROBS;
+
+    /*
+    ** If we're classifying messages, we need to compute the scalefactor 
+    ** (from the .MSG_COUNT values)
+    ** If we're registering tokens, we needn't get .MSG_COUNT
+    */
+
+    if (run_type == RUN_NORMAL || run_type == RUN_UPDATE) {
+	scalefactor = compute_scale();
+	if (fabs(robs) < EPS)
+	    robs = ROBS;
+    }
 }
 
 void rob_initialize_constants(void)

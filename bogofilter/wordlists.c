@@ -19,9 +19,8 @@
 #include "xmalloc.h"
 #include "xstrdup.h"
 
-wordlist_t good_list;
-wordlist_t spam_list;
-wordlist_t ignore_list;
+wordlist_t *good_list;
+wordlist_t *spam_list;
 /*@null@*/ wordlist_t* word_lists=NULL;
 
 void *open_wordlist( const char *name, const char *filepath )
@@ -39,45 +38,45 @@ void *open_wordlist( const char *name, const char *filepath )
 }
 
 /* returns -1 for error, 0 for success */
-static int init_wordlist(/*@out@*/ wordlist_t* list, const char* name, const char* path,
-			 double weight, bool bad, int override, bool ignore)
+static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const char* path,
+			 double weight, bool bad, int override)
 {
-    wordlist_t* list_index;
-    wordlist_t** last_list_ptr;
-    static int wordlist_index;
+    wordlist_t *new = (wordlist_t *)xmalloc(sizeof(*new));
+    wordlist_t* list_ptr;
+    static int listcount;
 
-    list->filename=xstrdup(name);
-    list->filepath=xstrdup(path);
-    list->index = ++wordlist_index;
-    list->msgcount=0;
-    list->override=override;
-    list->active=false;
-    list->weight=weight;
-    list->bad=bad;
-    list->ignore=ignore;
+    *list = new;
+
+    new->filename=xstrdup(name);
+    new->filepath=xstrdup(path);
+    new->index = ++listcount;
+    new->msgcount=0;
+    new->override=override;
+    new->active=false;
+    new->weight=weight;
+    new->bad=bad;
 
     if (! word_lists) {
-	word_lists=list;
-	list->next=NULL;
+	word_lists=new;
+	new->next=NULL;
 	return 0;
     }
-    list_index=word_lists;
-    last_list_ptr=&word_lists;
+    list_ptr=word_lists;
 
     /* put lists with high override numbers at the front. */
     while(1) {
-	if (list_index->override < override) {
-	    *last_list_ptr=list;
-	    list->next=list_index;
+	if (list_ptr->override < override) {
+	    word_lists=new;
+	    new->next=list_ptr;
 	    break;
         }
-        if (! list_index->next) {
+        if (! list_ptr->next) {
 	    /* end of list */
-	    list_index->next=list;
-	    list->next=NULL;
+	    list_ptr->next=new;
+	    new->next=NULL;
 	    break;
 	}
-	list_index=list_index->next;
+	list_ptr=list_ptr->next;
     }
     return 0;
 }
@@ -99,26 +98,22 @@ int setup_wordlists(const char* dir)
     }
 
     if ((build_path(filepath, sizeof(filepath), dir, GOODFILE) < 0) ||
-	init_wordlist(&good_list, "good", filepath, good_weight, false, 0, 0) != 0)
+	init_wordlist(&good_list, "good", filepath, good_weight, false, 0) != 0)
 	rc = -1;
 
     if ((build_path(filepath, sizeof(filepath), dir, SPAMFILE) < 0) ||
-	init_wordlist(&spam_list, "spam", filepath, bad_weight, true,  0, 0) != 0)
+	init_wordlist(&spam_list, "spam", filepath, bad_weight, true, 0) != 0)
 	rc = -1;
 
-/*
-    if (build_path(filepath, sizeof(filepath), dir, IGNOREFILE) < 0) rc = -1;
-    if (init_wordlist(&ignore_list, "ignore", filepath, 0, true,  0, 0)) rc = -1;
-*/
     return rc;
 }
 
 void open_wordlists(void)
 {
-    wordlist_t* list;
+    wordlist_t *list;
+
     for ( list = word_lists; list != NULL; list = list->next )
     {
-
 	list->dbh=open_wordlist(list->filename, list->filepath);
 	if (list->dbh == NULL) {
 	    fprintf(stderr, "Can't open %s\n", list->filename);
@@ -126,27 +121,47 @@ void open_wordlists(void)
 	    exit(2);
 	}
     }
+
+    return;
 }
 
 void close_wordlists(void)
 {
-    wordlist_t* list;
+    wordlist_t *list;
+
     for ( list = word_lists; list != NULL; list = list->next )
     {
 	db_close(list->dbh);
 	if (list->filename) free(list->filename);
 	if (list->filepath) free(list->filepath);
     }
+
+    return;
 }
 
 void set_good_weight(double weight)
 {
-    wordlist_t* list;
+    wordlist_t *list;
+
     for ( list = word_lists; list != NULL; list = list->next )
     {
 	if ( ! list->bad )
 	    list->weight = weight;
     }
+
+    return;
+}
+
+void set_list_active_status(bool status)
+{
+    wordlist_t *list;
+
+    for ( list = word_lists; list != NULL; list = list->next )
+    {
+	list->active = status;
+    }
+
+    return;
 }
 
 #ifdef COMPILE_DEAD_CODE
@@ -165,7 +180,7 @@ static void sanitycheck_lists(void)
 	    fprintf(stderr, "A list has no name.\n");
 	    exit(2);
 	}
-	if ((list->msgcount==0) && (! list->ignore)) {
+	if (list->msgcount==0) {
 	    fprintf(stderr, "list %s has zero message count.\n", list->name);
 	    exit(2);
 	}
@@ -200,7 +215,6 @@ bool configure_wordlist(const char *val)
     double weight = 0.0f;
     bool bad = false;
     int override = 0;
-    bool ignore = false;
 
     char *tmp = xstrdup(val);
 	
@@ -216,9 +230,6 @@ bool configure_wordlist(const char *val)
 	case 's':
 	case 'b':		/* spam */
 	    bad = true;
-	    break;
-	case 'i':		/* ignore */
-	    ignore = true;
 	    break;
 	default:
 	    fprintf( stderr, "Unknown list type - '%c'\n", type[0]);
@@ -245,7 +256,7 @@ bool configure_wordlist(const char *val)
     *tmp++ = '\0';
     while (isspace((unsigned char)*tmp)) tmp += 1;
 
-    rc = init_wordlist(list, name, path, weight, bad, override, ignore);
+    rc = init_wordlist(&list, name, path, weight, bad, override);
     ok = rc == 0;
 
     return ok;
