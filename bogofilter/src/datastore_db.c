@@ -411,8 +411,7 @@ retry_db_open:
 
 	ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | retryflag, DS_MODE);
 
-	/* Begin complex xform ... */
-	{
+	/* Begin complex change ... */
 	if (ret != 0) {
 	    err = (ret != ENOENT) || (opt_flags == DB_RDONLY);
 	    if (!err) {
@@ -436,7 +435,7 @@ retry_db_open:
 	    else
 		err = true;
 	}
-	} /* End complex xform ... */
+	/* End complex change ... */
 
 	if (err)
 	{
@@ -500,26 +499,15 @@ retry_db_open:
 	/* check file size limit */
 	check_fsize_limit(handle->fd, pagesize);
 
-	if (fTransaction)	/* done if transactions */
+	/* Begin complex change ... */
+	e = dsm->dsm_lock(handle, open_mode);
+	if (e == 0)
 	    break;
-	else {			/* continue if non-transactional */
-	/* try fcntl lock */
-	if (db_lock(handle->fd, F_SETLK,
-		    (short int)(open_mode == DS_READ ? F_RDLCK : F_WRLCK)))
-	{
-	    int e = errno;
-	    db_close(handle);
-	    handle = NULL;	/* db_close freed it, we don't want to use it anymore */
-	    errno = e;
-	    if (errno == EACCES)
-		errno = EAGAIN;
-	    if (errno != EAGAIN)
-		return NULL;
-	} else {
-	    /* have lock */
-	    break;
-	}
-	}
+	if (e != EAGAIN)
+	    return NULL;
+	handle = NULL;
+	/* End complex change ... */
+
     } /* for idx over retryflags */
 
     if (!fTransaction && handle) {
