@@ -35,7 +35,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #include "xstrdup.h"
 
 typedef struct {
-    char	*filename;
+    char	*path;
     size_t	count;
     char	*name[2];
     int		fd[2];
@@ -44,9 +44,6 @@ typedef struct {
     pid_t	pid;
     bool	locked;
     bool	is_swapped;
-    /*@owned@*/ void *dbh_word;	/* database handle */
-    /*@owned@*/ void *dbh_good;	/* database handle */
-    /*@owned@*/ void *dbh_spam;	/* database handle */
 } dbh_t;
 
 #define DBT_init(dbt) do { memset(&dbt, 0, sizeof(DBT)); } while(0)
@@ -90,7 +87,7 @@ static dbh_t *dbh_init(const char *path, size_t count, const char **names)
     memset(handle, 0, sizeof(dbh_t));	/* valgrind */
 
     handle->count = count;
-    handle->filename = xstrdup(path);
+    handle->path = xstrdup(path);
     for (c = 0; c < count ; c += 1) {
 	size_t len = strlen(path) + strlen(names[c]) + 2;
 	handle->name[c] = xmalloc(len);
@@ -111,7 +108,7 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 	size_t c;
 	for (c = 0; c < handle->count ; c += 1)
 	    xfree(handle->name[c]);
-	xfree(handle->filename);
+	xfree(handle->path);
 	xfree(handle);
     }
     return;
@@ -365,7 +362,6 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 
 int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 {
-    int ret;
     DBT db_key;
     DBT db_data;
     size_t i;
@@ -383,6 +379,7 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
     db_data.size = val->leng;
 
     for (i = 0; i < handle->count; i += 1) {
+	int ret;
 	DB *dbp = handle->dbp[i];
 
 	ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
@@ -394,7 +391,7 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 	}
     }
 
-    return ret;
+    return 0;
 }
 
 
@@ -466,7 +463,7 @@ int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
 
 	ret = dbp->cursor(dbp, NULL, &dbcp, 0);
 	if (ret) {
-	    dbp->err(dbp, ret, "(cursor): %s", handle->filename);
+	    dbp->err(dbp, ret, "(cursor): %s", handle->path);
 	    return -1;
 	}
 

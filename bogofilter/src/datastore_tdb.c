@@ -26,7 +26,7 @@ Gyepi Sam <gyepi@praxis-sw.com>   2003
 #include "xstrdup.h"
 
 typedef struct {
-    char *filename;
+    char *path;
     size_t count;
     char *name[2];
     pid_t pid;
@@ -50,7 +50,7 @@ static dbh_t *dbh_init(const char *path, size_t count, const char **names)
     memset(handle, 0, sizeof(dbh_t));	/* valgrind */
 
     handle->count = count;
-    handle->filename = xstrdup(path);
+    handle->path = xstrdup(path);
     for (c = 0; c < count; c += 1) {
       size_t len = strlen(path) + strlen(names[c]) + 2;
       handle->name[c] = xmalloc(len);
@@ -70,7 +70,7 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
       for (c = 0; c < handle->count; c += 1)
           xfree(handle->name[c]);
 
-      xfree(handle->filename);
+      xfree(handle->path);
       xfree(handle);
     }
     return;
@@ -259,7 +259,7 @@ void db_close(void *vhandle, bool nosync)
     for (i = 0; i < handle->count; i += 1) {
         if ((ret = tdb_close(handle->dbp[i]))) {
             print_error(__FILE__, __LINE__, "(db) tdb_close on file %s failed with error %s",
-			handle->filename, tdb_errorstr(handle->dbp[i]));
+			handle->path, tdb_errorstr(handle->dbp[i]));
         }
     }
 
