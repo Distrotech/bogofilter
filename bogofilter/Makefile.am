@@ -23,7 +23,7 @@ AM_CPPFLAGS = -I$(srcdir)/dcdflib/doc
 AM_CFLAGS = -DBOGOFILTER
 
 # what to build
-bin_PROGRAMS = bogofilter bogoutil bogolexer lexertest
+bin_PROGRAMS = bogofilter bogoutil bogolexer 
 bin_SCRIPTS = bogoupgrade
 check_PROGRAMS = debugtest configtest wordhash find_home.test bogowordfreq
 man_MANS = bogofilter.1 bogoutil.1 bogoupgrade.1 bogolexer.1
@@ -83,8 +83,6 @@ configtest_SOURCES = configtest.c
 wordhash_SOURCES = wordhash.main.c
 
 find_home_test_SOURCES = find_home.test.c
-
-lexertest_SOURCES = lexertest.c lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l
 
 # what to distribute
 extradistdirs = doc
