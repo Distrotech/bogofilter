@@ -646,20 +646,6 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, const dbv_t *val)
     return 0;
 }
 
-static int db_flush_dirty(DB_ENV *env, int ret) {
-#if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
-    /* flush dirty pages in buffer pool */
-    while (ret == DB_INCOMPLETE) {
-	rand_sleep(10000,1000000);
-	ret = BF_MEMP_SYNC(env, NULL);
-    }
-#else
-    (void)env;
-#endif
-
-    return ret;
-}
-
 /* Close files and clean up. */
 void db_close(void *vhandle)
 {
@@ -718,8 +704,7 @@ void db_close(void *vhandle)
 	ret = 0;
 #endif
 
-    if (fTransaction)
-	ret = db_flush_dirty(dbe, ret);
+    ret = dsm->dsm_sync(dbe, ret);
 
     if (ret)
 	print_error(__FILE__, __LINE__, "DB->close error: %s",
@@ -750,7 +735,8 @@ void db_flush(void *vhandle)
     if (ret == DB_INCOMPLETE)
 	ret = 0;
 #endif
-    ret = db_flush_dirty(handle->dbenv->dbe, ret);
+
+    ret = dsm->dsm_sync(handle->dbenv->dbe, ret);
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
