@@ -58,11 +58,9 @@ struct encoding_s {
     { MIME_7BIT,	"7BIT",	  		},
     { MIME_8BIT,	"8BIT",	  		},
     { MIME_BINARY,	"BINARY", 		},
-    { MIME_QP,		"QP",	  		},
-    { MIME_QP,		"quoted-printable",	},
+    { MIME_QP,		"QUOTED-PRINTABLE",	},
     { MIME_BASE64,	"BASE64", 		},
-    { MIME_UUENCODE,	"UUENCODE", 		},
-    { MIME_UUENCODE,	"x-UUENCODE", 		},
+    { MIME_UUENCODE,	"X-UUENCODE", 		},
 };
 
 struct disposition_s { 
@@ -277,7 +275,6 @@ void mime_boundary(void)
 size_t mime_decode(char *buff, size_t size)
 {
     size_t count = size;
-    static bool base64_initialized = false;
 
     if (msg_state->mime_header)	/* do nothing if in header */
 	return count;
@@ -288,11 +285,6 @@ size_t mime_decode(char *buff, size_t size)
         memcmp(msg_state->boundary, buff+2,msg_state->boundary_len) == 0)
 	return count;
     
-    if (!base64_initialized) {
-	base64_init();
-	base64_initialized = true;
-    }
-
     switch(msg_state->mime_encoding) {
     case MIME_7BIT:
 	/* do nothing */
