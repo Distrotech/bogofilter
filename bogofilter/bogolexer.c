@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     int option;
     int count=0;
 
-    while ((option = getopt(argc, argv, ":hnpqvx:M")) != -1)
+    while ((option = getopt(argc, argv, ":hnpqvnx:M")) != -1)
 	switch (option) {
 	case 'h':
 	    help();
