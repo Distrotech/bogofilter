@@ -31,6 +31,7 @@ extern const char *progname;
 /*@observer@*/
 extern const char *stats_prefix;
 extern char *directory;
+extern char *update_dir;
 extern char outfname[PATH_LEN];
 extern const char *const version;
 extern const char *const system_config_file;

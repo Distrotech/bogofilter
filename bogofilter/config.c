@@ -71,6 +71,7 @@ int verbose;		/* '-v' */
 int Rtable = 0;		/* '-R' */
 
 char *directory = NULL;
+char *update_dir = NULL;
 char outfname[PATH_LEN] = "";
 
 const char *user_config_file   = "~/.bogofilter.cf";
@@ -140,6 +141,7 @@ static const parm_desc sys_parms[] =
     { "algorithm",  	  CP_FUNCTION,	{ (void *) &config_algorithm } },
     { "bogofilter_dir",	  CP_DIRECTORY,	{ &directory } },
     { "wordlist",	  CP_FUNCTION,	{ (void *) &configure_wordlist } },
+    { "update_dir",	  CP_STRING,	{ &update_dir } },
 
     { "min_dev",	  CP_DOUBLE,	{ (void *) &min_dev } },
     { "spam_cutoff",	  CP_DOUBLE,	{ (void *) &spam_cutoff } },
