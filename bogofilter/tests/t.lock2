@@ -2,12 +2,20 @@
 
 . ${srcdir:=.}/t.frame
 
-filelist=`find $srcdir/* \( -type d -prune \) -o \( -type f -print \)`
+filelist=`ls bogofilter/inputs/*x*`
 cat $filelist >$TMPDIR/inp
+
+CONFIG=$TMPDIR/test.cf
+
+cat <<EOF > ${CONFIG}
+robx=0.415
+min_dev=1.0
+replace_nonascii_characters=Y
+EOF
 
 grind() {
     a=0
-    ../bogofilter -n -d $TMPDIR -xd -vvv <$TMPDIR/inp 2>> $TMPDIR/log || a=$?
+    ../bogofilter -n -xd -vv -d $TMPDIR -c $CONFIG <$TMPDIR/inp 2>> $TMPDIR/log || a=$?
     echo >>$TMPDIR/res $a
 }
 
