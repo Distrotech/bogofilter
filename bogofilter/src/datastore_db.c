@@ -61,6 +61,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "word.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
+#include "mxcat.h"
 
 static DB_ENV *dbe; /* libdb environment, if in use, NULL otherwise */
 static int lockfd;  /* fd of locked file to prevent concurrent recovery etc. */
@@ -806,7 +807,7 @@ static int plock(const char *path, short locktype, int mode) {
 static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	u_int32_t flags, short locktype /* for fcntl */)
 {
-    char *t; size_t tl;
+    char *t;
     const char *const tackon = DIRSEP_S "lockfile-do-not-delete";
     int ret;
 
@@ -821,10 +822,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	exit(EXIT_FAILURE);
     }
 
-    tl = strlen(bogohome) + strlen(tackon) + 1;
-    t = xmalloc(tl);
-    strlcpy(t, bogohome, tl);
-    strlcat(t, tackon, tl);
+    t = mxcat(bogohome, tackon, NULL);
 
     /* FIXME: this may be dead code if we leave recover outside */
     ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
