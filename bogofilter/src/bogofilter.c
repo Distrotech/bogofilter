@@ -134,7 +134,6 @@ rc_t bogofilter(int argc, char **argv)
 
 	score_cleanup();
 	passthrough_cleanup();
-	ds_checkpoint();
     }
 
     bogoreader_fini();
