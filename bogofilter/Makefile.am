@@ -25,7 +25,7 @@ EXTRA_DIST=	autogen.sh gsl config.rpath \
 		CHANGES-0.15 RELEASE.NOTES-0.15 \
 		CHANGES-0.16 RELEASE.NOTES-0.16 \
 		CHANGES-0.17 RELEASE.NOTES-0.17 \
-		CHANGES-0.9x
+		CHANGES-0.9x RELEASE.NOTES-0.92
 
 .PHONY:	rpm cvs-check
 
@@ -48,4 +48,4 @@ rsync:	distdir .rsyncs
 dist-hook:
 	cd $(distdir) && find doc gnugetopt gsl -name CVS -type d -prune -exec rm -r '{}' ';'
 	cd $(distdir) && find doc gnugetopt gsl -name '.#*' -type f -exec rm '{}' ';'
-	rm -f $(distdir)/doc/.cvsignore
+	rm -f $(distdir)/doc/.cvsignore $(distdir)/ChangeLog

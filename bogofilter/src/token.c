@@ -30,6 +30,8 @@ AUTHOR:
 
 word_t *yylval = NULL;
 word_t *msg_addr = NULL;	/* First IP Address in Received: statement */
+word_t *msg_id   = NULL;	/* Message ID */
+word_t *queue_id = NULL;	/* Message's first queue ID */
 
 static token_t save_class = NONE;
 static word_t *ipsave = NULL;
@@ -172,11 +174,29 @@ token_t get_token(void)
 	    }
 	    break;
 
+	case QUEUE_ID:
+	    /* special token;  saved for formatted output, but not returned to bogofilter */
+	    if (queue_id == NULL) {
+		const char *tmp = (const char *)yylval->text;
+		size_t skip = 0;
+		while (isspace(yylval->text[skip]))
+		    skip += 1;
+		if (memcmp(tmp+skip, "id", 2) == 0)
+		    skip += 2;
+		while (isspace(yylval->text[skip]))
+		    skip += 1;
+		memmove(yylval->text, yylval->text+skip, yylval->leng-skip+D);
+		yylval->leng -= skip;
+		word_free(queue_id);
+		queue_id = word_dup(yylval);
+	    }
+	    continue;
+
 	case MSGADDR:
+	{
 	    /* trim brackets */
 	    yylval->leng -= 2;
-	    memmove(yylval->text, yylval->text+1, yylval->leng);
-	    Z(yylval->text[yylval->leng]);	/* for easier debugging - removable */
+	    memmove(yylval->text, yylval->text+1, yylval->leng+D);
 	    /* if top level, no address, not localhost, .... */
 	    if (token_prefix == w_recv &&
 		msg_state == msg_state->parent && 
@@ -186,6 +206,10 @@ token_t get_token(void)
 		word_free(msg_addr);
 		msg_addr = word_dup(yylval);
 	    }
+	}
+
+	/*@fallthrough@*/
+
 	case IPADDR:
 	    if (block_on_subnets)
 	    {
@@ -297,6 +321,8 @@ void token_init(void)
     }
 
     WFREE(msg_addr);
+    WFREE(msg_id);
+    WFREE(queue_id);
 
     return;
 }
@@ -362,4 +388,6 @@ void token_cleanup()
     WFREE(w_head);
     WFREE(w_mime);
     WFREE(msg_addr);
+    WFREE(msg_id);
+    WFREE(queue_id);
 }

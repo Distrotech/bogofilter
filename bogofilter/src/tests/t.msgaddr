@@ -9,7 +9,7 @@ CORRECT=${SYSTEST}/outputs/msgaddr.ref
 cat <<EOF > $CFG
 # include ip address
 # suppress timestamps & version info in output
-header_format=%h: %c, ipaddr=%I
+header_format=%h: %c, ipaddr=%A
 EOF
 
 # build wordlists

@@ -5,7 +5,43 @@
 NOTE: More information on important changes for bogofilter updaters
 is in the RELEASE.NOTES files.  Read them!!
 
-	* Remove obsolete '-f' from t.valgrind, too.
+0.92.2	2004-07-11
+
+	* Bugfix:  '%I' is now really the Message-ID,
+	* Feature: '%Q' is now the queue ID
+
+	2004-07-10
+
+	* Use an explicit inputs/outputs directory list to avoid shipping test
+	  files in those directories.
+
+	2004-07-08
+
+	* Miscellaneous cleanups, removed 'degen' code remainders.
+
+	2004-07-07
+
+	* Formatting character changes:
+	  '%A' is now the message's IP address.
+	  '%I' is now the message's ID.
+
+	* bogofilter-faq.html - corrected editting error that deleted
+	  "asian spam" question and added answer to "multi-user"
+	  question.
+
+	* Fix self-test suite ("make check") when bogofilter is compiled
+	  with QDBM or TDB as the data base engine.
+
+	2004-07-02
+
+	* The self-test suite now properly detects valgrind when
+	  make check VERBOSE=-x is used.
+
+	2004-07-01
+
+	* Convert a C99/C++ //-style comment to a /* C-style comment */
+
+	* Fix valgrind self test that still had an obsolete '-f' option.
 
 0.92.1	2004-07-01
 
@@ -31,7 +67,7 @@ is in the RELEASE.NOTES files.  Read them!!
 	* Fixed db_init/db_cleanup problems encountered with multiple
 	wordlists and concurrent data stores.
 
-0.92.0	2004-06-26 - New Stable Release
+0.92.0	2004-06-26 - Stable Release
 
 	* Added ESF options to bogofilter's man page.
 	* Revised man pages' description of multi-parameter options.
@@ -170,7 +206,7 @@ is in the RELEASE.NOTES files.  Read them!!
           rather than %e, to mask differences between GSL versions.
 
 0.17.5	2004-04-01
-	2004-04-08 - New Stable Release
+	2004-04-08 - Promoted to Stable Release
 
 	2004-03-31
 

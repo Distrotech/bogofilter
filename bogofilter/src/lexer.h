@@ -26,8 +26,9 @@ typedef enum {
     HEADKEY,	/* header keyword */
     EOH,	/* end-of-header (empty line) */
     BOUNDARY,	/* MIME multipart boundary line */
-    IPADDR,	/* IP address */
+    QUEUE_ID,	/* Queue ID of message */
     MSGADDR,	/* Message's IP address */
+    IPADDR,	/* Generic IP address */
     VERP,	/* Variable Envelope Return Path */
     MSG_COUNT_LINE,
     BOGO_LEX_LINE
@@ -62,6 +63,7 @@ extern char yy_get_state(void);
 extern void yy_set_state_initial(void);
 
 /* in lexer.c */
+extern void 	lexer_init(void);
 extern void	yyinit(void);
 extern int	yyinput(byte *buf, size_t used, size_t size);
 

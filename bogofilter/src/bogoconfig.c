@@ -312,8 +312,6 @@ static const char *help_text[] = {
     "  --bogofilter_dir                  directory for wordlists\n",
     "  --charset_default                 default character set\n",
     "  --db_cachesize                    Berkeley db cache in Mb\n",
-    "  --degen_enabled                   if no match, simplify\n",
-    "  --first_match                     if degen use first match\n",
     "  --ham_cutoff                      nonspam if score below\n",
     "  --header_format                   spam header format\n",
     "  --log_header_format               header written to log\n",
@@ -373,7 +371,6 @@ static void print_version(void)
 		  progtype, version, ds_version_str(), PACKAGE);
 }
 
-/* #define	OPTIONS	":-:bBc:Cd:DefFghHI:k:lL:m:MnNo:O:pqQRrsStTuUvVx:X:y:" */
 #define	OPTIONS	":-:bBc:Cd:DeFhHI:k:lL:m:MnNo:O:pqQRsStTuUvVx:X:y:"
 
 /** These functions process command line arguments.
