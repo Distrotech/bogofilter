@@ -133,9 +133,6 @@ extern char *ds_handle_filename(void *vhandle);
 /* Locks and unlocks file descriptor */
 extern int ds_lock(int fd, int cmd, short int type);
 
-/* Prints wordlist name(s) */
-extern void dbh_print_names(dsh_t *dsh, const char *msg);
-
 /* Returns version string */
 extern const char *ds_version_str(void);
 
