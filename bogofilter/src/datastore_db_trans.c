@@ -61,6 +61,8 @@ bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 
 static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
 static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
+static int	   txn_auto_commit_flags(void);
+static int	   txn_get_rmw_flag	(int open_mode);
 static int	  txn_begin		(void *vhandle);
 static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
@@ -70,6 +72,8 @@ static int  	  txn_commit		(void *vhandle);
 dsm_t dsm_traditional = {
     &txn_get_env_dbe,
     &txn_recover_open,
+    &txn_auto_commit_flags,
+    &txn_get_rmw_flag,
     &txn_begin,
     &txn_abort,
     &txn_commit,
@@ -78,6 +82,27 @@ dsm_t dsm_traditional = {
 DB_ENV *txn_get_env_dbe(dbe_t *env)
 {
     return env->dbe;
+}
+
+int  txn_auto_commit_flags(void)
+{
+#if DB_AT_LEAST(4,1)
+    return DB_AUTO_COMMIT;
+#else
+    return 0;
+#endif
+}
+
+int txn_get_rmw_flag(int open_mode)
+{
+    int flag;
+
+    if (open_mode == DS_READ)
+	flag = 0;
+    else
+	flag = DB_RMW;
+
+    return flag;
 }
 
 static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
