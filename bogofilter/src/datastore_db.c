@@ -430,12 +430,16 @@ retry_db_open:
  * collect the junk in a location separate from the implementation */
 #if DB_AT_LEAST(4,0)
 #define BF_LOG_FLUSH(e, i) ((e)->log_flush((e), (i)))
+#define BF_MEMP_SYNC(e, l) ((e)->memp_sync((e), (l)))
+#define BF_MEMP_TRICKLE(e, p, n) ((e)->memp_trickle((e), (p), (n)))
 #define BF_TXN_BEGIN(e, f, g, h) ((e)->txn_begin((e), (f), (g), (h)))
 #define BF_TXN_ID(t) ((t)->id(t))
 #define BF_TXN_ABORT(t) ((t)->abort((t)))
 #define BF_TXN_COMMIT(t, f) ((t)->commit((t), (f)))
 #else
 #define BF_LOG_FLUSH(e, i) (log_flush((e), (i)))
+#define BF_MEMP_SYNC(e, l) (memp_sync((e), (l)))
+#define BF_MEMP_TRICKLE(e, p, n) (memp_trickle((e), (p), (n)))
 #define BF_TXN_BEGIN(e, f, g, h) (txn_begin((e), (f), (g), (h)))
 #define BF_TXN_ID(t) (txn_id(t))
 #define BF_TXN_ABORT(t) (txn_abort((t)))
@@ -518,7 +522,7 @@ int db_txn_commit(void *vhandle)
 	case 0:
 	    /* push out buffer pages so that >=15% are clean - we
 	     * can ignore errors here, as the log has all the data */
-	    (void)dbe->memp_trickle(dbe, 15, NULL);
+	    BF_MEMP_TRICKLE(dbe, 15, NULL);
 
 	    return DST_OK;
 	case DB_LOCK_DEADLOCK:
@@ -684,7 +688,7 @@ void db_close(void *vhandle)
     /* flush dirty pages in buffer pool */
     while (ret == DB_INCOMPLETE) {
 	rand_sleep(10000,1000000);
-	ret = dbe->memp_sync(dbe, NULL);
+	ret = BF_MEMP_SYNC(dbe, NULL);
     }
 #endif
     if (ret)
@@ -715,7 +719,7 @@ void db_flush(void *vhandle)
     /* flush dirty pages in buffer pool */
     while (ret == DB_INCOMPLETE) {
 	rand_sleep(10000,1000000);
-	ret = dbe->memp_sync(dbe, NULL);
+	ret = BF_MEMP_SYNC(dbe, NULL);
     }
 #endif
     if (ret)
@@ -886,7 +890,12 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	fprintf(dbgout, "DB_ENV->set_cachesize(%u)\n", db_cachesize);
 
     /* configure lock system size - locks */
-    if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0) {
+#if DB_AT_LEAST(3,2)
+    if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0)
+#else
+    if ((ret = dbe->set_lk_max(dbe, numlocks)) != 0)
+#endif
+    {
 	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", (void *)dbe,
 		(unsigned long)numlocks, db_strerror(ret));
 	exit(EXIT_FAILURE);
@@ -894,6 +903,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", (void *)dbe, (unsigned long)numlocks);
 
+#if DB_AT_LEAST(3,2)
     /* configure lock system size - objects */
     if ((ret = dbe->set_lk_max_objects(dbe, numobjs)) != 0) {
 	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", (void *)dbe,
@@ -902,6 +912,7 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     }
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", (void *)dbe, (unsigned long)numlocks);
+#endif
 
     /* configure automatic deadlock detector */
     if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
@@ -911,7 +922,11 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT)\n");
 
-    ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK
+    ret = dbe->open(dbe, bogohome,
+#if DB_AT_MOST(3,0)
+	    NULL,
+#endif
+	    DB_INIT_MPOOL | DB_INIT_LOCK
 	    | DB_INIT_LOG | DB_INIT_TXN | DB_CREATE | flags, /* mode */ 0644);
     if (ret != 0) {
 	dbe->close(dbe, 0);
