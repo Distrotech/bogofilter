@@ -119,16 +119,6 @@ static double wordprob_result(wordprob_t* wordstats)
     return (fw);
 }
 
-static double wordprob_result_old(wordprob_t* wordstats)
-{
-    double prob = 0.0;
-    double count = wordstats->good + wordstats->bad;
-
-    prob = ((ROBS * ROBX + wordstats->bad) / (ROBS + count));
-
-    return (prob);
-}
-
 static double compute_scale(void)
 {
     wordlist_t* list;
