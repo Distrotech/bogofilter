@@ -109,8 +109,7 @@ rc_t bogofilter(int argc, char **argv)
 
 	if (classify_msg || write_msg) {
 	    spamicity = msg_compute_spamicity(w, NULL);
-	    if (spamicity < 0)
-		abort();
+	    assert(spamicity >= 0 && spamicity <= 1);
 	    status = msg_status();
 	    if (run_type & RUN_UPDATE)		/* Note: don't register if RC_UNSURE */
 	    {
