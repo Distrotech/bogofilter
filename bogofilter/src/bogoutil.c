@@ -78,51 +78,86 @@ int ds_dump_hook(word_t *key, dsv_t *data,
     return !!ferror(stdout);
 }
 
-struct robhook_data {
+typedef struct robhook_data {
     double   *sum;
     uint32_t *count;
     dsh_t    *dsh;
     double   scalefactor;
-};
+} rhd_t;
+
+static void robx_accum(rhd_t *rh, 
+		       word_t *key,
+		       dsv_t *data)
+{
+    uint32_t goodness = data->goodcount;
+    uint32_t spamness = data->spamcount;
+    double prob = spamness / (goodness * rh->scalefactor + spamness);
+    bool doit = goodness + spamness >= 10;
+
+    if (doit) {
+	*rh->sum += prob;
+	*rh->count += 1;
+    }
+
+    /* print if -vv and token in both word lists, or -vvv */
+    if ((verbose > 1 && doit) || verbose > 2) {
+	fprintf(dbgout, "cnt: %4lu,  sum: %11.6f,  ratio: %9.6f,"
+		"  sp: %3lu,  gd: %3lu,  p: %9.6f,  t: %*s\n", 
+		(unsigned long)*rh->count, *rh->sum, *rh->sum / *rh->count,
+		(unsigned long)spamness, (unsigned long)goodness, prob,
+		key->leng, key->text);
+    }
+}
 
 static int robx_hook(word_t *key, dsv_t *data, 
 		     void *userdata)
 {
     struct robhook_data *rh = userdata;
+    dsh_t *dsh = rh->dsh;
+    sh_t i = dsh->index;
 
-    uint32_t goodness;
-    uint32_t spamness;
-    double   prob;
+    bool doit;
 
     /* ignore system meta-data */
     if (*key->text == '.')
 	return 0;
 
-    spamness = data->spamcount;
-    goodness = data->goodcount;
+    if (dsh->count == 1) {
+	doit = true;
+    } else {
+	/* tokens in good list were already counted */
+	/* now add in tokens only in spam list */
+	ds_read(dsh, key, data);
+	doit = data->goodcount == 0;
+    }
 
-    /* tokens in good list were already counted */
-    /* now add in tokens only in spam list */
-/*
-    if (goodness == 0) {
-*/
-    prob = spamness / (goodness * rh->scalefactor + spamness);
-    if (goodness + spamness >= 10) {
-	(*rh->sum) += prob;
-	(*rh->count) += 1;
-    }
-    /* print if -vv and token in both word lists, or -vvv */
-    if ((verbose > 1 && goodness && spamness) || verbose > 2) {
-	printf("cnt: %4lu,  sum: %11.6f,  ratio: %9.6f,"
-	       "  sp: %3lu,  gd: %3lu,  p: %9.6f,  t: ", 
-	       (unsigned long)*rh->count, *rh->sum, *rh->sum / *rh->count,
-	       (unsigned long)spamness, (unsigned long)goodness, prob);
-	word_puts(key, 0, stdout);
-	fputc('\n', stdout);
-    }
-/*
-    }
-*/
+    if (doit)
+	robx_accum(rh, key, data);
+
+    dsh->index = i;
+
+    return 0;
+}
+
+static int count_hook(word_t *key, dsv_t *data, 
+		      void *userdata)
+{
+    struct robhook_data *rh = userdata;
+    dsh_t *dsh = rh->dsh;
+    sh_t i = dsh->index;
+
+    /* ignore system meta-data */
+    if (*key->text == '.')
+	return 0;
+
+    ds_read(dsh, key, data);
+
+    /* skip tokens with goodness == 0 */
+    if (data->goodcount != 0)
+	robx_accum(rh, key, data);
+
+    dsh->index = i;
+
     return 0;
 }
 
@@ -450,7 +485,17 @@ static double compute_robx(dsh_t *dsh)
     rh.sum = &sum;
     rh.count = &tok_cnt;
 
-    ds_foreach(dsh, robx_hook, &rh);
+    if (dsh->count == 1) {
+	dsh->index = 0;
+	ds_foreach(dsh, robx_hook, &rh);
+    }
+    else {
+	dsh->index = GOOD;	    /* robx needs count good tokens */
+	ds_foreach(dsh, count_hook, &rh);
+
+	dsh->index = SPAM;	    /* and scores for spam spam tokens */
+	ds_foreach(dsh, robx_hook, &rh);
+    }
 
     robx = sum/tok_cnt;
     if (verbose)
