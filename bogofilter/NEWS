@@ -4,6 +4,9 @@
 
 $Id$
 
+	2002-12-31
+	* Added sample procmail file, contrib/procmailrc.example
+	
 	2002-12-30
 	* Spamicity score now computed from multiple wordlist pairs, i.e. all 
 	  spam and ham wordlists in directories named on command line or in 
