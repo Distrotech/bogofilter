@@ -1,6 +1,6 @@
 # $Id$
 dnl vim: set noai tw=0:
-AC_INIT(bogofilter, 0.92.5+txn1)
+AC_INIT(bogofilter, 0.92.6+txn1)
 AC_PREREQ(2.54)
 AC_CONFIG_SRCDIR([src/bogofilter.c])
 AC_CANONICAL_TARGET
@@ -102,10 +102,6 @@ dgux*)
     fi
     ;;
 esac
-
-AC_ARG_WITH(db,
-	    AC_HELP_STRING([--with-db=PATH], [obsolete, use --with-libdb-prefix instead]),
-    AC_MSG_ERROR([--with-db is obsolete. Use --with-libdb-prefix=$withval instead.]))
 
 dnl If we're using gcc, enable some warnings
 dnl missing: -Wunreachable-code
