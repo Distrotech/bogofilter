@@ -16,8 +16,6 @@ David Relson	<relson@osagesoftware.com> 2005
 #ifndef DATASTORE_DB_PRIVATE_H
 #define DATASTORE_DB_PRIVATE_H
 
-/** Default flags for DB_ENV->open() */
-
 #define MAGIC_DBE 0xdbe
 #define MAGIC_DBH 0xdb4
 
@@ -30,39 +28,39 @@ typedef struct {
 } dbe_t;
 
 /* public -- used in datastore.c */
-typedef int	dsm_function		(void *vhandle);
+typedef int	dsm_i_pv	(void *vhandle);
 /* private -- used in datastore_db_*.c */
-typedef DB_ENV *dsm_get_env_dbe		(dbe_t *env);
-typedef const char *dsm_database_name	(const char *db_file);
-typedef DB_ENV *dsm_recover_open	(const char *db_file, DB **dbp);
-typedef int	dsm_auto_commit_flags	(void);
-typedef int	dsm_get_rmw_flag	(int open_mode);
-typedef void	dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
-typedef int	dsm_lock		(void *handle, int open_mode);
-typedef ex_t	dsm_common_close	(DB_ENV *dbe, const char *db_file);
-typedef int	dsm_sync		(DB_ENV *dbe, int ret);
-typedef void	dsm_log_flush		(DB_ENV *dbe);
-typedef dbe_t  *dsm_env_init		(const char *directory);
-typedef void	dsm_cleanup		(dbe_t *env);
+typedef int	dsm_i_i		(int open_mode);
+typedef int	dsm_i_pnvi	(DB_ENV *dbe, int ret);
+typedef int	dsm_i_pvi	(void *handle, int open_mode);
+typedef int	dsm_i_v		(void);
+typedef void	dsm_v_pbe	(dbe_t *env);
+typedef void	dsm_v_pnv	(DB_ENV *dbe);
+typedef void	dsm_v_pvuiui	(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
+typedef const char *dsm_pc_pc	(const char *db_file);
+typedef ex_t	dsm_x_pnvpc	(DB_ENV *dbe, const char *db_file);
+typedef dbe_t  *dsm_pbe_pc	(const char *directory);
+typedef DB_ENV *dsm_pnv_pcpb	(const char *db_file, DB **dbp);
+typedef DB_ENV *dsm_pnv_pbe	(dbe_t *env);
 
 typedef struct {
     /* public -- used in datastore.c */
-    dsm_function	        *dsm_begin;
-    dsm_function        	*dsm_abort;
-    dsm_function        	*dsm_commit;
+    dsm_i_pv	 *dsm_begin;
+    dsm_i_pv	 *dsm_abort;
+    dsm_i_pv	 *dsm_commit;
     /* private -- used in datastore_db_*.c */
-    dsm_env_init		*dsm_env_init;
-    dsm_cleanup			*dsm_cleanup;
-    dsm_cleanup			*dsm_cleanup_lite;
-    dsm_get_env_dbe		*dsm_get_env_dbe;
-    dsm_database_name		*dsm_database_name;
-    dsm_recover_open		*dsm_recover_open;
-    dsm_auto_commit_flags	*dsm_auto_commit_flags;
-    dsm_get_rmw_flag		*dsm_get_rmw_flag;
-    dsm_lock			*dsm_lock;
-    dsm_common_close		*dsm_common_close;
-    dsm_sync			*dsm_sync;
-    dsm_log_flush		*dsm_log_flush;
+    dsm_pbe_pc	 *dsm_env_init;
+    dsm_v_pbe	 *dsm_cleanup;
+    dsm_v_pbe	 *dsm_cleanup_lite;
+    dsm_pnv_pbe	 *dsm_get_env_dbe;
+    dsm_pc_pc	 *dsm_database_name;
+    dsm_pnv_pcpb *dsm_recover_open;
+    dsm_i_v	 *dsm_auto_commit_flags;
+    dsm_i_i	 *dsm_get_rmw_flag;
+    dsm_i_pvi	 *dsm_lock;
+    dsm_x_pnvpc	 *dsm_common_close;
+    dsm_i_pnvi	 *dsm_sync;
+    dsm_v_pnv	 *dsm_log_flush;
 } dsm_t;
 
 /** implementation internal type to keep track of databases
