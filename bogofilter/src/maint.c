@@ -3,10 +3,10 @@
 /*****************************************************************************
 
 NAME:
-  maint.c -- wordlist maintenance functions
+   maint.c -- wordlist maintenance functions
 
 AUTHOR:
-  David Relson
+   David Relson
 
 ******************************************************************************/
 
