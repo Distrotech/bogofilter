@@ -2,7 +2,10 @@
 
 				bogofilter news
 
-0.7.6	2002-10-25T23:05:00Z
+0.7.6	2002-10-26
+	* Added README.hp-ux for those using HP-UX.
+	* Added support for additional architectures - ia64, arm,
+	  powerpc, and s390.
 	* Bogofilter -p mode now preserves CR and NUL characters.
 	* Bogofilter -p mode now detects if the computer runs out of
 	  memory.
