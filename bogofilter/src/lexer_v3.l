@@ -79,7 +79,7 @@
 #define YY_DECL token_t yylex(void)
     YY_DECL;			/* declare function */
 
-#define YY_INPUT(buf,result,max_size) result = yyinput((byte *)buf, max_size)
+#define YY_INPUT(buf,result,max_size) result = yyinput((byte *)buf, result, max_size)
 #define YY_EXIT_FAILURE EX_ERROR
 
 #undef	stderr
@@ -334,9 +334,9 @@ static int xtoi(char *in, size_t len)
     while (isxdigit((byte) *in) && (len-- > 0)) {
 	char c = *in++;
 	val <<= 4;
-	val += isdigit((unsigned char)c)
+	val += isdigit((byte)c)
 	    ? (c - '0')
-	    : (tolower((unsigned char)c) - 'a' + 10);
+	    : (tolower((byte)c) - 'a' + 10);
     }
     return val;
 }
