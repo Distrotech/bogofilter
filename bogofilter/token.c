@@ -110,7 +110,9 @@ token_t get_token(void)
 	case TOKEN:	/* ignore anything when not reading text MIME types */
 	    if (html_tag_level > 0 || html_comment_level > 0)
 		continue;
-	    if (mime_lexer && stackp > 0)
+	    if (msg_header || msg_state->mime_header)
+		break;
+	    if (stackp > 0)
 		switch (msg_state->mime_type) {
 		case MIME_TEXT:
 		case MIME_TEXT_HTML:
