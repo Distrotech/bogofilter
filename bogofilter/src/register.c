@@ -25,18 +25,18 @@
 void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
 {
     const char *r="",*u="";
-    hashnode_t *node;
     dsv_t val;
+    hashnode_t *node;
     wordprop_t *wordprop;
     run_t save_run_type = run_type;
     int retrycount = 5;			/* we'll retry an aborted
 					   registration five times
 					   before giving up. */
 
-    u_int32_t g, b;
     u_int32_t wordcount = h->count;	/* use number of unique tokens */
 
     wordlist_t *list = default_wordlist();	/* use default wordlist */
+
     sh_t incr = IX_UNDF, decr = IX_UNDF;
 
     /* If update directory explicity supplied, setup the wordlists. */
@@ -69,8 +69,6 @@ retry:
 	fprintf(stderr, "ds_txn_begin error.\n");
 	exit(EX_ERROR);
     }
-
-    g = b = 0;
 
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
@@ -105,9 +103,7 @@ retry:
     val.goodcount = list->msgcount[IX_GOOD];
 
     ds_set_msgcounts(list->dsh, &val);
-
-    g += val.goodcount;
-    b += val.spamcount;
+    set_msg_counts(val.goodcount, val.spamcount);
 
     switch(ds_txn_commit(list->dsh)) {
 	case DST_OK:
@@ -132,9 +128,7 @@ retry:
 
     if (DEBUG_REGISTER(1))
 	(void)fprintf(dbgout, "bogofilter: list %s (%s) - %ul spam, %ul good\n",
-		      list->listname, list->filepath, list->msgcount[IX_SPAM], list->msgcount[IX_GOOD]);
-
-    set_msg_counts(g, b);
+		      list->listname, list->filepath, val.spamcount, val.goodcount);
 
     run_type = save_run_type;
 }
