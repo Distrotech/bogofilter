@@ -21,6 +21,7 @@ AUTHOR:
 #include "wordlists.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
+#include "find_home.h"
 
 #ifndef	DEBUG_CONFIG
 #define DEBUG_CONFIG(level)	(verbose > level)
@@ -150,7 +151,7 @@ void read_config_file(const char *filename)
 
     if ( *filename == '~' )
     {
-	char *home = getenv( "HOME" );
+	char *home = find_home(TRUE);
 	if ( home == NULL )
 	{
 	    fprintf( stderr, "Can't find $HOME.\n" );
