@@ -1,5 +1,5 @@
 # $Id$
-AC_INIT(bogofilter, 0.9.1.2.cvs)
+AC_INIT(bogofilter, 0.9.1.2.tst)
 AC_PREREQ(2.55)
 AC_CONFIG_SRCDIR([bogofilter.c])
 AM_INIT_AUTOMAKE
@@ -24,7 +24,7 @@ then
       -Waggregate-return -Wmissing-declarations \
       -Wmissing-format-attribute -Wnested-externs \
       -ggdb -fno-common -Wchar-subscripts -Wcomment \
-      -Wformat=2 -Wimplicit -Wsequence-point -Wreturn-type \
+      -Wimplicit -Wsequence-point -Wreturn-type \
       -Wfloat-equal -Wpointer-arith \
       -Wno-system-headers
       # -Wmissing-noreturn -Wconversion -pedantic -Wredundant-decls
