@@ -306,7 +306,11 @@ static int yygetline(char *buf, int max_size)
 	} while (count != -1 && isspace((unsigned char)*buf));
     }
 
-    while (!past_header) {
+/* unfolding:
+** 	causes "^\tid" to be treated as continuation of previous line
+** 	hence doesn't match lexer pattern which specifies beginning of line
+*/
+    while (0 && !past_header) {
 	int c = fgetc(yyin);
 	if (c == EOF)
 	    break;
