@@ -324,13 +324,19 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_key.size = token->leng;
 
     db_data.data = val->data;
-    db_data.size = val->size;
-    db_data.ulen = val->size;
-    db_data.flags = DB_DBT_USERMEM; /* saves the memcpy */
+    db_data.size = val->size;		/* cur used */
+    db_data.ulen = val->size;		/* max size */
+    db_data.flags = DB_DBT_USERMEM;	/* saves the memcpy */
 
     ret = dbp->get(dbp, NULL, &db_key, &db_data, 0);
 
-    val->leng = db_data.size;
+    if (val->size < db_data.size) {
+	print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%s' ), size error %d::%d",
+		    (char *)token->data, val->size, db_data.size);
+	exit(EX_ERROR);
+    }
+
+    val->leng = db_data.size;		/* read count */
 
     switch (ret) {
     case 0:
@@ -371,7 +377,7 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     db_key.size = token->leng;
 
     db_data.data = val->data;
-    db_data.size = val->leng;
+    db_data.size = val->leng;		/* write count */
 
     ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
 
@@ -438,14 +444,14 @@ void db_flush(dsh_t *dsh)
 
 int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 {
-    size_t i = dsh->index;
-    int ret = 0;
     dbh_t *handle = dsh->dbh;
+    DB *dbp = handle->dbp[dsh->index];
+
+    int ret = 0;
 
     DBC dbc;
     DBC *dbcp = &dbc;
     DBT key, data;
-    DB *dbp = handle->dbp[i];
 
     dbv_t dbv_key, dbv_data;
     memset(&key, 0, sizeof(key));
