@@ -68,7 +68,7 @@ static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const ch
 
     *list = new;
 
-    new->dbh=NULL;
+    new->dsh=NULL;
     new->filename=xstrdup(name);
     new->filepath=xstrdup(path);
     new->index = ++listcount;
@@ -196,16 +196,16 @@ void open_wordlists(dbmode_t mode)
 	    case WL_M_COMBINED:
 		if (db_cachesize < 4)
 		    db_cachesize = 4;
-		list->dbh = ds_open(list->filepath, cCombined, aCombined, mode);
+		list->dsh = ds_open(list->filepath, cCombined, aCombined, mode);
 		break;
 	    case WL_M_SEPARATE:
-		list->dbh = ds_open(list->filepath, cSeparate, aSeparate, mode);
+		list->dsh = ds_open(list->filepath, cSeparate, aSeparate, mode);
 		break;
 	    case WL_M_UNKNOWN:
 		fprintf(stderr, "Invalid wordlist mode.\n");
 		exit(EX_ERROR);
 	    }
-	    if (list->dbh == NULL) {
+	    if (list->dsh == NULL) {
 		int err = errno;
 		close_wordlists(true); /* unlock and close */
 		switch(err) {
@@ -224,7 +224,7 @@ void open_wordlists(dbmode_t mode)
 		} /* switch */
 	    } else { /* ds_open */
 		dsv_t val;
-		ds_get_msgcounts(list->dbh, &val);
+		ds_get_msgcounts(list->dsh, &val);
 		list->msgcount[GOOD] = val.goodcount;
 		list->msgcount[SPAM] = val.spamcount;
 	    } /* ds_open */
@@ -239,8 +239,8 @@ void close_wordlists(bool nosync /** Normally false, if true, do not synchronize
 
     for ( list = word_lists; list != NULL; list = list->next )
     {
-	if (list->dbh) ds_close(list->dbh, nosync);
-	list->dbh = NULL;
+	if (list->dsh) ds_close(list->dsh, nosync);
+	list->dsh = NULL;
     }
 }
 

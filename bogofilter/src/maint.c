@@ -19,6 +19,7 @@ AUTHOR:
 #include "datastore.h"
 #include "error.h"
 #include "maint.h"
+#include "wordlists.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
 
@@ -125,7 +126,7 @@ void maintain_wordlists(void)
     set_list_active_status(true);
 
     for (list = word_lists; list != NULL; list = list->next) {
-	maintain_wordlist(list->dbh);
+	maintain_wordlist(list->dsh);
 	list = list->next;
     }
 }

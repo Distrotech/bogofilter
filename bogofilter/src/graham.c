@@ -17,6 +17,7 @@ NAME:
 #include "datastore.h"
 #include "graham.h"
 #include "wordhash.h"
+#include "wordlists.h"
 
 /* constants for the Graham formula */
 #define KEEPERS		15		/* how many extrema to keep */
@@ -218,7 +219,7 @@ static double compute_probability(const word_t *token)
 	dsv_t val;
 	if (override > list->override)
 	    break;
-	ds_read(list->dbh, token, &val);
+	ds_read(list->dsh, token, &val);
 	if (val.count[0] == 0 && val.count[1] == 0)
 	    continue;
 

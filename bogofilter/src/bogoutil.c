@@ -28,6 +28,7 @@ AUTHOR:
 #include "paths.h"
 #include "robinson.h"			/* for ROBS and ROBX */
 #include "swap.h"
+#include "wordlists.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
 
@@ -79,7 +80,7 @@ int ds_dump_hook(word_t *key, dsv_t *data,
 struct robhook_data {
     double   *sum;
     uint32_t *count;
-    void     *dbh;
+    dsh_t    *dsh;
     double   scalefactor;
 };
 
@@ -138,18 +139,16 @@ static int ds_oper(const char *path, dbmode_t open_mode,
 		   ds_foreach_t *hook, void *userdata)
 {
     int   ret = 0;
-    void *dbh;
+    dsh_t *dsh = ds_open(".", 1, &path, open_mode);
 
-    dbh = ds_open(".", 1, &path, open_mode);
-
-    if (dbh == NULL) {
+    if (dsh == NULL) {
 	fprintf(stderr, "Can't open file %s\n", path);
 	exit(EX_ERROR);
     }
 
-    ret = ds_foreach(dbh, hook, userdata);
+    ret = ds_foreach(dsh, hook, userdata);
     if (ret)
-	ds_close(dbh, false);
+	ds_close(dsh, false);
 
     return ret;
 }
@@ -181,7 +180,7 @@ static byte *spanword(byte *t)
 
 static int load_file(const char *ds_file)
 {
-    void *dbh;
+    dsh_t *dsh;
     byte buf[BUFSIZE];
     byte *p;
     int rv = 0;
@@ -191,8 +190,8 @@ static int load_file(const char *ds_file)
     unsigned long count[2], date;
     YYYYMMDD today_save = today;
 
-    dbh = ds_open(".", 1, &ds_file, DB_WRITE);
-    if (dbh == NULL)
+    dsh = ds_open(".", 1, &ds_file, DB_WRITE);
+    if (dsh == NULL)
 	return 2;
 
     memset(buf, '\0', BUFSIZE);
@@ -256,13 +255,13 @@ static int load_file(const char *ds_file)
 	/* Slower, but allows multiple lists to be concatenated */
 	set_date(date);
 	token = word_new(buf, len);
-	ds_read(dbh, token, &data);
+	ds_read(dsh, token, &data);
 	data.spamcount += spamcount;
 	data.goodcount += goodcount;
-	ds_write(dbh, token, &data);
+	ds_write(dsh, token, &data);
 //	word_free(token);
     }
-    ds_close(dbh, false);
+    ds_close(dsh, false);
 
     if (verbose)
 	fprintf(dbgout, "%d tokens loaded\n", load_count);
@@ -301,11 +300,11 @@ static int get_token(buff_t *buff, FILE *fp)
 
 static int words_from_list(const char *ds_file, int argc, char **argv)
 {
-    void *dbh;
+    dsh_t *dsh;
     int rv = 0;
 
-    dbh = ds_open(".", 1, &ds_file, DB_READ);
-    if (dbh == NULL)
+    dsh = ds_open(".", 1, &ds_file, DB_READ);
+    if (dsh == NULL)
 	return 2;
 
     if (argc == 0)
@@ -315,7 +314,7 @@ static int words_from_list(const char *ds_file, int argc, char **argv)
 	while (get_token(buff, stdin) == 0) {
 	    dsv_t val;
 	    word_t *token = &buff->t;
-	    ds_read(dbh, token, &val);
+	    ds_read(dsh, token, &val);
 	    word_puts(token, 0, stdout);
 	    printf(" %lu %lu\n", (unsigned long) val.spamcount, (unsigned long) val.goodcount);
 	}
@@ -327,14 +326,14 @@ static int words_from_list(const char *ds_file, int argc, char **argv)
 	    dsv_t val;
 	    const byte *word = (const byte *) *argv++;
 	    word_t *token = word_new(word, strlen((const char *)word));
-	    ds_read(dbh, token, &val);
+	    ds_read(dsh, token, &val);
 	    word_puts(token, 0, stdout);
 	    printf(" %lu %lu\n", (unsigned long) val.spamcount, (unsigned long) val.goodcount);
 //	    word_free(token);
 	}
     }
 
-    ds_close(dbh, false);
+    ds_close(dsh, false);
 
     return rv;
 }
@@ -357,7 +356,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
     const char *head_format = !show_probability ? "%-20s %6s %6s\n"   : "%-20s %6s  %6s  %6s  %6s\n";
     const char *data_format = !show_probability ? "%-20s %6lu %6lu\n" : "%-20s %6lu  %6lu  %f  %f\n";
 
-    void *dbh;
+    dsh_t *dsh;
 
     set_wordlist_mode(dir);
     filepaths[0] = filepath1;
@@ -366,14 +365,14 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
     count = build_wordlist_paths(filepaths, dir);
 
     /* XXX FIXME: deadlock possible */
-    dbh = ds_open(".", count, (const char **)filepaths, DB_READ);
-    if (dbh == NULL)
+    dsh = ds_open(".", count, (const char **)filepaths, DB_READ);
+    if (dsh == NULL)
 	return 2;
 
     if (show_probability)
     {
 	dsv_t val;
-	ds_get_msgcounts(dbh, &val);
+	ds_get_msgcounts(dsh, &val);
 	spam_msg_count = val.spamcount;
 	good_msg_count = val.goodcount;
     }
@@ -398,7 +397,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
 	    token = word_new(word, strlen((const char *)word));
 	}
 
-	ds_read(dbh, token, &val);
+	ds_read(dsh, token, &val);
 	spam_count = val.spamcount;
 	good_count = val.goodcount;
 
@@ -417,7 +416,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
 //	    word_free(token);
     }
 
-    ds_close(dbh, false);
+    ds_close(dsh, false);
 
     return 0;
 }
@@ -446,7 +445,7 @@ static int display_words(const char *path, int argc, char **argv, bool prob)
     return 0;
 }
 
-static double compute_robx(void *dbh)
+static double compute_robx(dsh_t *dsh)
 {
     uint32_t tok_cnt = 0;
     double sum = 0.0;
@@ -456,16 +455,16 @@ static double compute_robx(void *dbh)
     uint32_t msg_good, msg_spam;
     struct robhook_data rh;
 
-    ds_get_msgcounts( dbh, &val );
+    ds_get_msgcounts(dsh, &val);
     msg_spam = val.spamcount;
     msg_good = val.goodcount;
 
     rh.scalefactor = (double)msg_spam/msg_good;
-    rh.dbh = dbh;
+    rh.dsh = dsh;
     rh.sum = &sum;
     rh.count = &tok_cnt;
 
-    ds_foreach(dbh, robx_hook, &rh);
+    ds_foreach(dsh, robx_hook, &rh);
 
     robx = sum/tok_cnt;
     if (verbose)
@@ -481,19 +480,19 @@ static int compute_robinson_x(char *path)
     double robx;
     word_t *word_robx = word_new((const byte *)ROBX_W, strlen(ROBX_W));
 
-    dsv_t val;
-    void *dbh;
-
     setup_wordlists(path, 0);
     open_wordlists(DB_READ);
 
-    robx = compute_robx(word_lists->dbh);
+    robx = compute_robx(word_lists->dsh);
 
     close_wordlists(false);
     free_wordlists();
 
     if (!onlyprint) {
 	size_t count;
+
+	dsv_t val;
+	dsh_t *dsh;
 
 	char filepath1[PATH_LEN];
 	char filepath2[PATH_LEN];
@@ -512,14 +511,14 @@ static int compute_robinson_x(char *path)
 
 	run_type = REG_SPAM;
 
-	dbh = ds_open(".", count, (const char **) filepaths, DB_WRITE);
-	if (dbh == NULL)
+	dsh = ds_open(".", count, (const char **) filepaths, DB_WRITE);
+	if (dsh == NULL)
 	    return 2;
 
 	val.goodcount = 0;
 	val.spamcount = (uint32_t) (robx * 1000000);
-	ds_write(dbh, word_robx, &val);
-	ds_close(dbh, false);
+	ds_write(dsh, word_robx, &val);
+	ds_close(dsh, false);
     }
 
 //    word_free(word_robx);

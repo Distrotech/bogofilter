@@ -13,6 +13,7 @@
 #include "maint.h"			/* for today */
 #include "register.h"
 #include "wordhash.h"
+#include "wordlists.h"
 
 #define PLURAL(count) ((count == 1) ? "" : "s")
 
@@ -63,7 +64,7 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
   for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
   {
       wordprop = node->buf;
-      ds_read(word_list->dbh, node->key, &val);
+      ds_read(word_list->dsh, node->key, &val);
       if (incr >= 0) {
 	  uint32_t *counts = val.count;
 	  counts[incr] += wordprop->freq;
@@ -72,7 +73,7 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 	  uint32_t *counts = val.count;
 	  counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
       }
-      ds_write(word_list->dbh, node->key, &val);
+      ds_write(word_list->dsh, node->key, &val);
   }
 
   for (list = word_lists; list != NULL; list = list->next)
@@ -83,7 +84,7 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 	  continue;
 */
 
-      ds_get_msgcounts(list->dbh, &val);
+      ds_get_msgcounts(list->dsh, &val);
       list->msgcount[SPAM] = val.spamcount;
       list->msgcount[GOOD] = val.goodcount;
 
@@ -100,9 +101,9 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
       val.spamcount = list->msgcount[SPAM];
       val.goodcount = list->msgcount[GOOD];
 
-      ds_set_msgcounts(list->dbh, &val);
+      ds_set_msgcounts(list->dsh, &val);
 
-      ds_flush(list->dbh);
+      ds_flush(list->dsh);
 
       if (verbose>1)
 	  (void)fprintf(stderr, "bogofilter: list %s - %ld spam, %ld good\n",

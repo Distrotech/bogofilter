@@ -21,6 +21,7 @@ NAME:
 #include "robinson.h"
 #include "rstats.h"
 #include "wordhash.h"
+#include "wordlists.h"
 
 #define ROBINSON_MIN_DEV	0.0	/* if nonzero, use characteristic words */
 #define ROBINSON_SPAM_CUTOFF	0.54	/* if it's spammier than this... */
@@ -130,13 +131,13 @@ double lookup_and_score(const word_t *token, wordprop_t *wordstats)
 	    break;
 	override=list->override;
 
-	ds_read(list->dbh, token, &val);
+	ds_read(list->dsh, token, &val);
 
 	for (i=0; i<COUNTOF(val.count); i++) {
 	    /* Protect against negatives */
 	    if ((int) val.count[i] < 0) {
 		val.count[i] = 0;
-		ds_write(list->dbh, token, &val);
+		ds_write(list->dsh, token, &val);
 	    }
 
 	    if (val.count[i] == 0)
@@ -327,13 +328,13 @@ void rob_initialize_with_parameters(rob_stats_t *stats, double _min_dev, double 
 	    robs = ROBS;
     }
 
-    if (fabs(robx) < EPS && word_list->dbh)
+    if (fabs(robx) < EPS && word_list->dsh != NULL)
     {
 	int ret;
 	dsv_t val;
 
 	/* Note: .ROBX is scaled by 1000000 in the wordlist */
-	ret = ds_read(word_list->dbh, word_robx, &val);
+	ret = ds_read(word_list->dsh, word_robx, &val);
 	if (ret != 0)
 	    robx = ROBX;
 	else {
