@@ -36,7 +36,7 @@ static bool open_wordlist(wordlist_t *list, dbmode_t mode)
     list->dsh = ds_open(bogohome, list->filepath, mode);
     if (list->dsh == NULL) {
 	int err = errno;
-	close_wordlists(true); /* unlock and close */
+	close_wordlists(); /* unlock and close */
 	switch(err) {
 	    /* F_SETLK can't obtain lock */
 	case EAGAIN:
@@ -121,13 +121,13 @@ void open_wordlists(dbmode_t mode)
 }
 
 /** close all open word lists */
-void close_wordlists(bool nosync /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */)
+void close_wordlists(void)
 {
     wordlist_t *list;
 
     for ( list = word_lists; list != NULL; list = list->next )
     {
-	if (list->dsh) ds_close(list->dsh, nosync);
+	if (list->dsh) ds_close(list->dsh);
 	list->dsh = NULL;
     }
 }

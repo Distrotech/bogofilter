@@ -211,7 +211,7 @@ static int load_wordlist(const char *ds_file)
 	}
     }
 
-    ds_close(dsh, false);
+    ds_close(dsh);
 
     ds_cleanup();
 
@@ -302,7 +302,7 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
 
     printf(head_format, "", "spam", "good", "  Fisher");
     if (DST_OK != ds_txn_begin(dsh)) {
-	ds_close(dsh, false);
+	ds_close(dsh);
 	fprintf(stderr, "Cannot begin transaction.\n");
 	return EX_ERROR;
     }
@@ -360,7 +360,7 @@ finish:
 	fprintf(stderr, "Cannot %s transaction.\n", rv ? "abort" : "commit");
 	rv = EX_ERROR;
     }
-    ds_close(dsh, false);
+    ds_close(dsh);
     ds_cleanup();
 
     buff_free(buff);
@@ -403,7 +403,7 @@ static int get_robx(char *path)
 	    if (DST_OK != ds_txn_commit(dsh))
 		ret = 1;
 	}
-	ds_close(dsh, false);
+	ds_close(dsh);
 	ds_cleanup();
 
 	word_free(word_robx);

@@ -141,7 +141,7 @@ int histogram(const char *path)
 	return EX_ERROR;
 
     if (DST_OK != ds_txn_begin(dsh)) {
-	ds_close(dsh, false);
+	ds_close(dsh);
 	fprintf(stderr, "cannot begin transaction!\n");
 	return EX_ERROR;
     }
@@ -150,12 +150,12 @@ int histogram(const char *path)
     set_msg_counts(val.goodcount, val.spamcount);
 
     if (DST_OK != ds_txn_commit(dsh)) {
-	ds_close(dsh, false);
+	ds_close(dsh);
 	fprintf(stderr, "cannot commit transaction!\n");
 	return EX_ERROR;
     }
 
-    ds_close(dsh, false);
+    ds_close(dsh);
     ds_cleanup();
 
     memset(&hist, 0, sizeof(hist));

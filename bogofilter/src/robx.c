@@ -118,7 +118,7 @@ double compute_robinson_x(char *path)
 	    rx = -1;
     } else rx = -1;
 
-    close_wordlists(false);
+    close_wordlists();
     free_wordlists();
 
     return rx;

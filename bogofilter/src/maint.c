@@ -288,7 +288,7 @@ int maintain_wordlist_file(const char *db_file)
     else
 	rc = maintain_wordlist(dsh);
 
-    ds_close(dsh, false);
+    ds_close(dsh);
     ds_cleanup();
 
     return rc;

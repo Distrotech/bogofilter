@@ -144,10 +144,10 @@ void *ds_open(const char *path, const char *name, dbmode_t open_mode)
     return dsh;
 }
 
-void ds_close(/*@only@*/ void *vhandle, bool nosync  /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */)
+void ds_close(/*@only@*/ void *vhandle)
 {
     dsh_t *dsh = vhandle;
-    db_close(dsh->dbh, nosync);
+    db_close(dsh->dbh, false);
     xfree(dsh);
 }
 
@@ -349,7 +349,7 @@ int ds_oper(const char *path, dbmode_t open_mode,
 		ret = -1;
     }
 
-    ds_close(dsh, false);
+    ds_close(dsh);
 
     return ret;
 }

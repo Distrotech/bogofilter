@@ -72,7 +72,7 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
     if (nonspam_exits_zero && exitcode != EX_ERROR)
 	exitcode = EX_OK;
 
-    close_wordlists(false);
+    close_wordlists();
     free_wordlists();
     ds_cleanup();
 
