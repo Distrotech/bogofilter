@@ -89,6 +89,7 @@ version_sources= \
 	maint.h maint.c \
 	mime.h mime.c \
 	msgcounts.h msgcounts.c \
+	mxcat.h mxcat.c \
 	passthrough.h passthrough.c \
 	paths.h paths.c \
 	prob.h prob.c \
