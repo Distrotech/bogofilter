@@ -171,7 +171,7 @@ token_t got_from(const char *text)
     }
 }
 
-#define	DEBUG	0
+#define	DEBUG	1
 
 #if	!DEBUG
 
@@ -185,6 +185,7 @@ void change_lexer_state(lexer_state_t new);
 const char *state_name(lexer_state_t state)
 {
     switch(state) {
+    case LEXER_HEAD: return "HEAD";
     case LEXER_TEXT: return "TEXT";
     case LEXER_HTML: return "HTML";
     } 
@@ -193,7 +194,8 @@ const char *state_name(lexer_state_t state)
 
 void change_lexer_state(lexer_state_t new)
 {
-    if (lexer_state != new)
+    /* if change of state, show new state */
+    if (DEBUG_LEXER(1) && lexer_state != new)
 	fprintf(stdout, "lexer_state: %s -> %s\n", state_name(lexer_state), state_name(new));
     lexer_state = new;
     return;
@@ -208,6 +210,10 @@ void got_newline()
     msg_header = msg_state->mime_header = false;
     
     switch (msg_state->mime_type) {
+
+    case LEXER_HEAD:
+	change_lexer_state(LEXER_TEXT);
+	break;
 
     case MIME_TEXT:
 	change_lexer_state(LEXER_TEXT);
