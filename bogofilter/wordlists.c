@@ -40,6 +40,7 @@ static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const ch
 
     *list = new;
 
+    new->dbh=NULL;
     new->filename=xstrdup(name);
     new->filepath=xstrdup(path);
     new->index = ++listcount;
