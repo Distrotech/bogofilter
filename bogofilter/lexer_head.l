@@ -67,20 +67,20 @@ TOKEN		[^[:blank:][:cntrl:][:digit:][:punct:]][^][:blank:]<>;=():&%$#@!+|/\\{}^\
 
 charset=\"?{ID}\"?				{ got_charset(yytext); yyredo(yytext, '='); }
 
-^MIME-Version:.*				{ if (mime_lexer) { mime_version(yytext, yyleng); yyredo(yytext, ':'); } }
-^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) { mime_encoding(yytext, yyleng); yyredo(yytext, ':'); } }
-^Content-Type:{MTYPE};?				{ if (mime_lexer) { mime_type(yytext, yyleng); yyredo(yytext, ':'); } }
-^Content-Disposition:{MTYPE}			{ if (mime_lexer) { mime_disposition(yytext, yyleng); yyredo(yytext, ':'); } }
+^MIME-Version:.*				{ mime_version(yytext, yyleng); yyredo(yytext, ':'); }
+^Content-Transfer-Encoding:{MTYPE}		{ mime_encoding(yytext, yyleng); yyredo(yytext, ':'); }
+^Content-Type:{MTYPE};?				{ mime_type(yytext, yyleng); yyredo(yytext, ':'); }
+^Content-Disposition:{MTYPE}			{ mime_disposition(yytext, yyleng); yyredo(yytext, ':'); }
 ^From\ 						{ return got_from(yytext); }
 ^Date:.*|Delivery-Date:.*			;
 ^Message-ID:.*					;
 ^\tid\ {ID}					;
 
 E?SMTP\ id\ {ID}				;
-boundary=[ ]*\"?{MIME_BOUNDARY}\"?		{ if (mime_lexer) { mime_boundary_set(yytext, yyleng); }}
+boundary=[ ]*\"?{MIME_BOUNDARY}\"?		{ mime_boundary_set(yytext, yyleng); }
 name=\"?					;
 filename=\"?					;
-^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { got_mime_boundary(yytext, yyleng); return (BOUNDARY); }}
+^--{MIME_BOUNDARY}(--)?$			{ got_mime_boundary(yytext, yyleng); return (BOUNDARY); }
 
 {IPADDR}					{ return(IPADDR);}
 {TOKEN}						{ return(TOKEN);}

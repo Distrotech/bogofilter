@@ -15,7 +15,6 @@ extern int yyleng;
 extern char *yytext;
 extern char *yylval;
 
-extern bool mime_lexer;
 extern bool block_on_subnets;
 
 /* lexer interface */

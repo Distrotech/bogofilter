@@ -26,7 +26,6 @@ char *yylval;
 
 int yylineno;
 int msg_header = 1;
-bool mime_lexer = true;
 
 static char *yysave = NULL;
 
