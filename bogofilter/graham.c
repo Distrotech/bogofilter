@@ -18,7 +18,6 @@ NAME:
 #include "bogofilter.h"
 #include "datastore.h"
 #include "graham.h"
-#include "lexer.h"
 #include "wordhash.h"
 
 /* constants for the Graham formula */
