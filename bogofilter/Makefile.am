@@ -48,7 +48,6 @@ libbogofilter_a_SOURCES= \
 	datastore.h datastore_db.h datastore_db.c \
 	error.h error.c \
 	format.h format.c \
-	lexer.h lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l \
 	maint.h maint.c \
 	mime.h mime.c \
 	paths.h paths.c \
@@ -57,12 +56,14 @@ libbogofilter_a_SOURCES= \
 	rstats.h rstats.c \
 	textblock.h textblock.c \
 	token.h token.c \
+	lexer.h lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l \
 	uudecode.h uudecode.c \
 	wordhash.h wordhash.c wordlists.h wordlists.c \
 	globals.h system.h \
 	version.c directories.c \
 	fgetsl.h fgetsl.c \
-	dcdflib/src/dcdflib.c dcdflib/src/ipmpar.c
+	dcdflib/src/dcdflib.c dcdflib/src/ipmpar.c \
+	swap.h swap_32bit.c
 
 CLEANFILES=version.c directories.c
 
@@ -70,15 +71,7 @@ bogofilter_SOURCES = bogofilter.c bogofilter.h main.c \
 		     method.c $(GRAHAM_SRC) $(ROBINSON_SRC) $(FISHER_SRC) \
 		     common.h method.h
 
-bogowordfreq_SOURCES = bogowordfreq.c
-
-bogolexer_SOURCES = bogolexer.c
-
 debugtest_SOURCES = debug.main.c
-
-bogoutil_SOURCES = bogoutil.c
-
-configtest_SOURCES = configtest.c
 
 wordhash_SOURCES = wordhash.main.c
 
