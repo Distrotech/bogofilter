@@ -58,6 +58,7 @@ map_rc()
 
 for alg in r g ; do
     BOGOFILTER_DIR="${TMPDIR}/words.$alg"
+    export BOGOFILTER_DIR
     rm -rf $BOGOFILTER_DIR
     mkdir $BOGOFILTER_DIR
     $BOGOFILTER -$alg -s < ${SYSTEST}/inputs/spam.mbx
