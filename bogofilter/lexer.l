@@ -393,12 +393,16 @@ static int yyinput(char *buf, int max_size)
 static int yyredo(char del)
 {
     char *t;
-    if (yysave)
+
+    if (DEBUG_LEXER(1)) fprintf(stdout, "yyredo:  %p %s\n", yysave, yytext );
+
+    if (yysave == NULL) {
 	xfree(yysave);
-    yysave = xstrdup(yytext);
-    t = strchr(yysave, del);
-    if (t != NULL)
-	*t = ' ';
+	yysave = xstrdup(yytext);
+	t = strchr(yysave, del);
+	if (t != NULL)
+	    *t = ' ';
+    }
 
     return 1;
 }
