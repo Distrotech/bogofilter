@@ -763,7 +763,7 @@ void db_close(void *vhandle)
     /* DB_LOG_INMEMORY is new in 4,3 */
     {
 	uint32_t t;
-	ret = dbe->get_flags(dbe, &t);
+	ret = dbp->get_flags(dbp, &t);
 	if (ret) {
 	    print_error(__FILE__, __LINE__, "DB_ENV->get_flags returned error: %s",
 		    db_strerror(ret));
