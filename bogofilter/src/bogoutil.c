@@ -159,8 +159,6 @@ static ex_t load_wordlist(const char *ds_file)
     unsigned long count[IX_SIZE], date;
     YYYYMMDD today_save = today;
     void *dbe = ds_init(bogohome);
-    if (dbe == NULL)
-	return EX_ERROR;
 
     dsh = ds_open(dbe, CURDIR_S, ds_file, DS_WRITE | DS_LOAD);
 
