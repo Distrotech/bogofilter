@@ -27,6 +27,12 @@ AUTHOR:
 extern int Rtable;
 extern double min_dev;
 
+extern	long msgs_good;		/* from robinson.c */
+extern	long msgs_bad;		/* from robinson.c */
+
+extern	double	robx;		/* from robinson.c */
+extern	double	robs;		/* from robinson.c */
+
 typedef struct rstats_s rstats_t;
 struct rstats_s {
     rstats_t *next;
@@ -214,12 +220,16 @@ void rstats_print_rtable(rstats_t **rstats_array, size_t count)
 	const char *token = cur->token;
 	int len = max(0, MAXTOKENLEN-(int)strlen(token));
 	double n = cur->good + cur->bad;
-	double fw = cur->prob;
+	double pw = ((n < EPS)
+		     ? 0.0
+		     : (pw = (cur->bad / msgs_bad) /
+			(cur->bad / msgs_bad + cur->good / msgs_good)));
+	double fw = (robs * robx + n * pw) / (robs + n);
 	char flag = (fabs(fw-EVEN_ODDS) < min_dev) ? '-' : '+';
 
 	(void)fprintf(stdout, "\"%s\"%*s %5d  %8.6f  %8.6f  %8.6f%10.5f%10.5f %c\n",
 		      token, len, " ",
-		      (int)n, cur->good / n, cur->bad / n, 
+		      (int)n, cur->good / msgs_good, cur->bad / msgs_bad, 
 		      fw, log(1.0 - fw), log(fw), flag);
     }
 
