@@ -33,8 +33,19 @@ extern char *spam_header_name;
 
 #define YY_NULL 0
 
-int yygetline(char *buf, int max_size)
-/* input getter for the scanner */
+static int yy_use_redo_text(char *buf, int max_size)
+{
+    int count;
+
+    count = strlcpy(buf, yysave, max_size-2);
+    buf[count++] = '\n';
+    buf[count] = '\0';
+    xfree(yysave);
+    yysave = NULL;
+    return count;
+}
+
+static int yy_get_new_line(char *buf, int max_size)
 {
     int count;
 
@@ -42,25 +53,10 @@ int yygetline(char *buf, int max_size)
     if (hdrlen==0)
 	hdrlen=strlen(spam_header_name);
 
-    if (yysave == NULL) {
-	count = fgetsl(buf, max_size, fpin);
+    count = fgetsl(buf, max_size, fpin);
 
-	/* Also, save the text on a linked list of lines.
-	 * Note that we store fixed-length blocks here, not lines.
-	 * One very long physical line could break up into more
-	 * than one of these. */
-	if (passthrough)
-	    textblock_add(textblocks, buf, count);
-	yylineno += 1;
-	if (DEBUG_LEXER(0)) fprintf(dbgout, "### %2d %d %s", yylineno, msg_header, buf);
-    }
-    else {
-	count = strlcpy(buf, yysave, max_size-2);
-	buf[count++] = '\n';
-	buf[count] = '\0';
-	xfree(yysave);
-	yysave = NULL;
-    }
+    yylineno += 1;
+    if (DEBUG_LEXER(0)) fprintf(dbgout, "### %2d %d %s", yylineno, msg_header, buf);
 
     /* skip spam_header ("X-Bogosity:") lines */
     while (msg_header
@@ -69,8 +65,6 @@ int yygetline(char *buf, int max_size)
     {
 	do {
 	    count = fgetsl(buf, max_size, fpin);
-	    if (passthrough)
-		textblock_add(textblocks, buf, count);
 	    yylineno += 1;
 	    if (DEBUG_LEXER(0)) fprintf(dbgout, "*** %2d %d %s\n", yylineno, msg_header, buf);
 
@@ -79,6 +73,26 @@ int yygetline(char *buf, int max_size)
 	} while (count != -1 && isspace((unsigned char)*buf));
     }
 
+    /* Also, save the text on a linked list of lines.
+     * Note that we store fixed-length blocks here, not lines.
+     * One very long physical line could break up into more
+     * than one of these. */
+
+    if (passthrough)
+	textblock_add(textblocks, buf, count);
+
+    return count;
+}
+
+int yygetline(char *buf, int max_size)
+{
+    int count;
+
+    if (yysave == NULL)
+	count = yy_get_new_line(buf, max_size);
+    else
+	count = yy_use_redo_text(buf, max_size);
+	
 /* unfolding:
 ** 	causes "^\tid" to be treated as continuation of previous line
 ** 	hence doesn't match lexer pattern which specifies beginning of line
