@@ -25,6 +25,62 @@ application or system crash.
 Berkeley DB versions 3.2, 3.3, 4.0, 4.1 and 4.2 are known to work as of
 2004-03-17. Older Berkeley DB versions may or may not work - go figure.
 
+Requisites to use this code successfully:
+
+- the hardware MUST NOT cheat fsync(2). Virtually all ATA hard disk
+  drives ship with write cache enabled so they give good figures in
+  benchmarks - disposing any traces of data safety at the same time.
+
+  You MUST switch off the drive's or raid controller's write cache
+  unless the cache is battery backed and permanent.
+
+  If you have an uninterruptible power supply unit attached with a
+  battery charged and in good shape, the risk for data loss may be
+  acceptable.
+
+
+  To switch off the write cache on Linux, run (as root, assuming that
+  the disk drive containing the bogofilter data base is /dev/hda):
+
+  /sbin/hdparm -W0 /dev/hda
+
+
+  To switch off the write cache on FreeBSD, add the line
+
+      hw.ata.wc="0"
+
+  to /boot/loader.conf.local and reboot.
+
+
+  Note that switching the write cache off adversely affects the write
+  performance (of bulk transfers in particular), but guarantees on-disk
+  consistency in case of power failure.
+
+  That's the price for getting ultra-cheap hardware. If you want decent
+  performance, buy SCSI.
+
+  While ATA drivers and file systems are under constant development,
+  hard statements about the durability issue, about write ordering
+  (ordered tags) or write barriers and what file systems and what
+  adaptors implement this properly, are very sparse, if any can be found
+  at all. Turning the write cache off is the safe way to avoid problems.
+
+- the data base must be on a local file system.
+  AFS, CIFS, Coda, NFS, SMBFS will not work.
+  EXT2FS, EXT3FS, FFS, JFS, REISERFS, UFS, XFS should be fine.
+
+- the data base block size must match what the file system is writing
+  atomically. If the data base block size is larger than the file
+  system's maximum atomic write block size, undetected corruptions can
+  remain even after running a "recovery" that appeared to be successful.
+
+  Repeat: PARTIAL WRITES ARE USUALLY EVIL (this applies to data bases in
+  general, not only those that use transactional models).
+
+Backup your data base regularly (see the db_archive utility for
+additional documentation of a "hot" backup), bogofilter cannot, of
+course, guess data that got lost through a hard drive fault.
+
 Berkeley DB keeps some additional statistics about locking, caching and
 their efficiency. These can be obtained by running the db_stat utility
 with the -e or -c option, examples:
@@ -38,29 +94,39 @@ db_stat -h ~/.bogofilter -t # transaction statistics
 db_stat ~/.bogofilter/wordlist.db # data base statistics
    (this has also been available with the traditional bogofilter code)
 
-The new code will store files named __db.NNN and log.NNNNNNNNNN - where
-NNN are numbers - in the ~/.bogofilter directory. These MUST NOT be
-removed without further consideration as they can contain update data
-for the data base that must be still written back to the wordlist.db
-file - this happens when there are many concurrent processes alongside a
-registration process.
+You MUST NOT remove files named __db.NNN and log.NNNNNNNNNN - where
+NNN are numbers - in the ~/.bogofilter directory.
+REMOVING THESE FILES CAUSES DATA BASE CORRUPTION
+(there is one exception, see below)
 
-The Berkeley DB documentation for the db_archive utility contains all
-relevant information. Read it.
+These can contain update data for the data base that must be still
+written back to the wordlist.db file - this happens when there are many
+concurrent processes alongside a registration process.
 
-The db_recover utility may remove some of these files, but it knows
-about Berkeley DB internals.
+Exception: after reading the Berkeley DB documentation for the
+db_archive utility and using that utility, you may be able to remove
+some of the log.NNNNNNNNNN files. This may be necessary to reclaim disk
+space.
+
+NOTE: If you need to copy data base files, use dd rather than cp, and
+give it a block size that matches the data base's block size, which can
+be found by running db_stat as above.
 
 3. Open issues and troubleshooting -------------------------------------
 
 Should the bogofilter processes refuse their work with a DB_RUNRECOVERY
-error, do just that - restore all log files into their old location
-(make sure you take the newest version of each log file in case you have
-multiple versions in the back) if the system has suffered data loss.
+error, do just that: run recovery. To do so:
 
-Then run db_recover -c -v -h ~/.bogofilter
+a. restore all log files into their old location
+   (make sure you take the newest version of each log file in case you have
+   multiple versions in the back) if the system has suffered data loss.
 
-bogofilter does not currently try to recover the environment itself as
-this would require additional locking code that we do not provide at the
-moment. Running db_recover should be an exception, not a common use, so
-this should not hurt anybody.
+b. then run db_recover -c -v -h ~/.bogofilter
+
+bogofilter does not currently try to recover the environment as this
+would require additional locking code that we do not provide at the
+moment to prevent environment corruption.
+
+Running db_recover should be an exception, not a common use, so this
+should not hurt anybody. If it does, report the problems you're having,
+there may be a bug buried more deeply that needs fixing.
