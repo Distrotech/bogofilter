@@ -105,6 +105,10 @@ AUTHORS:
 #define	MD_MAX_F	MD_MAX_C+MD_DLT_F
 #define	MD_DLT_F	0.014
 
+/* robx limits */
+#define RX_MIN		0.4
+#define RX_MAX		0.6
+
 enum e_verbosity {
     SUMMARY	   = 1,	/* summarize main loop iterations	*/
     TIME	   = 2, /* include timing info           	*/
@@ -211,17 +215,21 @@ static data_t *seq_by_amt(double fst, double lst, double amt)
 
 static data_t *seq_canonical(double fst, double amt)
 {
+    uint c;
+    float v;
     uint i = 0;
     data_t *val = xcalloc(1, sizeof(data_t));
 
-    val->cnt = 5;
-    val->data = xcalloc(val->cnt, sizeof(double));
+    val->data = xcalloc(5, sizeof(double));
 
+    fst = max(fst, RX_MIN);
+    fst = min(fst, RX_MAX);
     val->data[i++] = fst;
-    val->data[i++] = fst - amt;
-    val->data[i++] = fst + amt;
-    val->data[i++] = fst - amt * 2;
-    val->data[i++] = fst + amt * 2;
+    for (c = 1; c <= 2; c += 1) {
+	v = fst - amt * c; if (v >= RX_MIN) val->data[i++] = v;
+	v = fst + amt * c; if (v <= RX_MAX) val->data[i++] = v;
+    }
+    val->cnt = i;
 
     return val;
 }
@@ -292,20 +300,18 @@ static void print_parms(const char *label, const char *format, data_t *data)
     printf(")\n"); fflush(stdout);
 }
 
-static void print_all_parms(void)
+static void print_all_parms(uint r_count)
 {
     if (verbose >= PARMS) {
 	print_parms("rsval", "%6.4f", rsval);
 	print_parms("rxval", "%5.3f", rxval);
 	print_parms("mdval", "%5.3f", mdval);
-	print_parms("spexp", "%8.2e", spexp);
-	print_parms("nsexp", "%8.2e", nsexp);
+	print_parms("spexp", "%5.2f", spexp);
+	print_parms("nsexp", "%5.2f", nsexp);
     }
-    else if (verbose >= TIME)
+    if (verbose >= TIME)
 	printf("cnt: %u (rs: %u, rx: %u, md: %u spex: %u, nsex: %u)\n",
-	       rsval->cnt * rxval->cnt * mdval->cnt * spexp->cnt *
-	       nsexp->cnt, rsval->cnt, rxval->cnt, mdval->cnt,
-	       spexp->cnt, nsexp->cnt);
+	       r_count, rsval->cnt, rxval->cnt, mdval->cnt, spexp->cnt, nsexp->cnt);
 }
 
 static int compare_ascending(const void *const ir1, const void *const ir2)
@@ -1007,8 +1013,8 @@ static double get_robx(void)
 	verbose = -verbose;		/* enable bogofilter debug output */
     }
 
-    if (rx > 0.6) rx = 0.6;
-    if (rx < 0.4) rx = 0.4;
+    if (rx > RX_MAX) rx = RX_MAX;
+    if (rx < RX_MIN) rx = RX_MIN;
 
     printf("Initial x value is %8.6f\n", rx);
 
@@ -1513,11 +1519,10 @@ static rc_t bogotune(void)
 	    break;
 	}
 
-	print_all_parms();
-
-	r_count = rsval->cnt * mdval->cnt * rxval->cnt * spexp->cnt
-	    * nsexp->cnt;
+	r_count = rsval->cnt * mdval->cnt * rxval->cnt * spexp->cnt * nsexp->cnt;
 	results = (result_t *) xcalloc(r_count, sizeof(result_t));
+
+	print_all_parms(r_count);
 
 	if (verbose >= SUMMARY) {
 	    if (verbose >= SUMMARY+1)
