@@ -115,7 +115,7 @@ directories.c: config.status
 	xmlto html-nochunks $<
 
 .xml.1:
-	{ xmllint --noout --postvalid $< && xmlto man $< ; } || { rm -f $@ ; exit 1 ; }
+	xmlto man $< || { rm -f $@ ; exit 1 ; }
 
 .PHONY: rpm cvs-check
 
