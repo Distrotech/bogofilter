@@ -5,7 +5,18 @@
 NOTE: More information on important changes for bogofilter updaters
 is in the RELEASE.NOTES files.  Read them!!
 
-	2004-09-01
+	2004-09-03 (txn 2.1)
+	* The on-line crash detector would consider its own process a zombie,
+	  so all processes that lasted 30 s or longer would abort themselves
+	  after that period.
+
+	  This wass particularly prominent with BerkeleyDB 4.1 with
+	  x86/gcc-assembly mutexes as this combination appears rather slow when
+	  facing lock contention, causing t.lock3 failure. BDB 4.1 compiled to
+	  use POSIX mutexes (where working) appear to be a lot faster in this
+	  situation.
+
+	2004-09-01 (txn 2.0)
 	* Hook up crash detection code. Bogofilter is now able to detect
 	  when recovery is necessary and should detect stalled data bases
 	  within 30 seconds.
@@ -17,7 +28,7 @@ is in the RELEASE.NOTES files.  Read them!!
 
 	  This code uses ideas from Matthias Andree and Pavel Kankovsky.
 
-	2004-08-23
+	2004-08-23 (txn 1.1)
 	* Add -f and -F options to bogoutil (mnemonic: fix) to run data base
 	  recovery.
 	* Reimplement our own locking so that recovery and data base access
