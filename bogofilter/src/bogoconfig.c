@@ -119,6 +119,7 @@ extern const char *log_update_format;
 extern const char *log_header_format;
 extern const char *spamicity_tags;
 extern const char *spamicity_formats;
+extern wl_t wl_default;
 
 /*---------------------------------------------------------------------------*/
 
@@ -435,8 +436,9 @@ static void print_version(void)
 		  " Robinson"
 #endif
 		  "\n"
-		  "    Database: %s\n",
-		  progtype, version, ds_version_str());
+		  "    Database: %s, %s\n",
+		  progtype, version, ds_version_str(),
+		  (wl_default == WL_M_SEPARATE) ? "separate" : "combined");
 
     (void)fprintf(stderr,
 		  "Copyright (C) 2002 Eric S. Raymond\n\n"
