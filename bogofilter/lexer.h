@@ -15,6 +15,7 @@ extern int yyleng;
 extern char *yytext;
 extern char *yylval;
 
+extern bool mime_lexer;
 extern bool block_on_subnets;
 
 /* lexer interface */
@@ -30,6 +31,7 @@ typedef enum {
 /* in lexer.c */
 extern int yylineno;
 extern int msg_header;
+extern bool mime_lexer;
 
 /* in lexer_head.l */
 extern token_t	lexer_lex(void);
