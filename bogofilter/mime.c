@@ -232,7 +232,7 @@ mime_add_child (mime_t * parent)
 }
 
 static
-bool get_boundary_props(char *boundary, int boundary_len, boundary_t *b)
+bool get_boundary_props(const char *boundary, int boundary_len, boundary_t *b)
 {
   int i;
   
@@ -451,7 +451,7 @@ mime_type (const char *text, int leng)
       break;
     }
   }
-  if (msg_state->mime_type == MIME_TYPE_UNKNOWN)
+  if (DEBUG_MIME (1) &&  msg_state->mime_type == MIME_TYPE_UNKNOWN)
     fprintf (stderr, "Unknown mime type - '%s'\n", w);
   xfree (w);
 
@@ -517,6 +517,12 @@ mime_decode (char *buff, size_t size)
   case MIME_UUENCODE:
       if (get_boundary_props(buff, size, &b) == true)
             return count;
+      break;
+  case MIME_ENCODING_UNKNOWN:
+  case MIME_7BIT:
+  case MIME_8BIT:
+  case MIME_BINARY:
+      break;
   }
   
   switch (msg_state->mime_encoding)
@@ -541,11 +547,6 @@ mime_decode (char *buff, size_t size)
     count = uudecode (buff, size);
     break;
   case MIME_ENCODING_UNKNOWN:
-    break;
-  default:
-    fprintf (stderr, "Unknown mime encoding - %d\n",
-	     msg_state->mime_encoding);
-    exit (2);
     break;
   }
   return count;
