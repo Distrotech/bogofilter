@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+=pod
+
+author: Gyepi Sam <gyepi@praxis-sw.com>
+
+script to register all the files in a Maildir
+
+usage: perl register-maildir "/usr/bin/bogofilter -s -d $BOGOFILTER_DIR" ~/Maildir/{spam,spam2,spam3}
+
+This is faster than a shell script that uses find and repeatedly invokes bogofilter.
+
+=cut
+
+use strict;
+use File::Find;
+
+use vars qw($bf);
+
+my $bf_args = shift || die "Missing required arg.\n";
+
+open(B, "|$bf_args") or die "cannot run bogofilter [$bf_args]. $@\n";
+
+$bf = \*B;
+
+for my $dir (@ARGV){
+    find({ wanted => \&process, no_chdir => 1 }, $dir);
+}
+
+close(B);
+
+sub process
+{
+    my $x = $File::Find::name;
+    print $bf "From mbox-separator\@example.com\n";
+    open(F, $x) or die "cannot open file $x. $!\n";
+    local $/;
+    print $bf <F>;
+    close F;
+}
