@@ -26,7 +26,6 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
   const char *r="",*u="";
   hashnode_t *node;
   wordprop_t *wordprop;
-  run_t save_run_type = run_type;
 
   u_int32_t g = 0, b = 0;
   u_int32_t wordcount = h->count;	/* use number of unique tokens */
@@ -53,11 +52,6 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
   if (verbose)
     (void)fprintf(dbgout, "# %u word%s, %u message%s\n", 
 		  wordcount, PLURAL(wordcount), msgcount, PLURAL(msgcount));
-
-  /* When using auto-update with separate wordlists , 
-     datastore.c needs to know which to update */
-
-  run_type |= _run_type;
 
 retry:
   if (ds_txn_begin(word_list->dsh)) {
@@ -127,7 +121,4 @@ retry:
   }
 
   set_msg_counts(g, b);
-
-  run_type = save_run_type;
 }
-
