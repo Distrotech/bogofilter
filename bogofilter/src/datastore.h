@@ -33,9 +33,6 @@ typedef enum sh_e { SPAM, GOOD } sh_t;
 
 #define MSG_COUNT_TOK ((const byte *)".MSG_COUNT")
 
-#undef UINT32_MAX
-#define UINT32_MAX 4294967295lu /* 2 ^ 32 - 1 */
-
 /* typedef:  Datastore handle type
 ** - used to communicate between datastore layer and database layer
 ** - known to program layer as a void*
@@ -44,7 +41,7 @@ typedef enum sh_e { SPAM, GOOD } sh_t;
 typedef struct {
     void *dbh;			/* database handle from db_open() */
     size_t count;		/* database count (1 or 2) */
-    size_t index;		/* database index (0 or 1) */
+    sh_t   index;		/* database index (0 or 1) */
     bool is_swapped;
 } dsh_t;
 
