@@ -34,36 +34,34 @@ LDADD = libbogofilter.a @LIBOBJS@
 
 # what to build that from
 libbogofilter_a_SOURCES= \
-	xmalloc.h xcalloc.c xmem_error.c xrealloc.c \
-	    xmalloc.c xstrdup.h xstrdup.c \
-	xstrlcat.h xstrlcat.c \
-	xstrlcpy.h xstrlcpy.c \
-	debug.h debug.c \
+	common.h globals.h system.h \
+	directories.c version.c \
 	base64.h base64.c \
 	bogoconfig.h config.c \
-	find_home.h find_home.c find_home_user.c \
-	    find_home_tildeexpand.c \
 	charset.h charset.c \
 	collect.h collect.c \
 	datastore.h datastore_db.h datastore_db.c \
+	debug.h debug.c \
 	error.h error.c \
+	fgetsl.h fgetsl.c \
+	find_home.h find_home.c find_home_user.c find_home_tildeexpand.c \
 	format.h format.c \
+	lexer.h lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l \
 	maint.h maint.c \
 	mime.h mime.c \
 	paths.h paths.c \
 	qp.h qp.c \
 	register.h register.c \
 	rstats.h rstats.c \
+	swap.h swap_32bit.c\
 	textblock.h textblock.c \
 	token.h token.c \
-	lexer.h lexer.c lexer_head.l lexer_text_plain.l lexer_text_html.l \
 	uudecode.h uudecode.c \
 	wordhash.h wordhash.c wordlists.h wordlists.c \
-	globals.h system.h \
-	version.c directories.c \
-	fgetsl.h fgetsl.c \
-	dcdflib/src/dcdflib.c dcdflib/src/ipmpar.c \
-	swap.h swap_32bit.c
+	xmalloc.h xcalloc.c xmalloc.c xmem_error.c xrealloc.c xstrdup.h xstrdup.c \
+	xstrlcat.h xstrlcat.c \
+	xstrlcpy.h xstrlcpy.c \
+	dcdflib/src/dcdflib.c dcdflib/src/ipmpar.c
 
 CLEANFILES=version.c directories.c
 
