@@ -858,7 +858,8 @@ static int db_try_glock(short locktype, int lockcmd) {
 
     t = mxcat(bogohome, tackon, NULL);
 
-    /* FIXME: this may be dead code if we leave recover outside */
+    /* All we are interested in is that this file exists, we'll close it
+     * right away as plock down will open it again */
     ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
     if (ret < 0 && errno != EEXIST) {
 	print_error(__FILE__, __LINE__, "open(%s): %s",
