@@ -438,62 +438,60 @@ void db_flush(dsh_t *dsh)
 
 int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 {
-    size_t i;
+    size_t i = dsh->index;
     int ret = 0;
     dbh_t *handle = dsh->dbh;
 
-    for (i = 0; i < handle->count; i += 1)
-    {
-	DBC dbc;
-	DBC *dbcp = &dbc;
-	DBT key, data;
-	DB *dbp = handle->dbp[i];
+    DBC dbc;
+    DBC *dbcp = &dbc;
+    DBT key, data;
+    DB *dbp = handle->dbp[i];
 
-	dbv_t dbv_key, dbv_data;
-	memset(&key, 0, sizeof(key));
-	memset(&data, 0, sizeof(data));
+    dbv_t dbv_key, dbv_data;
+    memset(&key, 0, sizeof(key));
+    memset(&data, 0, sizeof(data));
 
-	ret = dbp->cursor(dbp, NULL, &dbcp, 0);
-	if (ret) {
-	    dbp->err(dbp, ret, "(cursor): %s", handle->path);
-	    return -1;
-	}
-
-	while ((ret = dbcp->c_get(dbcp, &key, &data, DB_NEXT)) == 0)
-	{
-	    int rc;
-
-	    /* Question: Is there a way to avoid using malloc/free? */
-
-	    /* switch to "dbv_t *" variables */
-	    dbv_key.leng = key.size;
-	    dbv_key.data = xmalloc(dbv_key.leng+1);
-	    memcpy(dbv_key.data, key.data, dbv_key.leng);
-	    ((char *)dbv_key.data)[dbv_key.leng] = '\0';
-
-	    dbv_data.data = data.data;
-	    dbv_data.leng = data.size;
-
-	    /* call user function */
-	    rc = hook(&dbv_key, &dbv_data, userdata);
-	    xfree(dbv_key.data);
-	    if (rc != 0)
-		break;
-	}
-
-	switch (ret) {
-	case DB_NOTFOUND:
-	    /* OK */
-	    ret = 0;
-	    break;
-	default:
-	    dbp->err(dbp, ret, "(c_get)");
-	    ret = -1;
-	}
-	if (dbcp->c_close(dbcp)) {
-	    dbp->err(dbp, ret, "(c_close)");
-	    ret = -1;
-	}
+    ret = dbp->cursor(dbp, NULL, &dbcp, 0);
+    if (ret) {
+	dbp->err(dbp, ret, "(cursor): %s", handle->path);
+	return -1;
     }
+
+    while ((ret = dbcp->c_get(dbcp, &key, &data, DB_NEXT)) == 0)
+    {
+	int rc;
+
+	/* Question: Is there a way to avoid using malloc/free? */
+
+	/* switch to "dbv_t *" variables */
+	dbv_key.leng = key.size;
+	dbv_key.data = xmalloc(dbv_key.leng+1);
+	memcpy(dbv_key.data, key.data, dbv_key.leng);
+	((char *)dbv_key.data)[dbv_key.leng] = '\0';
+
+	dbv_data.data = data.data;
+	dbv_data.leng = data.size;
+
+	/* call user function */
+	rc = hook(&dbv_key, &dbv_data, userdata);
+	xfree(dbv_key.data);
+	if (rc != 0)
+	    break;
+    }
+
+    switch (ret) {
+    case DB_NOTFOUND:
+	/* OK */
+	ret = 0;
+	break;
+    default:
+	dbp->err(dbp, ret, "(c_get)");
+	ret = -1;
+    }
+    if (dbcp->c_close(dbcp)) {
+	dbp->err(dbp, ret, "(c_close)");
+	ret = -1;
+    }
+
     return ret;
 }
