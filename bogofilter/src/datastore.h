@@ -59,7 +59,8 @@ typedef struct {
 
 /** Status value used when a key is not found in the data base. */
 #define DS_NOTFOUND (-1)
-/** Status value used when the transaction must be aborted. */
+/** Status value when the transaction was aborted to resolve a deadlock
+ * and should be retried. */
 #define DS_ABORT_RETRY (-2)
 
 /** Macro that clamps its argument to INT_MAX and casts it to int. */
@@ -211,10 +212,10 @@ extern int ds_txn_abort(void *vhandle);
 #define DST_FAILURE (2)
 
 /** Get the database version */
-extern bool ds_get_wordlist_version(void *vhandle, dsv_t *val);
+extern int ds_get_wordlist_version(void *vhandle, dsv_t *val);
 
 /** set the database version */
-extern void ds_set_wordlist_version(void *vhandle, dsv_t *val);
+extern int ds_set_wordlist_version(void *vhandle, dsv_t *val);
 
 /** Get the current process ID. */
 extern unsigned long ds_handle_pid(void *vhandle);

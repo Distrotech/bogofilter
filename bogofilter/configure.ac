@@ -291,8 +291,6 @@ AC_ARG_WITH(database,
 
 case "x$WITH_DB_ENGINE" in
     xtdb)
-	AC_MSG_WARN([This data base engine is lightly tested and may not work.])
-	AC_MSG_WARN([Proceed at your own risk.])
 	AC_DEFINE(ENABLE_TDB_DATASTORE,1, [Enable tdb datastore])
 	AC_DEFINE_UNQUOTED(DB_TYPE, "tdb", [database type])
 	AC_DEFINE_UNQUOTED(DB_EXT, ".tdb", [database file extension])
@@ -309,8 +307,6 @@ case "x$WITH_DB_ENGINE" in
 	LIBS="$saveLIBS"
     ;;
     xqdbm)
-	AC_MSG_WARN([This data base engine is lightly tested and may not work.])
-	AC_MSG_WARN([Proceed at your own risk.])
 	AC_DEFINE(ENABLE_QDBM_DATASTORE,1, [Enable qdbm datastore])
 	AC_DEFINE_UNQUOTED(DB_TYPE, "qdbm")
 	AC_DEFINE_UNQUOTED(DB_EXT, ".qdbm")

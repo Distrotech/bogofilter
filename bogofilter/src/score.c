@@ -19,6 +19,7 @@ NAME:
 #include "datastore.h"
 #include "msgcounts.h"
 #include "prob.h"
+#include "rand_sleep.h"
 #include "rstats.h"
 #include "score.h"
 #include "wordhash.h"
@@ -113,14 +114,22 @@ static void lookup(const word_t *token, wordcnts_t *cnts)
 	if (override > list->override)	/* if already found */
 	    break;
 
+retry:
 	if (ds_txn_begin(list->dsh) != DST_OK) {
 	    fprintf(stderr, "Problem starting transaction!\n");
 	    exit(EX_ERROR);
 	}
 
 	ret = ds_read(list->dsh, token, &val);
+	if (ret == DS_ABORT_RETRY) {
+	    rand_sleep(4*1000,1000*1000);
+	    goto retry;
+	}
 
-	ds_txn_commit(list->dsh); /* reading shouldn't fail... */
+	if (ds_txn_commit(list->dsh) == DST_TEMPFAIL) {
+	    rand_sleep(4*1000,1000*1000);
+	    goto retry;
+	}
 
 	if (ret)
 	    continue;			/* not found */
@@ -295,19 +304,24 @@ void score_initialize(void)
 
     if (fabs(robx) < EPS)
     {
-	int ret;
-	dsv_t val;
-
 	/* Assign default value in case there's no wordlist
 	 * or no wordlist entry */
 	robx = ROBX;
+	if (list->dsh != NULL)
+	{
+	    int ret;
+	    dsv_t val;
 
-	if (list->dsh) {
+retry:
 	    /* Note: .ROBX is scaled by 1000000 in the wordlist */
 	    if (DST_OK != ds_txn_begin(list->dsh))
 		ret = -1;
 	    else {
 		ret = ds_read(list->dsh, word_robx, &val);
+		if (ret == DS_ABORT_RETRY) {
+		    rand_sleep(4*1000,1000*1000);
+		    goto retry;
+		}
 		if (ret != 0)
 		    robx = ROBX;
 		else {

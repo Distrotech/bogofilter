@@ -52,6 +52,7 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
 	openlog("bogofilter", LOG_PID, LOG_MAIL);
 
     /* open all wordlists */
+    ds_init();
     open_wordlists((run_type == RUN_NORMAL) ? DS_READ : DS_WRITE);
 
     output_setup();
@@ -73,6 +74,7 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
 
     close_wordlists(false);
     free_wordlists();
+    ds_cleanup();
 
     /* cleanup storage */
     mime_cleanup();

@@ -65,6 +65,11 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     run_type |= _run_type;
 
 retry:
+    if (retrycount-- == 0) {
+	fprintf(stderr, "retry count exceeded, giving up.\n");
+	exit(EX_ERROR);
+    }
+
     if (ds_txn_begin(list->dsh)) {
 	fprintf(stderr, "ds_txn_begin error.\n");
 	exit(EX_ERROR);
@@ -73,8 +78,17 @@ retry:
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
 	wordprop = node->buf;
-	if (DS_ABORT_RETRY == ds_read(list->dsh, node->key, &val))
-	    goto abort_retry;
+	switch (ds_read(list->dsh, node->key, &val)) {
+	    case DS_ABORT_RETRY:
+		rand_sleep(4*1000,1000*1000);
+		goto retry;
+	    case 0:
+	    case 1:
+		break;
+	    default:
+		fprintf(stderr, "cannot read from data base.\n");
+		exit(EX_ERROR);
+	}
 	if (incr != IX_UNDF) {
 	    u_int32_t *counts = val.count;
 	    counts[incr] += wordprop->freq;
@@ -83,12 +97,29 @@ retry:
 	    u_int32_t *counts = val.count;
 	    counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
 	}
-	if (DS_ABORT_RETRY == ds_write(list->dsh, node->key, &val))
-	    goto abort_retry;
+	switch (ds_write(list->dsh, node->key, &val)) {
+	    case DS_ABORT_RETRY:
+		rand_sleep(4*1000,1000*1000);
+		goto retry;
+	    case 0:
+		break;
+	    default:
+		fprintf(stderr, "cannot write to data base.\n");
+		exit(EX_ERROR);
+	}
     }
 
-    if (DS_ABORT_RETRY == ds_get_msgcounts(list->dsh, &val))
-	goto abort_retry;
+    switch (ds_get_msgcounts(list->dsh, &val)) {
+	case 0:
+	case 1:
+	    break;
+	case DS_ABORT_RETRY:
+	    rand_sleep(4 * 1000, 1000 * 1000);
+	    goto retry;
+	default:
+	    fprintf(stderr, "cannot get message count values.\n");
+	    exit(EX_ERROR);
+    }
     list->msgcount[IX_SPAM] = val.spamcount;
     list->msgcount[IX_GOOD] = val.goodcount;
 
@@ -105,8 +136,17 @@ retry:
     val.spamcount = list->msgcount[IX_SPAM];
     val.goodcount = list->msgcount[IX_GOOD];
 
-    if (DS_ABORT_RETRY == ds_set_msgcounts(list->dsh, &val))
-	goto abort_retry;
+    switch (ds_set_msgcounts(list->dsh, &val)) {
+	case 0:
+	    break;
+	case DS_ABORT_RETRY:
+	    fprintf(stderr, "cannot set message count values, retrying\n");
+	    rand_sleep(4 * 1000, 1000 * 1000);
+	    goto retry;
+	default:
+	    fprintf(stderr, "cannot set message count values\n");
+	    exit(EX_ERROR);
+    }
     set_msg_counts(val.goodcount, val.spamcount);
 
     switch(ds_txn_commit(list->dsh)) {
@@ -114,8 +154,8 @@ retry:
 	    break;
 	case DST_TEMPFAIL:
 	    if (--retrycount) {
-		fprintf(stderr, "commit was aborted, retrying (%d tries left)...\n", retrycount);
-		rand_sleep(4 * 1000, 3000 * 1000);
+		fprintf(stderr, "commit was aborted, retrying...\n");
+		rand_sleep(4 * 1000, 1000 * 1000);
 		goto retry;
 	    }
 	    fprintf(stderr, "giving up on this transaction.\n");
@@ -135,20 +175,4 @@ retry:
 		      list->listname, list->filepath, val.spamcount, val.goodcount);
 
     run_type = save_run_type;
-    return;
-
-abort_retry:
-    if (ds_txn_abort(list->dsh) != DST_OK) {
-	fprintf(stderr, "abort failed.\n");
-	exit(EX_ERROR);
-    }
-
-    if (--retrycount) {
-	fprintf(stderr, "transaction was aborted, retrying (%d tries left)...\n", retrycount);
-	rand_sleep(4 * 1000, 3000 * 1000);
-	goto retry;
-    }
-
-    fprintf(stderr, "giving up on this transaction.\n");
-    exit(EX_ERROR);
 }

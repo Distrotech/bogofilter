@@ -79,7 +79,6 @@ static int dump_wordlist(char *ds_file)
 
     token_count = 0;
 
-    set_bogohome(ds_file);
     rc = ds_oper(ds_file, DS_READ, ds_dump_hook, NULL);
 
     if (rc)
@@ -113,10 +112,6 @@ static int load_wordlist(const char *ds_file)
     unsigned long line = 0;
     unsigned long count[IX_SIZE], date;
     YYYYMMDD today_save = today;
-
-    set_bogohome(ds_file);
-
-    ds_init();
 
     dsh = ds_open(CURDIR_S, ds_file, DS_WRITE | DS_LOAD);
     if (dsh == NULL)
@@ -188,21 +183,32 @@ static int load_wordlist(const char *ds_file)
 	    load_count += 1;
 	    /* Slower, but allows multiple lists to be concatenated */
 	    set_date(date);
-	    ds_read(dsh, token, &data);
+	    switch (ds_read(dsh, token, &data)) {
+		case 0:
+		case 1:
+		    break;
+		default:
+		    rv = 1;
+	    }
 	    data.spamcount += spamcount;
 	    data.goodcount += goodcount;
-	    ds_write(dsh, token, &data);
+	    if (ds_write(dsh, token, &data)) rv = 1;
 	}
 	word_free(token);
     }
 
-    switch (ds_txn_commit(dsh)) {
-	case DST_FAILURE:
-	case DST_TEMPFAIL:
-	    fprintf(stderr, "commit failed\n");
-	    exit(EXIT_FAILURE);
-	case DST_OK:
-	    break;
+    if (rv) {
+	fprintf(stderr, "read or write error, aborting.\n");
+	ds_txn_abort(dsh);
+    } else {
+	switch (ds_txn_commit(dsh)) {
+	    case DST_FAILURE:
+	    case DST_TEMPFAIL:
+		fprintf(stderr, "commit failed\n");
+		exit(EXIT_FAILURE);
+	    case DST_OK:
+		break;
+	}
     }
 
     ds_close(dsh, false);
@@ -256,14 +262,13 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
     void *dsh = NULL; /* initialize to silence bogus gcc warning */
 
     struct stat sb;
+    int rv = 0;
 
     /* protect against broken stat(2) that succeeds for empty names */
     if (path == NULL || *path == '\0') {
         fprintf(stderr, "Expecting non-empty directory or file name.\n");
         return EX_ERROR;
     }
-
-    ds_init();
 
     if ( stat(path, &sb) == 0 ) {
 	/* XXX FIXME: deadlock possible */
@@ -306,6 +311,7 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
     {
 	dsv_t val;
 	word_t *token;
+	int rc;
 
 	unsigned long spam_count;
 	unsigned long good_count;
@@ -323,33 +329,43 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
 	    token = word_new(word, (uint) strlen((const char *)word));
 	}
 
-	ds_read(dsh, token, &val);
-	spam_count = val.spamcount;
-	good_count = val.goodcount;
+	rc = ds_read(dsh, token, &val);
+	switch (rc) {
+	    case 0:
+		spam_count = val.spamcount;
+		good_count = val.goodcount;
 
-	if (!show_probability)
-	    printf(data_format, token->text, spam_count, good_count);
-	else
-	{
-	    rob_prob = calc_prob(good_count, spam_count);
-	    printf(data_format, token->text, spam_count, good_count, rob_prob);
+		if (!show_probability)
+		    printf(data_format, token->text, spam_count, good_count);
+		else
+		{
+		    rob_prob = calc_prob(good_count, spam_count);
+		    printf(data_format, token->text, spam_count, good_count, rob_prob);
+		}
+		break;
+	    case 1:
+		break;
+	    default:
+		fprintf(stderr, "Cannot read from data base.\n");
+		rv = EX_ERROR;
+		goto finish;
 	}
 
 	if (token != &buff->t)
 	    word_free(token);
     }
 
-    if (DST_OK != ds_txn_commit(dsh)) {
-	ds_close(dsh, false);
-	fprintf(stderr, "Cannot commit transaction.\n");
-	return EX_ERROR;
+finish:
+    if (DST_OK != rv ? ds_txn_abort(dsh) : ds_txn_commit(dsh)) {
+	fprintf(stderr, "Cannot %s transaction.\n", rv ? "abort" : "commit");
+	rv = EX_ERROR;
     }
     ds_close(dsh, false);
     ds_cleanup();
 
     buff_free(buff);
 
-    return 0;
+    return rv;
 }
 
 static int get_robx(char *path)
@@ -358,6 +374,8 @@ static int get_robx(char *path)
     int ret = 0;
 
     rx = compute_robinson_x(path);
+    if (rx < 0)
+	return EX_ERROR;
 
     if (onlyprint)
 	printf("%f\n", rx);
@@ -373,7 +391,7 @@ static int get_robx(char *path)
 	run_type = REG_SPAM;
 
 	set_bogohome(filepath);
-	ds_init();
+
 	dsh = ds_open(CURDIR_S, filepath, DS_WRITE);
 	if (dsh == NULL)
 	    return EX_ERROR;
@@ -621,6 +639,7 @@ static int process_arglist(int argc, char **argv)
 
 int main(int argc, char *argv[])
 {
+    int rc;
     progtype = build_progtype(progname, DB_TYPE);
 
     set_today();			/* compute current date for token age */
@@ -635,29 +654,38 @@ int main(int argc, char *argv[])
 
     atexit(bf_exit);
 
+    set_bogohome(ds_file);
+    ds_init();
+
     switch(flag) {
 	case M_DUMP:
-	    return dump_wordlist(ds_file);
+	    rc = dump_wordlist(ds_file);
+	    break;
 	case M_LOAD:
-	    return load_wordlist(ds_file);
+	    rc = load_wordlist(ds_file);
+	    break;
 	case M_MAINTAIN:
 	    maintain = true;
-	    set_bogohome(ds_file);
-	    return maintain_wordlist_file(ds_file);
+	    rc = maintain_wordlist_file(ds_file);
+	    break;
 	case M_WORD:
 	    argc -= optind;
 	    argv += optind;
-	    set_bogohome(ds_file);
-	    return display_words(ds_file, argc, argv, prob);
+	    rc = display_words(ds_file, argc, argv, prob);
+	    break;
 	case M_HIST:
-	    set_bogohome(ds_file);
-	    return histogram(ds_file);
+	    rc = histogram(ds_file);
+	    break;
 	case M_ROBX:
-	    set_bogohome(ds_file);
-	    return get_robx(ds_file);
+	    rc = get_robx(ds_file);
+	    break;
 	case M_NONE:
 	default:
 	    /* should have been handled above */
 	    abort();
+	    break;
     }
+
+    ds_cleanup();
+    return rc;
 }

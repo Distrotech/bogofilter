@@ -14,7 +14,6 @@ AUTHOR:
 #include "common.h"
 
 #include "datastore.h"
-#include "rand_sleep.h"
 #include "robx.h"
 #include "wordlists.h"
 
@@ -73,21 +72,16 @@ static double compute_robx(dsh_t *dsh)
     double rx;
 
     dsv_t val;
+    bool ok;
     uint32_t good_cnt, spam_cnt;
     struct robhook_data rh;
-    int ret, retrycount = 5;
+    int ret;
 
-retry:
-    ret = ds_get_msgcounts(dsh, &val);
-    if (ret != 0 && --retrycount) {
-	fprintf(stderr, "transaction was aborted, retrying (%d tries left)...\n", retrycount);
-	rand_sleep(4*1000,1000*1000);
-	goto retry;
-    }
+    ok = ds_get_msgcounts(dsh, &val) == 0;
 
-    if (ret) {
+    if (!ok) {
 	fprintf(stderr, "Can't find message counts.\n");
-	exit(EX_ERROR);
+	return -1;
     }
 
     spam_cnt = val.spamcount;

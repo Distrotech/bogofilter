@@ -68,7 +68,6 @@ static int lockfd;  /* fd of locked file to prevent concurrent recovery etc. */
 static const DBTYPE dbtype = DB_BTREE;
 
 static bool init = false;
-bool create_flag = false;		/* For datastore.c (to add .WORDLIST_VERSION) */
 
 typedef struct {
     char	*path;
@@ -86,6 +85,9 @@ typedef struct {
 #define DB_AT_LEAST(maj, min) ((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
 #define DB_AT_MOST(maj, min) ((DB_VERSION_MAJOR < (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR <= (min))))
 #define DB_EQUAL(maj, min) ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR == (min)))
+
+/* dummy infrastructure, to be expanded by environment
+ * or transactional initialization/shutdown */
 
 /* Function definitions */
 
@@ -289,18 +291,11 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
     char *t;
 
     dbh_t *handle = NULL;
-    uint32_t open_flags = 0;
+    uint32_t opt_flags = 0;
 
-    if (!init)
-	/* internal error: must be called only after initialization */
-	internal_error;
+    assert(init);
 
     check_db_version();
-
-    if (open_mode & DS_READ )
-	open_flags = DB_RDONLY;
-    if (open_mode & DS_CREATE )
-	open_flags = DB_CREATE | DB_EXCL;
 
     {
 #if DB_AT_LEAST(4,1)
@@ -308,7 +303,6 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 #endif
 	DB *dbp;
 	uint32_t pagesize;
-	bool err = false;
 
 	handle = dbh_init(path, name);
 
@@ -350,29 +344,13 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 	    t = handle->name;
 
 retry_db_open:
-	ret = DB_OPEN(dbp, t, NULL, dbtype, open_flags, 0664);
-
-	if (ret != 0) {
-	    err = (ret != ENOENT) || (open_flags & DB_RDONLY);
-	    if (!err) {
-		ret = DB_OPEN(dbp, t, NULL, dbtype, open_flags | DB_CREATE | DB_EXCL, 0664);
-		if (ret != 0)
-		    err = true;
-		else
-		    handle->created = true;
-	    }
-	}
-
-	if (ret != 0) {
-	    if (ret == ENOENT && open_flags != DB_RDONLY)
-		return NULL;
-	    else
-		err = true;
-	}
-
-	if (err)
+	handle->created = false;
+	if ((ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags, 0664)) != 0
+	    && ( ret != ENOENT || opt_flags == DB_RDONLY ||
+		(handle->created = true),
+		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, 0664)) != 0))
 	{
-	    if (open_flags != DB_RDONLY && ret == EEXIST && --retries) {
+	    if (open_mode != DB_RDONLY && ret == EEXIST && --retries) {
 		/* sleep for 4 to 100 ms - this is just to give up the CPU
 		 * to another process and let it create the data base
 		 * file in peace */
@@ -518,11 +496,7 @@ int db_txn_commit(void *vhandle)
     dbh_t *handle = vhandle;
     DB_TXN *t = handle->txn;
     assert(dbe);
-    if (!t) {
-	print_error(__FILE__, __LINE__,
-		"db_txn_commit called without transaction open.");
-	return DST_FAILURE;
-    }
+    assert(t);
 
     ret = BF_TXN_COMMIT(t, 0);
     if (ret)
@@ -612,6 +586,7 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 	ret = DS_NOTFOUND;
 	break;
     case DB_LOCK_DEADLOCK:
+	db_txn_abort(handle);
 	ret = DS_ABORT_RETRY;
 	break;
     default:
@@ -647,21 +622,22 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 
     ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
 
-    if (ret) {
+    if (ret == DB_LOCK_DEADLOCK) {
+	db_txn_abort(handle);
+	return DS_ABORT_RETRY;
+    }
+
+    if (ret != 0) {
 	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%.*s' ), err: %d, %s",
-		CLAMP_INT_MAX(token->leng), (char *)token->data, ret, db_strerror(ret));
-	if (ret == DB_LOCK_DEADLOCK) {
-	    db_txn_abort(handle);
-	    return DS_ABORT_RETRY;
-	} else
-	    exit(EX_ERROR);
+		    CLAMP_INT_MAX(token->leng), (char *)token->data, ret, db_strerror(ret));
+	exit(EX_ERROR);
     }
 
     if (DEBUG_DATABASE(3))
 	fprintf(dbgout, "DB->put(%.*s): %s\n",
 		CLAMP_INT_MAX(token->leng), (char *) token->data, db_strerror(ret));
 
-    return ret;
+    return 0;
 }
 
 

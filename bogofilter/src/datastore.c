@@ -23,6 +23,7 @@ David Relson <relson@osagesoftware.com>  2003
 
 #include "error.h"
 #include "maint.h"
+#include "rand_sleep.h"
 #include "swap.h"
 #include "word.h"
 #include "xmalloc.h"
@@ -120,21 +121,25 @@ void dsh_free(void *vhandle)
 void *ds_open(const char *path, const char *name, dbmode_t open_mode)
 {
     dsh_t *dsh;
-    bool create = false;
-    void *v = db_open(path, name, open_mode);
+    void *v;
 
-    if (v == NULL && open_mode != DS_READ) {
-	create = true;
-	v = db_open(path, name, DS_CREATE);
-    }
+    v = db_open(path, name, open_mode);
 
     if (!v)
 	return NULL;
 
     dsh = dsh_init(v);
 
-    if (create && (open_mode & DS_WRITE) && ! (open_mode & DS_LOAD))
-	ds_set_wordlist_version(dsh, NULL);
+    if (db_created(v) && ! (open_mode & DS_LOAD)) {
+	if (DST_OK == ds_txn_begin(dsh)) {
+	    ds_set_wordlist_version(dsh, NULL);
+	    if (DST_OK == ds_txn_commit(dsh))
+		return dsh;
+	}
+	db_close(v, false);
+	dsh_free(dsh);
+	dsh = NULL;
+    }
 
     return dsh;
 }
@@ -189,18 +194,18 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 		    (unsigned long)val->spamcount,
 		    (unsigned long)val->goodcount);
 	}
-	break;
+	return 0;
 
     case DS_NOTFOUND:
 	if (DEBUG_DATABASE(3)) {
 	    fprintf(dbgout, "ds_read: [%.*s] not found\n", 
 		    CLAMP_INT_MAX(word->leng), (char *) word->text);
 	}
-	break;
+	return 1;
 
     case DS_ABORT_RETRY:
-	if (DEBUG_DATABASE(3)) {
-	    fprintf(dbgout, "ds_read: [%.*s] returned abort-retry\n", 
+	if (DEBUG_DATABASE(1)) {
+	    print_error(__FILE__, __LINE__, "ds_read('%.*s') was aborted to recover from a deadlock.",
 		    CLAMP_INT_MAX(word->leng), (char *) word->text);
 	}
 	break;
@@ -329,7 +334,6 @@ int ds_oper(const char *path, dbmode_t open_mode,
     int  ret = 0;
     void *dsh;
 
-    ds_init();
     dsh = ds_open(CURDIR_S, path, open_mode);
 
     if (dsh == NULL) {
@@ -346,7 +350,6 @@ int ds_oper(const char *path, dbmode_t open_mode,
     }
 
     ds_close(dsh, false);
-    ds_cleanup();
 
     return ret;
 }
@@ -356,13 +359,13 @@ static word_t  *wordlist_version_tok;
 
 void ds_init()
 {
+    db_init();
     if (msg_count_tok == NULL) {
 	msg_count_tok = word_new((const byte *)MSG_COUNT, strlen(MSG_COUNT));
     }
     if (wordlist_version_tok == NULL) {
 	wordlist_version_tok = word_new((const byte *)WORDLIST_VERSION, strlen(WORDLIST_VERSION));
     }
-    db_init();
 }
 
 /* Cleanup storage allocation */
@@ -388,7 +391,7 @@ int ds_get_msgcounts(void *vhandle, dsv_t *val)
 /*
  Set the number of messages associated with database.
 */
-int ds_set_msgcounts(void *vhandle, dsv_t *val)
+int  ds_set_msgcounts(void *vhandle, dsv_t *val)
 {
     dsh_t *dsh = vhandle;
 
@@ -400,20 +403,17 @@ int ds_set_msgcounts(void *vhandle, dsv_t *val)
 /*
   Get the wordlist version associated with database.
 */
-bool ds_get_wordlist_version(void *vhandle, dsv_t *val)
+int ds_get_wordlist_version(void *vhandle, dsv_t *val)
 {
-    int rc;
     dsh_t *dsh = vhandle;
 
-    rc = ds_read(dsh, wordlist_version_tok, val);
-
-    return rc == 0;
+    return ds_read(dsh, wordlist_version_tok, val);
 }
 
 /*
  Set the wordlist version associated with database.
 */
-void ds_set_wordlist_version(void *vhandle, dsv_t *val)
+int ds_set_wordlist_version(void *vhandle, dsv_t *val)
 {
     dsh_t *dsh = vhandle;
     dsv_t  tmp;
@@ -427,9 +427,7 @@ void ds_set_wordlist_version(void *vhandle, dsv_t *val)
 
     val->date = today;
 
-    ds_write(dsh, wordlist_version_tok, val);
-
-    return;
+    return ds_write(dsh, wordlist_version_tok, val);
 }
 
 const char *ds_version_str(void)
