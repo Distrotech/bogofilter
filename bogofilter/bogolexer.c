@@ -11,6 +11,8 @@ NAME:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* for getopt: */
+#include <unistd.h>
 
 #include "config.h"
 #include "lexer.h"
