@@ -38,6 +38,7 @@ static const int chk_intval = 30;	/* check interval in seconds */
 static const char aprt[] = DIRSEP_S "process-table";
 static const off_t cellsize = 1;
 static off_t lockpos;			/* lock cell offset */
+static int locked;			/* if we have the lock */
 static int lockfd = -1;			/* lock file descriptor */
 
 static const char cell_inuse = '1';
@@ -69,6 +70,13 @@ static const char *s_locktype(int locktype) {
 static int check_celllock(int fd, off_t offset) {
     struct flock fl;
     int r;
+
+    /* check our own lock explicitly first, F_GETLK will return F_UNLCK
+     * for our own locks because we can demote, upgrade, reset, set our
+     * own locks at will, IOW, F_GETLK will only detect locks set by
+     * other processes */
+    if (offset == lockpos && locked)
+	return 1;
 
     fl.l_type = F_RDLCK;
     fl.l_whence = SEEK_SET;
@@ -273,6 +281,7 @@ int set_lock(const char *bogohome) {
 #endif
 
 		init_sig();
+		locked = 1;
 		return 0;
 	    }
 	}
@@ -284,6 +293,7 @@ int clear_lock(void) {
     shut_sig();
     if (lseek(lockfd, lockpos, SEEK_SET) < 0)
 	return -1;
+    locked = 0;
     if (cellsize != write(lockfd, &cell_free, cellsize))
 	return -1;
     if (set_celllock(lockfd, lockpos, F_UNLCK))
