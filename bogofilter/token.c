@@ -22,31 +22,43 @@ AUTHOR:
 #include "token.h"
 #include "mime.h"
 
+/* Structure Definitions */
+
 typedef enum {
     LEXER_HEAD,
     LEXER_TEXT,
     LEXER_HTML,
 } lexer_state_t;
 
+/* Local Static Variables */
+
 static char *yytext;
 static int yyleng;
-
-bool block_on_subnets = false;
 
 static token_t save_class = NONE;
 static char save_text[256];
 
-int html_tag_level = 0;
-int html_comment_level = 0;
+static int html_tag_level = 0;
+static int html_comment_level = 0;
 
-lexer_state_t lexer_state = LEXER_HEAD;
+static lexer_state_t lexer_state = LEXER_HEAD;
+
+/* Global Variables */
+
+bool block_on_subnets = false;
+
+/* Function Prototypes */
+
+static void reset_html_level(void);
+
+/* Function Definitions */
 
 void reset_html_level(void)
 {
     html_tag_level = 0;
     html_comment_level = 0;
 }
- 
+
 void html_tag(int level)
 {
     html_tag_level += level;
@@ -164,7 +176,7 @@ token_t get_token(void)
 
 token_t got_from(const char *text)
 {
-    if (memcmp(text, "From ", 5) != 0 ) 
+    if (memcmp(text, "From ", 5) != 0 )
 	return(TOKEN);
     else { 
 	msg_header = 1; 
@@ -173,7 +185,7 @@ token_t got_from(const char *text)
 	    stackp = 0;
 	    reset_msg_state(&msg_stack[stackp], 0); 
 	    reset_html_level();
-	} 
+	}
 	return(FROM);
     }
 }
@@ -195,7 +207,7 @@ const char *state_name(lexer_state_t state)
     case LEXER_HEAD: return "HEAD";
     case LEXER_TEXT: return "TEXT";
     case LEXER_HTML: return "HTML";
-    } 
+    }
     return "unknown";
 }
 
@@ -236,7 +248,7 @@ void got_newline()
 
     default:
 	change_lexer_state(LEXER_TEXT);
-    } 
+    }
 
     return;
 }
