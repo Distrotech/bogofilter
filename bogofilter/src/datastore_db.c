@@ -950,11 +950,8 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	exit(EXIT_FAILURE);
     }
 
-    if (DEBUG_DATABASE(1)) {
-	fprintf(stderr, "dbgout=%p, stdout=%p, stderr=%p\n",
-		dbgout, stdout, stderr);
+    if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->open(home=%s)\n", bogohome);
-    }
 
     init = true;
     return 0;
