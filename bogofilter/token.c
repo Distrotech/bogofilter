@@ -137,6 +137,10 @@ token_t get_token(void)
 		yyleng = strlcpy( yylval+len, yytext, avl);
 		return (class);
 	    }
+	case NONE:		/* nothing to do */
+	    break;
+	case FROM:		/* nothing to do */
+	    break;
 	}
 
 	/* eat all long words */

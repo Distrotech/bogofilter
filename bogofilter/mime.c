@@ -261,8 +261,10 @@ void mime_type(const char *text, int leng)
     case MIME_MESSAGE:
 	/* XXX: read boundary */
 	return;
+    case MIME_APPLICATION:
+	/* XXX: read boundary */
+	return;
     }
-    /* XXX: incomplete */
     return;
 }
 
