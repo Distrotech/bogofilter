@@ -113,10 +113,6 @@ strip contrib-static/bogogrep_static
 )
 %endif
 
-for README in randomtrain ; do
-  ln -s ../contrib/README.$README doc/README.$README
-done
-
 %post static
 for file in bogofilter bogolexer bogoutil bogotune ; do
     if [ $1 -lt 2 ] ; then
@@ -136,6 +132,7 @@ done
 %defattr(-,root,root)
 
 %doc AUTHORS CHANGES* COPYING INSTALL
+%doc GETTING.STARTED
 %doc NEWS README* RELEASE.NOTES* TODO
 %doc doc/bogofilter-tuning.HOWTO.html
 %doc doc/bogofilter-SA-2002-01
@@ -165,6 +162,7 @@ done
 %defattr(-,root,root)
 
 %doc AUTHORS CHANGES* COPYING INSTALL
+%doc GETTING.STARTED
 %doc NEWS README* RELEASE.NOTES* TODO
 %doc doc/bogofilter-tuning.HOWTO.html
 %doc doc/bogofilter-SA-2002-01
