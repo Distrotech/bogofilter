@@ -218,7 +218,7 @@ static int load_file(const char *ds_file)
 
     dsh = ds_open(".", 1, &ds_file, DB_WRITE);
     if (dsh == NULL)
-	return 2;
+	return EX_ERROR;
 
     memset(buf, '\0', BUFSIZE);
 
@@ -330,7 +330,7 @@ static int words_from_list(const char *ds_file, int argc, char **argv)
 
     dsh = ds_open(".", 1, &ds_file, DB_READ);
     if (dsh == NULL)
-	return 2;
+	return EX_ERROR;
 
     if (argc == 0)
     {
@@ -390,7 +390,7 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
     /* XXX FIXME: deadlock possible */
     dsh = ds_open(".", count, (const char **)filepaths, DB_READ);
     if (dsh == NULL)
-	return 2;
+	return EX_ERROR;
 
     if (show_probability)
     {
@@ -545,7 +545,7 @@ static int compute_robinson_x(char *path)
 
 	dsh = ds_open(".", count, (const char **) filepaths, DB_WRITE);
 	if (dsh == NULL)
-	    return 2;
+	    return EX_ERROR;
 
 	val.goodcount = 0;
 	val.spamcount = (uint32_t) (robx * 1000000);
@@ -553,7 +553,9 @@ static int compute_robinson_x(char *path)
 	ds_close(dsh, false);
     }
 
-    return 0;
+    word_free(word_robx);
+
+    return EX_OK;
 }
 
 static void print_version(void)
