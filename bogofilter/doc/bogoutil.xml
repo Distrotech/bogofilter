@@ -86,6 +86,7 @@
   <refsect1 id="author">
     <title>AUTHOR</title>
     <para>Gyepi Sam <email>gyepi@praxis-sw.com</email>.</para>
+    <para>Matthias Andree <email>matthias.andree@gmx.de</email>.</para>
     <para>
        For updates, see <ulink url="http://bogofilter.sourceforge.net/">
        the bogofilter project page</ulink>.
