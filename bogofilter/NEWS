@@ -5,12 +5,16 @@
 NOTE: More information on important changes for bogofilter updaters
 is in the RELEASE.NOTES files.  Read them!!
 
+	2004-09-13
+	* Updates doc/README.db with a section on the log file size and
+	  pointers to db_checkpoint and db_archive.
+
 	2004-09-03 (txn 2.1)
 	* The on-line crash detector would consider its own process a zombie,
 	  so all processes that lasted 30 s or longer would abort themselves
 	  after that period.
 
-	  This wass particularly prominent with BerkeleyDB 4.1 with
+	  This was particularly prominent with BerkeleyDB 4.1 with
 	  x86/gcc-assembly mutexes as this combination appears rather slow when
 	  facing lock contention, causing t.lock3 failure. BDB 4.1 compiled to
 	  use POSIX mutexes (where working) appear to be a lot faster in this

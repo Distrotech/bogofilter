@@ -24,7 +24,9 @@ application or system crash.
 
 Berkeley DB version 4.2 has been tested successfully in September 2004.
 
-Berkeley DB versions 4.1 and 4.2 are recommended over the older versions.
+Berkeley DB versions 4.1 and 4.2 are recommended over the previous
+versions. Note that BerkeleyDB 4.1 appears slower than 4.2 for multiple
+concurrent operations.
 
 Berkeley DB versions 4.1 and newer support checksumming data base pages,
 these will detect if a data base page has been written only partially
@@ -35,35 +37,40 @@ sparsely (if at all) documented on most systems.
 
 Requisites to use this code successfully:
 
-- the hardware MUST NOT cheat fsync(2). Virtually all ATA hard disk
-  drives ship with write cache enabled so they give good figures in
-  benchmarks - sacrificing even the least trace of reliability.
+- the hardware MUST NOT cheat when synchronous I/O completion is
+  requested, for instance through fsync(2). Virtually all ATA hard disk
+  drives and many SCSI hard disk drives ship with write cache enabled so
+  they give good figures in benchmarks - without giving heed to durability
+  of data sent to the drive.
 
   You MUST switch off the drive's or RAID controller's write cache
-  unless the cache is battery backed and permanent.
+  unless the cache is battery backed and permanent or your operating
+  system guarantees synchronous I/O completion in spite of the write
+  cache.
 
-  If you have an uninterruptible power supply unit attached with a
-  battery charged and in good shape, the risk for data loss may be
-  acceptable.
-
-
-  To switch off the write cache on Linux, run (as root, assuming that
-  the disk drive containing the bogofilter data base is /dev/hda):
+  To switch off the write cache under Linux, run this command for ATA
+  drives (assuming that the disk drive containing the bogofilter data
+  base is /dev/hda):
 
       /sbin/hdparm -W0 /dev/hda
 
-  To switch off the write cache on FreeBSD, add the line
+  For SCSI drives, use scsiinfo or scsi-config.
+
+  To switch off the write cache for ATA drives on FreeBSD, add the line
 
       hw.ata.wc="0"
 
-  to /boot/loader.conf.local and reboot.
+  to /boot/loader.conf.local and reboot. For SCSI drives, use
+  camcontrol modepage da0 -m8 -e -P3 (to save the setting)  and then
+  camcontrol modepage da0 -m8 -e -P0 (for the currently active setting).
+  This assumes da0 is your SCSI hard drive.
 
   Note that switching the write cache off adversely affects the write
   performance (of bulk transfers in particular), but guarantees on-disk
   consistency in case of power failure.
 
   That's the price for getting ultra-cheap hardware. If you want decent
-  performance, buy SCSI.
+  performance for data bases, buy SCSI for now.
 
   While ATA drivers and file systems are under constant development,
   substantiated statements about the durability issue, about write ordering
@@ -94,9 +101,37 @@ NOTE: If you need to copy your data base, DO NOT USE cp! DO USE dd INSTEAD
       and pass dd the data base page size (you can obtain this size by
       db_stat, as shown in section 4.1) as block size argument.
 
-One common failure case is known:
+3.1 LOG FILE HANDLING
 
-3.1 LOCK TABLE EXHAUSTION
+The Berkeley DB Transactional Data Store uses log files to store data
+base changes so that they can be rolled back or restored after an
+application crash.
+
+The logs of the transactional data store, log.NNNNNNNNNN files of up to
+10 MB in size (in the default configuration), can clog up considerable
+amounts of disk space and many users wish to purge or compress these log
+files. These can safely be handled with BerkeleyDB's db_checkpoint and
+db_archive utilities, which you'll run in this order:
+
+- db_checkpoint migrates written-ahead data from the log into the data
+  base, and places a checkpoint which will speed up non-catastrophic
+  data base recovery, for instance after a premature bogofilter abort.
+
+
+
+- db_archive allows to identify log files that are no longer in use so
+  that you can compress or remove them.
+
+Before choosing to remove log files, be sure to read the db_archive
+documentation that ships with BerkeleyDB, because removing logs has an
+impact on recoverability and can render your data base unrecoverable.
+
+The db_archive documentation also contains suggestions for several
+backup strategies.
+
+3.2 LOCK TABLE EXHAUSTION
+
+One common failure case is known:
 
 Problem: Operations that affect large parts of the data base or the data
 	 base as a whole (bogoutil usually) may require many locks and
