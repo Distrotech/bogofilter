@@ -11,6 +11,7 @@
 #include "collect.h"
 #include "format.h"
 #include "msgcounts.h"
+#include "rand_sleep.h"
 #include "register.h"
 #include "wordhash.h"
 #include "wordlists.h"

@@ -29,6 +29,7 @@ THEORY:
 
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "bogofilter.h"
 #include "bogoconfig.h"
