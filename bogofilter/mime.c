@@ -209,7 +209,7 @@ void mime_encoding(void)
     return;
 }
 
-void get_mime_type(void)
+enum mimetype get_mime_type(void)
 {
     return msg_state->mime_type;
 }
