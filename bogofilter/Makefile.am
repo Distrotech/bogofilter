@@ -22,8 +22,11 @@ EXTRA_DIST = autogen.sh \
 
 .PHONY: rpm cvs-check
 
+enable_static = 0
+with_tdb = 0
+
 rpm:	dist
-	rpm -ta $(distdir).tar.gz
+	rpm -ta $(distdir).tar.gz --define 'enable_static $(enable_static)' --define 'with_tdb $(with_tdb)'
 
 cvs-check:
 	rm -rf $(PACKAGE)-$(VERSION)-export

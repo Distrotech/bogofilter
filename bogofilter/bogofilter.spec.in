@@ -1,5 +1,6 @@
 # $Id$
 
+
 Name: @PACKAGE@
 Version: @VERSION@
 Release: 1
@@ -9,8 +10,16 @@ License: GPL
 Group: Applications/Internet
 Summary: fast anti-spam filtering by Bayesian statistical analysis
 Buildroot: %{_tmppath}/%{name}-%{version}-root
-Conflicts: bogofilter-static
 %define mydocdir %{_docdir}/%{name}
+
+%define enable_static_p 0
+%define with_tdb_p     0
+
+# rpm -ba|--rebuild --define 'with_tdb 1'
+# rpm -ba|--rebuild --define 'enable_static  1'
+
+%{?enable_static:%define enable_static_p 1}
+%{?with_tdb:%define with_tdb_p 1}
 
 %description
 Bogofilter is a Bayesian spam filter.  In its normal mode of
@@ -21,21 +30,19 @@ Bogofilter is designed with fast algorithms (including Berkeley DB system),
 coded directly in C, and tuned for speed, so it can be used for production
 by sites that process a lot of mail.
 
-%package static
-Summary: Statically linked
-Group: Applications/Internet
-Conflicts: bogofilter
-%description static
-Statically linked bogofilter, bogolexer, and bogoutil
-
 %prep
 %setup
 CFLAGS="$RPM_OPT_FLAGS" \
 ./configure \
   --prefix=%{_prefix} \
   --mandir=%{_mandir} \
-  --sysconfdir=%{_sysconfdir} \
-  --enable-static
+%if %{enable_static_p}
+  --enable-static --program-suffix=_static \
+%endif
+%if %{with_tdb_p}
+  --with-tdb \
+%endif
+  --sysconfdir=%{_sysconfdir}
 
 %build
 make
@@ -81,27 +88,12 @@ for README in randomtrain ; do
   ln -s ../contrib/README.$README doc/README.$README
 done
 
-%post static
-for file in bogofilter bogolexer bogoutil ; do
-    if [ $1 -lt 2 ] ; then
-        ln -s %{_bindir}/${file}_static %{_bindir}/${file} 
-    fi
-done
-
-%postun static
-for file in bogofilter bogolexer bogoutil ; do
-    if [ $1 -eq 0 ] ; then
-        rm -f %{_bindir}/${file}
-        echo rm -f %{_bindir}/${file}
-    fi
-done
-
 %files
 %defattr(-,root,root)
 
-%{_bindir}/bogofilter
-%{_bindir}/bogolexer
-%{_bindir}/bogoutil
+%{_bindir}/bogofilter*
+%{_bindir}/bogolexer*
+%{_bindir}/bogoutil*
 %{_bindir}/bogoupgrade
 %{_sysconfdir}/bogofilter.cf.example
 %config(noreplace) %{_sysconfdir}/bogofilter.cf
@@ -121,36 +113,7 @@ done
 %doc doc/programmer
 %doc .inst/html .inst/xml
 
-%{_datadir}/%{name}/contrib/*
-%{_datadir}/%{name}/tuning/*
-
-%files static
-%defattr(-,root,root)
-
-%{_bindir}/bogofilter_static
-%{_bindir}/bogolexer_static
-%{_bindir}/bogoutil_static
-%{_bindir}/bogoupgrade
-
-%{_sysconfdir}/bogofilter.cf.example
-%config(noreplace) %{_sysconfdir}/bogofilter.cf
-
-%{_mandir}/man1/bogofilter.1*
-%{_mandir}/man1/bogolexer.1*
-%{_mandir}/man1/bogoutil.1*
-%{_mandir}/man1/bogoupgrade.1*
-%{_mandir}/man1/bogol.1*
-%{_mandir}/man1/bogotune.1*
-
-%doc AUTHORS CHANGES-* COPYING INSTALL METHODS NEWS
-%doc README README.cvs RELEASE.NOTES-* TODO UPGRADE
-%doc doc/bogofilter-tuning.HOWTO
-%doc doc/integrating-with-postfix
-%doc doc/integrating-with-qmail
-%doc doc/programmer
-%doc .inst/html .inst/xml
-
-%{_datadir}/%{name}/contrib-static/*
+%{_datadir}/%{name}/contrib*/*
 %{_datadir}/%{name}/tuning/*
 
 %changelog

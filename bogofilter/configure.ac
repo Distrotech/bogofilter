@@ -63,6 +63,61 @@ AC_SUBST(CFLAGS)
 # Checks for libraries.
 AC_CHECK_LIB([m],  [cos])
 
+AC_CHECK_DECLS(optreset,,,[[
+#include <unistd.h>
+/* Solaris */
+#include <stdlib.h>
+]])
+
+AC_ARG_ENABLE(static,
+      AC_HELP_STRING([--enable-static], [Build static versions as well.]))
+if test a$enable_static = ayes ; then
+    AC_MSG_CHECKING([option to link statically])
+    LDEFLAGS="$LDFLAGS"
+    found=0
+    for i in -static ; do
+	LDFLAGS="$LDEFLAGS $i"
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>]],
+			  [[exit (0);]])],found=1)
+	if test $found -eq 1 ; then break ; fi
+    done
+    if test $found -eq 1 ; then
+	AC_MSG_RESULT($i)
+	STATICLDFLAGS=$i
+	LDFLAGS="$LDEFLAGS"
+    else
+	AC_MSG_RESULT([[?]])
+	AC_MSG_WARN([Cannot figure out how to statically link a program.])
+	STATICLDFLAGS=
+	enable_static=no
+    fi
+fi
+export STATICLDFLAGS
+AC_SUBST(STATICLDFLAGS)
+AM_CONDITIONAL(ENABLE_STATIC, test x$enable_static = xyes)
+
+WITH_TDB=
+AC_ARG_WITH(tdb,
+	    AC_HELP_STRING([--with-tdb[=PATH]],
+            [Use trivial database (tdb), optionally specifying path to installation directory]),
+	    [
+            if test "x$withval" != "xno"; then
+            WITH_TDB=yes
+dnl            if test "x$withval" = "xyes"; then
+dnl            else
+dnl dnl check user supplied data for correctness
+            fi
+        ]	
+)
+
+if test "x$WITH_TDB" = "xyes"; then 
+AC_CHECK_LIB(tdb,
+             tdb_open,,
+             [AC_MSG_ERROR(Cannot link to tdb library. Please specify path to tdb installation directory.)],
+)
+fi
+
+if test "x$WITH_TDB" != "xyes"; then 
 AH_TEMPLATE([HAVE_DB_H], [Have suitable db.h header])
 need_dash_r=
 case $target_os in
@@ -111,38 +166,6 @@ You can download BerkeleyDB 4.0.x from http://www.sleepycat.com/]]),
 [[#include <db.h>]]
 )
 
-AC_CHECK_DECLS(optreset,,,[[
-#include <unistd.h>
-/* Solaris */
-#include <stdlib.h>
-]])
-
-AC_ARG_ENABLE(static,
-      AC_HELP_STRING([--enable-static], [Build static versions as well.]))
-if test a$enable_static = ayes ; then
-    AC_MSG_CHECKING([option to link statically])
-    LDEFLAGS="$LDFLAGS"
-    found=0
-    for i in -static ; do
-	LDFLAGS="$LDEFLAGS $i"
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>]],
-			  [[exit (0);]])],found=1)
-	if test $found -eq 1 ; then break ; fi
-    done
-    if test $found -eq 1 ; then
-	AC_MSG_RESULT($i)
-	STATICLDFLAGS=$i
-	LDFLAGS="$LDEFLAGS"
-    else
-	AC_MSG_RESULT([[?]])
-	AC_MSG_WARN([Cannot figure out how to statically link a program.])
-	STATICLDFLAGS=
-	enable_static=no
-    fi
-fi
-export STATICLDFLAGS
-AC_SUBST(STATICLDFLAGS)
-AM_CONDITIONAL(ENABLE_STATIC, test x$enable_static = xyes)
 
 AC_CHECK_DB([db db-4.1 db41 db-4.0 db4 db-3.3 db-3.2 db-3.1 db3],${STATICLDFLAGS},,
 	    AC_MSG_ERROR([[Can not locate a suitable Berkeley DB library.  Use --with-db=PATH to specify the path to a v3+ install directory]]),-lpthread -lthread)
@@ -180,6 +203,7 @@ AC_RUN_IFELSE(
 		   [AC_MSG_RESULT(no)
 		   AC_MSG_ERROR(db.h header file and db library version do not match.)],)
 AC_MSG_RESULT(yes)
+fi
 
 # Allow the user to specify a header name to use to indicate whether a given
 # message is SPAM or not.
@@ -263,7 +287,6 @@ if test x$USE_FISHER != xNO ; then
 fi
 
 # Enable building with Graham/Robinson/Fisher files.
-
 AM_CONDITIONAL(ENABLE_GRAHAM_METHOD, test x$USE_GRAHAM != xNO)
 AM_CONDITIONAL(ENABLE_ROBINSON_METHOD, test x$USE_ROBINSON != xNO)
 AM_CONDITIONAL(ENABLE_ROBINSON_FISHER, test x$USE_FISHER != xNO)
@@ -274,7 +297,14 @@ if test x$USE_MEMDEBUG = xYES ; then
 	AC_DEFINE(ENABLE_MEMDEBUG,1,
 	[Enable memory usage debugging])
 fi
+
 AM_CONDITIONAL(ENABLE_MEMDEBUG, test x$MEM_DEBUG != xNO)
+
+if test "x$WITH_TDB" = "xyes" ; then
+    AC_DEFINE(ENABLE_TDB_DATASTORE,1, [Enable tdb datastore])
+fi
+
+AM_CONDITIONAL(ENABLE_TDB_DATASTORE, test "x$WITH_TDB" = "xyes")
 
 # Checks for header files.
 AC_HEADER_STDC

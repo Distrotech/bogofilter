@@ -34,11 +34,6 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #include "xmalloc.h"
 #include "xstrdup.h"
 
-#define MSG_COUNT_TOK ((const byte *)".MSG_COUNT")
-word_t  *msg_count_tok;
-
-#undef UINT32_MAX
-#define UINT32_MAX 4294967295lu /* 2 ^ 32 - 1 */
 
 typedef struct {
   char *filename;
@@ -51,6 +46,9 @@ typedef struct {
   int  is_swapped;
 } dbh_t;
 
+/* This must come after dbh_t is defined ! */
+#include "db_handle_props.h"
+
 #define DBT_init(dbt) do { memset(&dbt, 0, sizeof(DBT)); } while(0)
 
 #define DB_AT_LEAST(maj, min) ((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
@@ -61,12 +59,9 @@ typedef struct {
 #define	DB_OPEN(db, file, database, dbtype, flags, mode) db->open(db, file, database, dbtype, flags, mode)
 #endif
 
-int db_cachesize = 0;	/* in MB */
 
 /* Function prototypes */
 
-static int db_get_dbvalue(void *vhandle, const word_t *word, dbv_t *val);
-static void db_set_dbvalue(void *vhandle, const word_t *word, dbv_t *val);
 static int db_lock(int fd, int cmd, short int type);
 
 /* Function definitions */
@@ -222,44 +217,6 @@ open_err:
     return NULL;
 }
 
-/* Cleanup storage allocation */
-void db_cleanup()
-{
-    xfree(msg_count_tok);
-    msg_count_tok = NULL;
-}
-
-/*
-    Retrieve numeric value associated with word.
-    Returns: value if the the word is found in database,
-    0 if the word is not found.
-    Notes: Will call exit if an error occurs.
-*/
-uint32_t db_getvalue(void *vhandle, const word_t *word){
-  dbv_t val;
-  int ret;
-  uint32_t value = 0;
-  dbh_t *handle = vhandle;
-
-  ret = db_get_dbvalue(vhandle, word, &val);
-
-  if (ret == 0) {
-    value = val.count;
-
-    if (DEBUG_DATABASE(3)) {
-      fprintf(dbgout, "[%lu] db_getvalue (%s): [",
-	      (unsigned long) handle->pid, handle->name);
-      word_puts(word, 0, dbgout);
-      fprintf(dbgout, "] has value %lu\n",
-	      (unsigned long)value);
-    }
-    if ((int32_t)value < (int32_t)0)
-	value = 0;
-    return value;
-  } else {
-    return 0;
-  }
-}
 
 void db_delete(void *vhandle, const word_t *word) {
     int ret;
@@ -278,7 +235,7 @@ void db_delete(void *vhandle, const word_t *word) {
     exit(2);
 }
 
-static int db_get_dbvalue(void *vhandle, const word_t *word, /*@out@*/ dbv_t *val){
+int db_get_dbvalue(void *vhandle, const word_t *word, /*@out@*/ dbv_t *val){
   int ret;
   DBT db_key;
   DBT db_data;
@@ -329,39 +286,7 @@ static int db_get_dbvalue(void *vhandle, const word_t *word, /*@out@*/ dbv_t *va
 }
 
 
-/*
-Store VALUE in database, using WORD as database key
-Notes: Calls exit if an error occurs.
-*/
-void db_setvalue(void *vhandle, const word_t *word, uint32_t count){
-  dbv_t val;
-  val.count = count;
-  val.date  = today;		/* date in form YYYYMMDD */
-  db_set_dbvalue(vhandle, word, &val);
-}
-
-
-/*
-Update the VALUE in database, using WORD as database key.
-Adds COUNT to existing count.
-Sets date to newer of TODAY and date in database.
-*/
-void db_updvalue(void *vhandle, const word_t *word, const dbv_t *updval){
-  dbv_t val;
-  int ret = db_get_dbvalue(vhandle, word, &val);
-  if (ret != 0) {
-      val.count = updval->count;
-      val.date  = updval->date;		/* date in form YYYYMMDD */
-  }
-  else {
-      val.count += updval->count;
-      val.date  = max(val.date, updval->date);	/* date in form YYYYMMDD */
-  }
-  db_set_dbvalue(vhandle, word, &val);
-}
-
-
-static void db_set_dbvalue(void *vhandle, const word_t *word, dbv_t *val){
+void db_set_dbvalue(void *vhandle, const word_t *word, dbv_t *val){
   int ret;
   DBT db_key;
   DBT db_data;
@@ -407,57 +332,6 @@ static void db_set_dbvalue(void *vhandle, const word_t *word, dbv_t *val){
   }
 }
 
-
-/*
-  Increment count associated with WORD, by VALUE.
- */
-void db_increment(void *vhandle, const word_t *word, uint32_t value){
-    uint32_t dv = db_getvalue(vhandle, word);
-    value = UINT32_MAX - dv < value ? UINT32_MAX : dv + value;
-    db_setvalue(vhandle, word, value);
-}
-
-/*
-  Decrement count associated with WORD by VALUE,
-  if WORD exists in the database.
-*/
-void db_decrement(void *vhandle, const word_t *word, uint32_t value){
-    uint32_t dv = db_getvalue(vhandle, word);
-    value = dv < value ? 0 : dv - value;
-    db_setvalue(vhandle, word, value);
-}
-
-/*
-  Get the number of messages associated with database.
-*/
-uint32_t db_get_msgcount(void *vhandle){
-    uint32_t msg_count;
-
-    if (msg_count_tok == NULL)
-	msg_count_tok = word_new(MSG_COUNT_TOK, strlen((const char *)MSG_COUNT_TOK));
-    msg_count = db_getvalue(vhandle, msg_count_tok);
-
-    if (DEBUG_DATABASE(2)) {
-	dbh_t *handle = vhandle;
-	fprintf(dbgout, "db_get_msgcount( %s ) -> %lu\n", handle->name,
-		(unsigned long)msg_count);
-    }
-
-    return msg_count;
-}
-
-/*
- Set the number of messages associated with database.
-*/
-void db_set_msgcount(void *vhandle, uint32_t count){
-    db_setvalue(vhandle, msg_count_tok, count);
-
-    if (DEBUG_DATABASE(2)) {
-	dbh_t *handle = vhandle;
-	fprintf(dbgout, "db_set_msgcount( %s ) -> %lu\n", handle->name,
-		(unsigned long)count);
-    }
-}
 
 
 /* Close files and clean up. */
