@@ -278,6 +278,7 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
     /* retry when locking failed */
     for (idx = 0; idx < COUNTOF(retryflags); idx += 1)
     {
+	int flags;
 	DB *dbp;
 	uint32_t retryflag = retryflags[idx], pagesize;
 
@@ -294,6 +295,27 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 	}
 
 	handle->dbp = dbp;
+
+	/* set flags */
+#if DB_AT_LEAST(4,1) && DB_AT_MOST(4,1)
+	    flags = DB_CHKSUM_SHA1;
+#endif
+#if DB_AT_LEAST(4,2)
+	    flags = DB_CHKSUM;
+#endif
+
+#if DB_AT_LEAST(4,1)
+	    ret = dbp->set_flags(dbp, flags);
+	    if (ret) {
+		print_error(__FILE__, __LINE__,
+			"(db) DB->set_flags(%d) failed: %s",
+			flags, db_strerror(ret));
+		dbp->close(dbp, 0);
+		goto open_err;
+	    }
+#else
+	    (void)flags;
+#endif
 
 	/* open data base */
 	if ((t = strrchr(handle->name, DIRSEP_C)))

@@ -23,7 +23,17 @@ application or system crash.
 2. Use, restrictions, caveats ------------------------------------------
 
 Berkeley DB versions 3.2, 3.3, 4.0, 4.1 and 4.2 are known to work as of
-2004-03-17. Older Berkeley DB versions may or may not work - go figure.
+2004-03-17. BerkeleyDB 4.1 and 4.2 are recommended.
+
+Berkeley DB versions 4.1 and newer support checksumming data base pages,
+these will detect if a data base page has been written only partially
+(usually as the result of a system crash or I/O error). We use this
+feature unconditionally because the state of what file system on what
+operating system writes what block sizes atomically is unknown and
+sparsely (if at all) documented on most systems. This costs a little
+CPU, but the important performance factors are disk drive speed and the
+"lexer" component that tokenizes the mail, so processing performance
+will be acceptable.
 
 Requisites to use this code successfully:
 
@@ -73,6 +83,9 @@ Requisites to use this code successfully:
   atomically. If the data base block size is larger than the file
   system's maximum atomic write block size, undetected corruptions can
   remain even after running a "recovery" that appeared to be successful.
+
+  This requisite does not apply if you are using Berkeley DB version 4.1
+  or 4.2, these checksum data base pages to detect partial writes.
 
   Repeat: PARTIAL WRITES ARE USUALLY EVIL (this applies to data bases in
   general, not only those that use transactional models).
