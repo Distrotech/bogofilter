@@ -21,6 +21,7 @@ typedef 	void dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t num
 typedef		int	dsm_lock		(void *handle, int open_mode);
 typedef		ex_t	dsm_common_close	(DB_ENV *dbe, const char *db_file);
 typedef		int	dsm_sync		(DB_ENV *env, int ret);
+typedef		void	dsm_log_flush		(DB_ENV *env);
 
 typedef struct {
     dsm_get_env_dbe		*dsm_get_env_dbe;
@@ -34,6 +35,7 @@ typedef struct {
     dsm_function        	*dsm_commit;
     dsm_common_close		*dsm_common_close;
     dsm_sync			*dsm_sync;
+    dsm_log_flush		*dsm_log_flush;
 } dsm_t;
 
 /** implementation internal type to keep track of databases

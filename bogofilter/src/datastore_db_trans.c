@@ -82,6 +82,7 @@ static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
 static ex_t	   txn_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   txn_sync		(DB_ENV *env, int ret);
+static void	   txn_log_flush	(DB_ENV *env);
 
 /* OO function lists */
 
@@ -97,6 +98,7 @@ dsm_t dsm_transactional = {
     &txn_commit,
     &txn_common_close,
     &txn_sync,
+    &txn_log_flush
 };
 
 /* non-OO static function prototypes */
@@ -811,4 +813,15 @@ ex_t dbe_remove(const char *directory)
 	exit(EX_ERROR);
 
     return dbe_common_close(env, directory);
+}
+
+void txn_log_flush(DB_ENV *dbe)
+{
+    int ret;
+
+    ret = BF_LOG_FLUSH(dbe, NULL);
+
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", (void *)dbe,
+		db_strerror(ret));
 }

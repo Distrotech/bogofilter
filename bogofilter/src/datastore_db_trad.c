@@ -62,6 +62,7 @@ static int  	  tra_abort		(void *vhandle);
 static int  	  tra_commit		(void *vhandle);
 static ex_t	   tra_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   tra_sync		(DB_ENV *env, int ret);
+static void	   tra_log_flush	(DB_ENV *env);
 
 /* OO function lists */
 
@@ -77,6 +78,7 @@ dsm_t dsm_traditional = {
     &tra_commit,
     &tra_common_close,
     &tra_sync,
+    &tra_log_flush
 };
 
 DB_ENV *tra_get_env_dbe	(dbe_t *env)
@@ -166,6 +168,17 @@ DB_ENV *tra_recover_open	(const char *db_file, DB **dbp)
     }
 
     return NULL;
+}
+
+void tra_log_flush(DB_ENV *dbe)
+{
+    int ret;
+
+    ret = BF_LOG_FLUSH(dbe, NULL);
+
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", (void *)dbe,
+		db_strerror(ret));
 }
 
 int  tra_begin	(void *vhandle) { (void) vhandle; return 0; }
