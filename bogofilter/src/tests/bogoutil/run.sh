@@ -37,14 +37,14 @@ fi
 cp -f $srcdir/$inputfile $tdir/
 
 datafile="${srcdir}/input-${num}-data.txt"
-inputdb="input-${num}.db"
+inputdb="input-${num}.${DB_EXT}"
 
 if [ -f "$datafile" ]; then
 	rm -f $tdir/$inputdb
 	../../bogoutil $yday -l $tdir/$inputdb <  $datafile
 fi
 
-outputdb="output-${num}.db"
+outputdb="output-${num}.${DB_EXT}"
 rm -f $tdir/$outputdb
 
 perl ${srcdir}/../../bogoupgrade $yday -b ../../bogoutil \

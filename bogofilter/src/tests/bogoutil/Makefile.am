@@ -18,4 +18,4 @@ EXTRA_DIST=$(TESTSCRIPTS) input-1.txt input-2-data.txt \
 	    output-dl-6.txt
 
 distclean-local:
-	rm -f {in,out}put-[1-9].db
+	rm -f {in,out}put-[1-9].{tdb,db}

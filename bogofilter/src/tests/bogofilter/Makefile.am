@@ -9,7 +9,7 @@ TESTS_ENVIRONMENT = RUN_FROM_MAKE=1 AWK=$(AWK) srcdir=$(srcdir) $(SHELL) $(VERBO
 EXTRA_DIST=$(TESTSCRIPTS) inputs outputs
 
 distclean-local:
-	rm -f {in,out}put-[1-9].db
+	rm -f {in,out}put-[1-9].{tdb,db}
 
 dist-hook:
 	cd $(distdir) && for i in inputs outputs ; do find $$i -name CVS -type d -prune -exec rm -r '{}' ';' ; done

@@ -45,7 +45,7 @@ if [ ! -z "$RUN_FROM_MAKE" ] ; then
     $BOGOUTIL -R $TMPDIR
 else
     for w in spamlist goodlist ; do
-	$BOGOUTIL -d $TMPDIR/$w.db > ${TMPDIR}/$w.txt
+	$BOGOUTIL -d $TMPDIR/$w.${DB_EXT} > ${TMPDIR}/$w.txt
     done
     $BOGOUTIL -vvv -R $TMPDIR > ${TMPDIR}/output.vvv
 fi
