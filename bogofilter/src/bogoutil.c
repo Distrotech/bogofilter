@@ -35,8 +35,6 @@ AUTHOR:
 
 #define MINIMUM_FREQ	5		/* minimum freq */
 
-run_t run_type = RUN_NORMAL;
-
 const char *progname = PROGNAME;
 
 static int dump_count = 0;

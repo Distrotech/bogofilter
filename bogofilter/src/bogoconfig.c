@@ -73,7 +73,6 @@ CONTRIBUTORS:
 
 char outfname[PATH_LEN] = "";
 
-run_t run_type = RUN_UNKNOWN;
 bool  run_classify = false;
 bool  run_register = false;
 
