@@ -359,7 +359,7 @@ void init_charset_table(const char *charset_name, bool use_default)
 	if (strcasecmp(charset->name, charset_name) == 0)
 	{
 	    if (DEBUG_CONFIG(1))
-		printf(" ... found.\n");
+		fprintf(dbgout, " ... found.\n");
 	    map_default();			/* Setup the table defaults. */
 	    (*charset->func)();
 	    found = true;
@@ -400,7 +400,7 @@ void got_charset( const char *charset )
     }
     *d++ = '\0';
     if (DEBUG_CONFIG(0))
-	fprintf( stderr, "got_charset( '%s' )\n", t );
+	fprintf(dbgout, "got_charset( '%s' )\n", t);
     init_charset_table( t, false );
     xfree(t);
 }

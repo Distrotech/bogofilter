@@ -136,7 +136,7 @@ long db_getvalue(void *vhandle, const char *word){
     value = val.count;
 
     if (DEBUG_DATABASE(2)) {
-      fprintf(stderr, "[%lu] db_getvalue (%s): [%s] has value %ld\n",
+      fprintf(dbgout, "[%lu] db_getvalue (%s): [%s] has value %ld\n",
 	      (unsigned long) handle->pid, handle->name, word, value);
     }
     return(value);
@@ -185,7 +185,7 @@ long db_get_dbvalue(void *vhandle, const char *word, dbv_t *val){
     return ret;
   case DB_NOTFOUND:
     if (DEBUG_DATABASE(2)) {
-      fprintf(stderr, "[%lu] db_getvalue (%s): [%s] not found\n", (unsigned long) handle->pid, handle->name, word);
+      fprintf(dbgout, "[%lu] db_getvalue (%s): [%s] not found\n", (unsigned long) handle->pid, handle->name, word);
     }
     return ret;
   default:
@@ -248,7 +248,7 @@ void db_set_dbvalue(void *vhandle, const char * word, dbv_t *val){
   xfree(t);
   if (ret == 0){
     if (DEBUG_DATABASE(2)) {
-      fprintf(stderr, "db_set_dbvalue (%s): [%s] has value %ld\n", handle->name, word, val->count);
+      fprintf(dbgout, "db_set_dbvalue (%s): [%s] has value %ld\n", handle->name, word, val->count);
     }
   }
   else {
@@ -347,14 +347,14 @@ void db_lock_reader(void *vhandle){
   dbh_t *handle = vhandle;
 
   if (DEBUG_DATABASE(1))
-    fprintf(stderr, "[%lu] Acquiring read lock  on %s\n", (unsigned long) handle->pid, handle->filename);
+    fprintf(dbgout, "[%lu] Acquiring read lock  on %s\n", (unsigned long) handle->pid, handle->filename);
 
   errno = 0;
 
   if (db_lock(handle, F_SETLKW, F_RDLCK) != 0){
     if (errno == EAGAIN){
   	if (DEBUG_DATABASE(2))
-    	  fprintf(stderr, "[%lu] Faked read lock on %s.\n", (unsigned long) handle->pid, handle->filename);
+    	  fprintf(dbgout, "[%lu] Faked read lock on %s.\n", (unsigned long) handle->pid, handle->filename);
     }
     else {
 	print_error(__FILE__, __LINE__, "Error acquiring read lock on %s\n", handle->filename);
@@ -363,7 +363,7 @@ void db_lock_reader(void *vhandle){
   }
 
   if (DEBUG_DATABASE(1))
-    fprintf(stderr, "[%lu] Got read lock  on %s\n", (unsigned long) handle->pid, handle->filename);
+    fprintf(dbgout, "[%lu] Got read lock  on %s\n", (unsigned long) handle->pid, handle->filename);
 
   handle->locked = true;
 }
@@ -375,7 +375,7 @@ void db_lock_writer(void *vhandle){
   dbh_t *handle = vhandle;
 
   if (DEBUG_DATABASE(1))
-    fprintf(stderr, "[%lu] Acquiring write lock on %s\n", (unsigned long) handle->pid, handle->filename);
+    fprintf(dbgout, "[%lu] Acquiring write lock on %s\n", (unsigned long) handle->pid, handle->filename);
 
   if (db_lock(handle, F_SETLKW, F_WRLCK) != 0){
       print_error(__FILE__, __LINE__, "Error acquiring write lock on %s\n", handle->filename);
@@ -383,7 +383,7 @@ void db_lock_writer(void *vhandle){
   }
 
   if (DEBUG_DATABASE(1))
-    fprintf(stderr, "[%lu] Got write lock on %s\n", (unsigned long) handle->pid, handle->filename);
+    fprintf(dbgout, "[%lu] Got write lock on %s\n", (unsigned long) handle->pid, handle->filename);
 
   handle->locked = true;
 }
@@ -396,7 +396,7 @@ void db_lock_release(void *vhandle){
 
   if (handle->locked){
     if (DEBUG_DATABASE(1))
-      fprintf(stderr, "[%lu] Releasing lock on %s\n", (unsigned long) handle->pid, handle->filename);
+      fprintf(dbgout, "[%lu] Releasing lock on %s\n", (unsigned long) handle->pid, handle->filename);
 
     if (db_lock(handle, F_SETLK, F_UNLCK) != 0){
 	print_error(__FILE__, __LINE__, "Error releasing on %s\n", handle->filename);
@@ -404,7 +404,7 @@ void db_lock_release(void *vhandle){
     }
   }
   else if (DEBUG_DATABASE(1)) {
-    fprintf(stderr, "[%lu] Attempt to release open lock on %s\n", (unsigned long) handle->pid, handle->filename);
+    fprintf(dbgout, "[%lu] Attempt to release open lock on %s\n", (unsigned long) handle->pid, handle->filename);
   }
 
   handle->locked = false;

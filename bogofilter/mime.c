@@ -169,7 +169,7 @@ mime_push (mime_t * parent)
     mime_init (parent);
 
     if (DEBUG_MIME (1))
-      fprintf (stdout, "*** mime_push. stackp: %d\n", stackp);
+      fprintf (dbgout, "*** mime_push. stackp: %d\n", stackp);
   }
   else
   {
@@ -181,7 +181,7 @@ static void
 mime_pop (void)
 {
   if (DEBUG_MIME (1))
-    fprintf (stdout, "*** mime_pop. stackp: %d\n", stackp);
+    fprintf (dbgout, "*** mime_pop. stackp: %d\n", stackp);
 
   if (stackp > -1)
   {
@@ -215,7 +215,7 @@ mime_reset (void)
 {
 
   if (DEBUG_MIME (1))
-    fprintf (stdout, "*** mime_reset\n");
+    fprintf (dbgout, "*** mime_reset\n");
 
   while (stackp > -1)
     mime_pop ();
@@ -282,7 +282,7 @@ got_mime_boundary (const char *boundary, int boundary_len)
 	 return; 
   
   if (DEBUG_MIME (1))
-    fprintf (stdout, "*** got_mime_boundary. stackp: %d. boundary: %s\n",
+    fprintf (dbgout, "*** got_mime_boundary. stackp: %d. boundary: %s\n",
 	     stackp, boundary);
 
   if (stackp > 0)
@@ -386,7 +386,7 @@ mime_disposition (const char *text, int leng)
     {
       msg_state->mime_disposition = dis->disposition;
       if (DEBUG_MIME (1))
-	fprintf (stdout, "*** mime_disposition: %s\n", text);
+	fprintf (dbgout, "*** mime_disposition: %s\n", text);
       break;
     }
   }
@@ -420,7 +420,7 @@ mime_encoding (const char *text, int leng)
     {
       msg_state->mime_encoding = enc->encoding;
       if (DEBUG_MIME (1))
-	fprintf (stdout, "*** mime_encoding: %s\n", text);
+	fprintf (dbgout, "*** mime_encoding: %s\n", text);
       break;
     }
   }
@@ -445,7 +445,7 @@ mime_type (const char *text, int leng)
     {
       msg_state->mime_type = typ->type;
       if (DEBUG_MIME (1))
-	fprintf (stdout, "*** mime_type: %s\n", text);
+	fprintf (dbgout, "*** mime_type: %s\n", text);
       break;
     }
   }
@@ -480,7 +480,7 @@ mime_boundary_set (const char *text, int leng)
   char *boundary;
 
   if (DEBUG_MIME (1))
-    fprintf (stdout, "*** --> mime_boundary_set: %d  %p '%-.*s'\n", stackp,
+    fprintf (dbgout, "*** --> mime_boundary_set: %d  %p '%-.*s'\n", stackp,
 	     text, leng, text);
 
   boundary = getword (text + strlen ("boundary="), text + leng);
@@ -488,7 +488,7 @@ mime_boundary_set (const char *text, int leng)
   msg_state->boundary_len = strlen (boundary);
 
   if (DEBUG_MIME (1))
-    fprintf (stdout, "*** <-- mime_boundary_set: %d  %p '%s'\n", stackp,
+    fprintf (dbgout, "*** <-- mime_boundary_set: %d  %p '%s'\n", stackp,
 	     boundary, boundary);
 
   return;
@@ -501,7 +501,7 @@ mime_decode (char *buff, size_t size)
   boundary_t b;
    
   if (DEBUG_MIME (3))
-    fprintf (stdout, "*** mime_decode %d \"%-.*s\"\n", size, (int) size - 1,
+    fprintf (dbgout, "*** mime_decode %d \"%-.*s\"\n", size, (int) size - 1,
 	     buff);
 
   if (msg_state->mime_header)	/* do nothing if in header */

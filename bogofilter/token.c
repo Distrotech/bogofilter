@@ -212,7 +212,7 @@ void change_lexer_state(lexer_state_t new)
 {
     /* if change of state, show new state */
     if (DEBUG_LEXER(1) && lexer_state != new)
-	fprintf(stdout, "lexer_state: %s -> %s\n", state_name(lexer_state), state_name(new));
+	fprintf(dbgout, "lexer_state: %s -> %s\n", state_name(lexer_state), state_name(new));
     lexer_state = new;
     return;
 }

@@ -52,7 +52,7 @@ int yygetline(char *buf, int max_size)
 	if (passthrough)
 	    textblock_add(textblocks, buf, count);
 	yylineno += 1;
-	if (DEBUG_LEXER(0)) fprintf(stdout, "### %2d %d %s", yylineno, msg_header, buf);
+	if (DEBUG_LEXER(0)) fprintf(dbgout, "### %2d %d %s", yylineno, msg_header, buf);
     }
     else {
 	count = strlcpy(buf, yysave, max_size-2);
@@ -72,7 +72,7 @@ int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf, count);
 	    yylineno += 1;
-	    if (DEBUG_LEXER(0)) fprintf(stdout, "*** %2d %d %s\n", yylineno, msg_header, buf);
+	    if (DEBUG_LEXER(0)) fprintf(dbgout, "*** %2d %d %s\n", yylineno, msg_header, buf);
 
 	    if (count != -1 && *buf == '\n')
 		break;
@@ -97,7 +97,7 @@ int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf+count, add);
 	    yylineno += 1;
-	    if (DEBUG_LEXER(1)) fprintf(stdout, "*** %2d %d %s\n", yylineno, msg_header, buf+count);
+	    if (DEBUG_LEXER(1)) fprintf(dbgout, "*** %2d %d %s\n", yylineno, msg_header, buf+count);
 	    count += add;
 	} else {
 	    ungetc(c,stdin);
@@ -158,7 +158,7 @@ int yyredo(const char *text, char del)
 {
     char *tmp;
 
-    if (DEBUG_LEXER(1)) fprintf(stdout, "yyredo:  %p %s\n", yysave, text );
+    if (DEBUG_LEXER(1)) fprintf(dbgout, "yyredo:  %p %s\n", yysave, text );
 
     /* if already processing saved text, concatenate new after old */
     if (yysave == NULL) {

@@ -67,7 +67,7 @@ bool keep_count(int count)
 	return true;
     else {
 	bool ok = count > thresh_count;
-	if (DEBUG_DATABASE(1)) fprintf(stderr, "keep_count:  %d > %d -> %c\n", count, thresh_count, ok ? 't' : 'f' );
+	if (DEBUG_DATABASE(1)) fprintf(dbgout, "keep_count:  %d > %d -> %c\n", count, thresh_count, ok ? 't' : 'f' );
 	return ok;
     }
 }
@@ -79,7 +79,7 @@ bool keep_date(int date)
 	return true;
     else {
 	bool ok = thresh_date < date;
-	if (DEBUG_DATABASE(1)) fprintf(stderr, "keep_date:  %d < %d -> %c\n", (int) thresh_date, date, ok ? 't' : 'f' );
+	if (DEBUG_DATABASE(1)) fprintf(dbgout, "keep_date:  %d < %d -> %c\n", (int) thresh_date, date, ok ? 't' : 'f' );
 	return ok;
     }
 }
@@ -91,7 +91,7 @@ bool keep_size(size_t size)
 	return true;
     else {
 	bool ok = (size_min <= size) && (size <= size_max);
-	if (DEBUG_DATABASE(1)) fprintf(stderr, "keep_size:  %d <= %d <= %d -> %c\n", size_min, size, size_max, ok ? 't' : 'f' );
+	if (DEBUG_DATABASE(1)) fprintf(dbgout, "keep_size:  %d <= %d <= %d -> %c\n", size_min, size, size_max, ok ? 't' : 'f' );
 	return ok;
     }
 }
@@ -177,7 +177,7 @@ int maintain_wordlist(void *vhandle)
 		rc1 = dbcp->c_del(dbcp, 0);
 		rc2 = dbh->dbp->del(dbh->dbp, NULL, &db_key, 0);
 
-		if (DEBUG_DATABASE(0)) fprintf(stderr, "deleting %s --> %d, %d\n", (char *)db_key.data, rc1, rc2);
+		if (DEBUG_DATABASE(0)) fprintf(dbgout, "deleting %s --> %d, %d\n", (char *)db_key.data, rc1, rc2);
 	    }
 	}
 	else if (ret == DB_NOTFOUND) {

@@ -546,6 +546,7 @@ int main(int argc, char *argv[])
     set_today();		/* compute current date for token age */
 
     fpin = stdin;
+    dbgout = stderr;
 
     while ((option = getopt(argc, argv, "d:l:m:w:R:phvVx:a:c:s:ny:I:")) != -1)
 	switch (option) {

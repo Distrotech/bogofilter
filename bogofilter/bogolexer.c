@@ -51,6 +51,7 @@ int main(int argc, char **argv)
     int count=0;
 
     fpin = stdin;
+    dbgout = stderr;
 
     while ((option = getopt(argc, argv, ":hnpqvnx:I:")) != -1)
 	switch (option) {

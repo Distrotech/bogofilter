@@ -193,7 +193,7 @@ static void sanitycheck_lists(void)
 	exit(2);
     }
     if (DEBUG_WORDLIST(1))
-	fprintf(stderr, "%d lists look OK.\n", listcount);
+	fprintf(dbgout, "%d lists look OK.\n", listcount);
 }
 #endif
 

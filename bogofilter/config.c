@@ -220,7 +220,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		    break;
 		}
 		if (DEBUG_CONFIG(0))
-		    fprintf(stderr, "%s -> %s\n", arg->name,
+		    fprintf(dbgout, "%s -> %s\n", arg->name,
 			    *arg->addr.b ? "Yes" : "No");
 		break;
 	    }
@@ -231,7 +231,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		    val += 1;
 		*arg->addr.i = atoi((const char *)val) * sign;
 		if (DEBUG_CONFIG(0))
-		    fprintf( stderr, "%s -> %d\n", arg->name, *arg->addr.i );
+		    fprintf(dbgout, "%s -> %d\n", arg->name, *arg->addr.i);
 		break;
 	    }
 	case CP_DOUBLE:
@@ -241,21 +241,21 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		    val += 1;
 		*arg->addr.d = atof((const char *)val) * sign;
 		if (DEBUG_CONFIG(0))
-		    fprintf( stderr, "%s -> %f\n", arg->name, *arg->addr.d );
+		    fprintf(dbgout, "%s -> %f\n", arg->name, *arg->addr.d);
 		break;
 	    }
 	case CP_CHAR:
 	    {
 		*arg->addr.c = *(const char *)val;
 		if (DEBUG_CONFIG(0))
-		    fprintf( stderr, "%s -> '%c'\n", arg->name, *arg->addr.c );
+		    fprintf(dbgout, "%s -> '%c'\n", arg->name, *arg->addr.c);
 		break;
 	    }
 	case CP_STRING:
 	    {
 		*arg->addr.s = xstrdup((const char *)val);
 		if (DEBUG_CONFIG(0))
-		    fprintf( stderr, "%s -> '%s'\n", arg->name, *arg->addr.s );
+		    fprintf(dbgout, "%s -> '%s'\n", arg->name, *arg->addr.s);
 		break;
 	    }
 	case CP_DIRECTORY:
@@ -264,7 +264,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		xfree(dir);
 		*arg->addr.s = dir = xstrdup((const char *)val);
 		if (DEBUG_CONFIG(0))
-		    fprintf( stderr, "%s -> '%s'\n", arg->name, dir );
+		    fprintf(dbgout, "%s -> '%s'\n", arg->name, dir);
 		if (setup_wordlists(dir) != 0)
 		    exit(2);
 		break;
@@ -273,7 +273,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 	{
 	    ok = (*arg->addr.f)(val);
 	    if (DEBUG_CONFIG(0))
-		fprintf( stderr, "%s -> '%c'\n", arg->name, *val );
+		fprintf(dbgout, "%s -> '%c'\n", arg->name, *val);
 	    break;
 	}
 	default:
@@ -303,12 +303,12 @@ static bool process_config_line( const unsigned char *line, const parm_desc *par
     for ( arg = parms; arg->name != NULL; arg += 1 )
     {
 	if (DEBUG_CONFIG(1))
-	    fprintf( stderr, "Testing:  %s\n", arg->name);
+	    fprintf(dbgout, "Testing:  %s\n", arg->name);
 	if (strncmp(arg->name, (const char *)line, len) == 0)
 	{
 	    bool ok = process_config_parameter(arg, val);
 	    if (DEBUG_CONFIG(1) && ok )
-		fprintf( stderr, "%s\n", "   Found it!");
+		fprintf(dbgout, "%s\n", "   Found it!");
 	    return ok;
 	}
     }
@@ -332,14 +332,14 @@ static void read_config_file(const char *fname, bool tilde_expand)
 
     if (fp == NULL) {
 	if (DEBUG_CONFIG(0)) {
-	    fprintf(stderr, "Debug: cannot open %s: %s\n", filename, strerror(errno));
+	    fprintf(dbgout, "Debug: cannot open %s: %s\n", filename, strerror(errno));
 	}
 	xfree(filename);
 	return;
     }
 
     if (DEBUG_CONFIG(0))
-	fprintf(stderr, "Reading %s\n", filename);
+	fprintf(dbgout, "Reading %s\n", filename);
 
     while (!feof(fp))
     {
@@ -664,7 +664,7 @@ void process_config_files(void)
     stats_prefix= stats_in_header ? "\t" : "#   ";
 
     if (DEBUG_CONFIG(0))
-	fprintf( stderr, "stats_prefix: '%s'\n", stats_prefix );
+	fprintf(dbgout, "stats_prefix: '%s'\n", stats_prefix);
 
     init_charset_table(charset_default, true);
 
