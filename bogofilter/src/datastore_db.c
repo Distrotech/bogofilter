@@ -353,7 +353,6 @@ void *db_open(void *vhandle, const char *path,
     int retries = 2; /* how often do we retry to open after ENOENT+EEXIST
 			races? 2 is sufficient unless the kernel or
 			BerkeleyDB are buggy. */
-    char *t;
     dbe_t *env = vhandle;
 
     dbh_t *handle = NULL;
@@ -382,6 +381,7 @@ void *db_open(void *vhandle, const char *path,
 	DB *dbp;
 	DB_ENV *dbe;
 	bool err = false;
+	const char *db_file;
 	uint32_t pagesize;
 	uint32_t retryflag = retryflags[idx];
 
@@ -401,19 +401,13 @@ void *db_open(void *vhandle, const char *path,
 	handle->dbp = dbp;
 	handle->dbenv = env;
 
-	/* open data base */
-	if (fTransaction && 
-	    (t = strrchr(handle->name, DIRSEP_C)))
-	    t++;
-	else
-	    t = handle->name;
-
 	handle->open_mode = open_mode;
+	db_file = dsm->dsm_database_name(handle->name);
 
 retry_db_open:
 	handle->created = false;
 
-	ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | retryflag, DS_MODE);
+	ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | retryflag, DS_MODE);
 
 	if (fTransaction) {	/* TRANSACTION */
 	if (ret != 0 && ( ret != ENOENT || opt_flags == DB_RDONLY ||
@@ -424,14 +418,14 @@ retry_db_open:
 #if DB_AT_LEAST(4,2)
 		 (ret = DB_SET_FLAGS(dbp, DB_CHKSUM)) != 0 ||
 #endif
-		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, DS_MODE)) != 0)))
+		(ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, DS_MODE)) != 0)))
 	    err = true;
 	}
 	else {			/* NON-TRANSACTION */
 	if (ret != 0) {
 	    err = (ret != ENOENT) || (opt_flags == DB_RDONLY);
 	    if (!err) {
-		ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL | retryflag, DS_MODE);
+		ret = DB_OPEN(dbp, db_file, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL | retryflag, DS_MODE);
 		if (ret != 0)
 		    err = true;
 		else
@@ -460,7 +454,7 @@ retry_db_open:
 	    /* close again and bail out without further tries */
 	    if (DEBUG_DATABASE(0))
 		print_error(__FILE__, __LINE__, "DB->open(%s) - actually %s, directory %s, err %s",
-			    handle->name, t, env->directory, db_strerror(ret));
+			    handle->name, db_file, env->directory, db_strerror(ret));
 
 	    dbp->close(dbp, 0);
 	    goto open_err;
