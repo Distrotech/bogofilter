@@ -17,6 +17,7 @@ extern FILE *yyin;
 extern int yyleng;
 extern char *yytext;
 extern char *yylval;
+extern bool mime_lexer;
 
 /* lexer interface */
 typedef enum {

@@ -508,7 +508,7 @@ int process_args(int argc, char **argv)
 
     select_algorithm(algorithm, false);	/* select default algorithm */
 
-    while ((option = getopt(argc, argv, "d:eFhl::o:snSNvVpuc:CgrRx:fqtO:y:" G R F)) != EOF)
+    while ((option = getopt(argc, argv, "d:eFhl::o:snSNvVpuc:CgrRx:fqtO:y:M" G R F)) != EOF)
     {
 	switch(option)
 	{
@@ -635,6 +635,10 @@ int process_args(int argc, char **argv)
 
 	case 'y':		/* date as YYYYMMDD */
 	    today = string_to_date((char *)optarg);
+	    break;
+
+	case 'M':
+	    mime_lexer = true;
 	    break;
 
 	default:

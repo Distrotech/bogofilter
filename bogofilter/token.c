@@ -62,12 +62,8 @@ token_t get_token(void)
 	}
 #endif
 
-	if (class == BOUNDARY && yyleng >= 4) {
-	    if ((t = strstr(yytext+yyleng-2, "--"))) {
-		strcpy(t, "");
-	    }
-	    break;
-	}
+	if (class == BOUNDARY && yyleng >= 4)
+	    continue;
 
 	if (class == IPADDR && block_on_subnets)
 	{

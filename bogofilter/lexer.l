@@ -10,7 +10,6 @@
 */
 #include <stdlib.h>
 #include <ctype.h>
-#include <string.h>
 
 #include <config.h>
 #include "common.h"
@@ -18,9 +17,11 @@
 #include "charset.h"
 #include "error.h"
 #include "lexer.h"
+#include "mime.h"
 #include "fgetsl.h"
 #include "textblock.h"
 #include "xmalloc.h"
+#include "xstrdup.h"
 
 /*
  * Our lexical analysis is different from Paul Graham's rules: 
@@ -51,23 +52,32 @@
 
 extern char *spam_header_name;
 
+static int past_header;
+static int yyinput(char *buf, int max_size);
+static int yyredo(char del);
+
+bool mime_lexer = true;
+
+static int lineno;
+
 #define YY_INPUT(buf,result,max_size) result = yyinput(buf, max_size)
 
 #define YY_DECL token_t yylex(void)
 
 char *yylval;
-static int past_header;
-static int yyinput(char *buf, int max_size);
 
 %}
 
-%option align nounput noyywrap noreject 8bit
+%option align nounput noyywrap noreject 8bit caseless
 
-BASE64		^([A-Za-z0-9/+]+={1,2}|[A-Za-z0-9/+]{32,})$
-UUENCODE	^M[^ ]{60}X?$
 UINT8		([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5]))
 IPADDR		{UINT8}\.{UINT8}\.{UINT8}\.{UINT8}
-MIME_BOUNDARY	^--[^[:blank:][:cntrl:]]+
+BCHARSNOSPC	[0-9a-zA-Z'()+_,-./:=?]
+BCHARS		[ 0-9a-zA-Z'()+_,-./:=?]
+MIME_BOUNDARY	{BCHARS}*{BCHARSNOSPC}
+
+MTYPE		[ \t]*[0-9a-zA-Z/-]*
+TOKEN		[^[:blank:][:cntrl:][:digit:][:punct:]][^][:blank:]<>;=():&%$#@!+|/\\{}^\"\?\*,[:cntrl:][]+[^[:blank:][:punct:][:cntrl:]]
 
 %%
 
@@ -226,50 +236,88 @@ width	;
 \<\!--	;
 -->	;
 
-^From\ 						{past_header = 0; return(FROM);}
+^MIME-Version:.*				{ if (mime_lexer) { mime_version(); yyredo(':'); } }
+^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) { mime_encoding(); yyredo(':'); } }
+^Content-Type:{MTYPE}				{ if (mime_lexer) { mime_type(); yyredo(':'); } }
+^Content-Disposition:{MTYPE}			{ if (mime_lexer) { mime_disposition(); yyredo(':'); } }
+^From\ 						{ if (mime_lexer) { stackp = 0; resetmsgstate(&msg_stack[stackp], 0); } return(FROM); }
 ^Date:.*|Delivery-Date:.*			;
 ^Message-ID:.*					;
-{BASE64}					;
-{UUENCODE}					;
 ^\tid\ .*					;
 
-E?SMTP\ id\ .*					;
-boundary=.*					;
+E?SMTP\ id\ [0-9a-zA-z]*			;
+boundary=.*					{ if (mime_lexer) { mime_boundary(); }}
 name=\"?					;
 filename=\"?					;
-{MIME_BOUNDARY}(--)?$				{return (BOUNDARY);}
+^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { mime_boundary(); return (BOUNDARY); }}
 
 {IPADDR}					{return(IPADDR);}
-[^[:blank:][:cntrl:][:digit:][:punct:]][^][:blank:]<>;=():&%$#@!+|/\\{}^\"?\*,[:cntrl:][]+[^[:blank:][:punct:][:cntrl:]]	{return(TOKEN);} 
+{TOKEN}						{return(TOKEN);}
 .						;
-^\n						{past_header = 1; /* eat token */}
+^\n						{ past_header = 1;  if (mime_lexer) { msg_stack[stackp].mime_header = 0; /* eat token */ }}
 \n						;
 
 %%
 
-static int yyinput(char *buf, int max_size)
+static char *yysave = NULL;
+
+static int yygetline(char *buf, int max_size)
 /* input getter for the scanner */
 {
-    int i, returned;
+    int count;
 
     static size_t hdrlen = 0;
     if (hdrlen==0)
 	hdrlen=strlen(spam_header_name);
 
-    returned = fgetsl(buf, max_size, yyin);
-
-    while (returned != -1
-	    && !past_header
-	    && memcmp(buf,spam_header_name,hdrlen) == 0)
-    {
-	do {
-	    returned = fgetsl(buf, max_size, yyin);
-	    if (returned != -1 && *buf == '\n')
-		break;
-	} while (returned != -1 && isspace((unsigned char)*buf));
+    if (yysave == NULL)
+	count = fgetsl(buf, max_size, yyin);
+    else {
+	count = strlcpy(buf, yysave, max_size-2);
+	buf[count++] = '\n';
+	buf[count] = '\0';
+	xfree(yysave);
+	yysave = NULL;
     }
 
-    if (returned == -1) {
+    lineno += 1;
+    if (DEBUG_LEXER(0)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf);
+
+    while (count != -1
+	   && !past_header
+	   && memcmp(buf,spam_header_name,hdrlen) == 0)
+    {
+	do {
+	    count = fgetsl(buf, max_size, yyin);
+	    lineno += 1;
+	    if (DEBUG_LEXER(0)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf);
+
+	    if (count != -1 && *buf == '\n')
+		break;
+	} while (count != -1 && isspace((unsigned char)*buf));
+    }
+
+    while (!past_header) {
+	int c = fgetc(yyin);
+	if (c == EOF)
+	    break;
+	if (c == ' ' || c == '\t') {
+	    int add;
+	    /* continuation line */
+	    ungetc(c,yyin);
+	    if (buf[count - 1] == '\n') count --;
+	    add = fgetsl(buf + count, max_size - count, yyin);
+	    lineno += 1;
+	    if (DEBUG_LEXER(1)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf+count);
+	    if (add == EOF) break;
+	    count += add;
+	} else {
+	    ungetc(c,yyin);
+	    break;
+	}
+    }
+
+    if (count == -1) {
 	if (ferror(yyin)) {
 	    print_error(__FILE__, __LINE__, "input in flex scanner failed\n");
 	    exit(2);
@@ -278,28 +326,75 @@ static int yyinput(char *buf, int max_size)
 	}
     }
 
+    if (0) { /* debug */
+	fprintf(stderr, "%d: ", count);
+	fwrite(buf, 1, count, stderr);
+	fprintf(stderr, "\n");
+    }
+
     if (passthrough)
     {
 	/* Also, save the text on a linked list of lines.
 	 * Note that we store fixed-length blocks here, not lines.
 	 * One very long physical line could break up into more
 	 * than one of these. */
-	textblock_add(textblocks, buf, returned);
+	textblock_add(textblocks, buf, count);
     }
 
     /* \r\n -> \n */
-    if (returned >= 2 && 0 == strcmp(buf + returned - 2, "\r\n")) {
-	returned --;
-	*(buf + returned - 1) = '\n';
+    if (count >= 2 && 0 == strcmp(buf + count - 2, "\r\n")) {
+	count --;
+	*(buf + count - 1) = '\n';
     }
 
-    for (i=0; i <= returned; i += 1)
+    return count;
+}
+
+static int yyinput(char *buf, int max_size)
+/* input getter for the scanner */
+{
+    int i, count, save;
+
+    while (1) {
+	count = yygetline(buf, max_size);
+	if (count == 0)
+	    break;
+
+	/* do nothing if in header */
+	if (!past_header ||
+	    msg_state->mime_header)
+	    break;
+
+	save = count;
+	count = mime_decode(buf, count);
+
+	if (count == save)
+	    break;
+	/* eat attachments */
+	if (msg_state->mime_disposition != MIME_ATTACHMENT)
+	    break;
+    }
+
+    for (i = 0; i < count; i += 1)
     {	
 	unsigned char ch = buf[i];
 	buf[i] = charset_table[ch];
     }
 
-    return(returned == -1 ? YY_NULL : returned);
+    return (count == -1 ? YY_NULL : count);
+}
+
+static int yyredo(char del)
+{
+    char *t;
+    if (yysave)
+	xfree(yysave);
+    yysave = xstrdup(yytext);
+    t = strchr(yysave, del);
+    if (t != NULL)
+	*t = ' ';
+
+    return 1;
 }
 
 /*
