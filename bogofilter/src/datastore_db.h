@@ -74,9 +74,6 @@ unsigned long db_handle_pid(dsh_t *dsh);
 /* Get the database filename */
 char *db_handle_filename(dsh_t *dsh);
 
-/* Locks and unlocks file descriptor */
-int db_lock(int fd, int cmd, short int type);
-
 /* Prints wordlist name(s) */
 void dbh_print_names(void *handle, const char *msg);
 
