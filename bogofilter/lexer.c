@@ -155,29 +155,28 @@ int yyinput(char *buf, int max_size)
     return (count == -1 ? 0 : count);
 }
 
-#define	USE_DEL
-
 int yyredo(const char *text, char del)
 {
-#ifndef	USE_DEL
-    const char *str = ":;=";
-#endif
+    char *tmp;
 
     if (DEBUG_LEXER(1)) fprintf(stdout, "yyredo:  %p %s\n", yysave, text );
 
+    /* if already processing saved text, concatenate new after old */
     if (yysave == NULL) {
-	char *t = xstrdup(text);
-	xfree(yysave);
-	yysave = t;
-#ifdef	USE_DEL
-	if ((t = strchr(t,del)) != NULL)
-	    *t = ' ';
-#else
-	while ((t = strpbrk(t, str)) != NULL) {
-	    *t++ = ' ';
-	}
-#endif
+	tmp = strdup(text);
     }
+    else {
+	size_t t = strlen(text);
+	size_t s = strlen(yysave);
+	tmp = xmalloc(s + t + 1);
+	memcpy(tmp, yysave, s+1);
+	memcpy(tmp+s, text, t+1);
+    }
+	
+    xfree(yysave);
+    yysave = tmp;
+    if ((tmp = strchr(tmp,del)) != NULL)
+	    *tmp++ = ' ';
 
     return 1;
 }
