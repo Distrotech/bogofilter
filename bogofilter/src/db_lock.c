@@ -221,7 +221,7 @@ static int init_sig(void) {
 
     sa.sa_handler = check_lock;
     sa.sa_mask = ss;
-    sa.sa_flags = 0;
+    sa.sa_flags = SA_RESTART;
     if (sigaction(SIGALRM, &sa, &oldact)) return -1;
 
     alarm(chk_intval);
