@@ -293,6 +293,11 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
     }
 
     printf(head_format, "", "spam", "good", "  Fisher");
+    if (DST_OK != ds_txn_begin(dsh)) {
+	ds_close(dsh, false);
+	fprintf(stderr, "Cannot begin transaction.\n");
+	return EX_ERROR;
+    }
 
     while (argc >= 0)
     {
@@ -331,6 +336,11 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
 	    word_free(token);
     }
 
+    if (DST_OK != ds_txn_commit(dsh)) {
+	ds_close(dsh, false);
+	fprintf(stderr, "Cannot commit transaction.\n");
+	return EX_ERROR;
+    }
     ds_close(dsh, false);
     ds_cleanup();
 
