@@ -19,7 +19,6 @@ EXTRA_DIST= \
 	printmaildir.pl \
 	procmailrc.example \
 	randomtrain \
-    register-maildir \
 	scramble \
 	trainbogo.sh
     
