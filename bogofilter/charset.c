@@ -140,7 +140,8 @@ static void map_default(void)
 
     for (ch=0; ch < COUNTOF(charset_table); ch += 1)
     {
-	if (iscntrl(ch) && ch != '\n')		/* convert control characters to blanks */
+	if (iscntrl(ch) &&		/* convert control characters to blanks */
+	    ch != '\t' && ch != '\n')	/* except tabs and newlines		*/
 	    charset_table[ch] = SP;
     }
 
