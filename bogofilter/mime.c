@@ -252,14 +252,11 @@ void mime_boundary(void)
 	boundary = getmimew(yytext+len, yytext + yyleng);
 	msg_state->boundary = boundary;
     }
-    else {
+    else {			/* verify that it's really a boundary line */
 	boundary = msg_state->boundary;
 	if (boundary == NULL )
 	    return;
 	len = strlen(boundary);
-//	if (strncmp( yytext+2, boundary, strlen(boundary)) == 0)
-//	    mime_read_block(boundary);
-	    /* verify that it's really a boundary line */
 	if (memcmp(yytext+2, boundary, len) == 0) {
 	    stackp += 1;
 	    msg_state = &msg_stack[stackp];
@@ -271,34 +268,6 @@ void mime_boundary(void)
     if (DEBUG_MIME(1)) fprintf(stderr, "*** mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
     return;
 }
-
-#if	0
-void mime_read_block(const char *boundary)
-{
-    char buff[1024];
-    size_t size = sizeof(buff);
-    size_t cnt;
-	
-
-    bool is_header = true;
-
-    while ((cnt = fgetsl(buff, size, yyin)) > 0) {
-	if (is_header) {
-	    fprintf(stderr, "H: %s", buff);
-	    textblock_add(head, buff, cnt);
-	    if (strlen(buff) == 1)
-		is_header = false;
-	}
-	else {
-	    fprintf(stderr, "B: %s", buff);
-	    textblock_add(body, buff, cnt);
-	}
-	if (strcmp(buff, boundary) == 0)
-	    break;
-    }
-    return;
-}
-#endif
 
 size_t mime_decode(char *buff, size_t size)
 {
