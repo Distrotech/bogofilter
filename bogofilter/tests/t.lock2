@@ -6,12 +6,12 @@ filelist=`find $srcdir -maxdepth 1 -type f -print`
 
 grind() {
     a=0
-    cat $filelist | ../bogofilter -n -d $TMPDIR 2>/dev/null || a=$?
+    cat $filelist | ../bogofilter -n -d $TMPDIR -xd -vvv 2>>$TMPDIR/log || a=$?
     echo >>$TMPDIR/res $a
 }
 
 # this test tortures the locking
-for i in 1 2 3 4 5 6 7 8 ; do
+for i in 1 2 3 4 5 6 7 8 9 10 ; do
     grind &
 done
 wait
