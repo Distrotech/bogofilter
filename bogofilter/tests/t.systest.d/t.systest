@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh -v
 
 set -e
 
@@ -35,6 +35,7 @@ map_rc()
 {
     (
 	set +e
+#	echo "$@"
 	eval "$@"
 	a=$?
 	[ $a -eq 0 ] && exit 0
@@ -56,15 +57,25 @@ map_rc()
 #	3 g vvv		X-Bogosity: Yes, spamicity=1.000000
 #	3 r vvv		X-Bogosity: Yes, spamicity=0.540316
 
-for alg in r g ; do
+algs="r"
+algs="r g"
+
+for alg in $alg ; do
     BOGOFILTER_DIR="${TMPDIR}/words.$alg"
     export BOGOFILTER_DIR
     rm -rf $BOGOFILTER_DIR
     mkdir $BOGOFILTER_DIR
-    $BOGOFILTER -$alg -s < ${SYSTEST}/inputs/spam.mbx
-    $BOGOFILTER -$alg -n < ${SYSTEST}/inputs/good.mbx
-    $BOGOUTIL -d $BOGOFILTER_DIR/spamlist.db > $BOGOFILTER_DIR/spamlist.txt
-    $BOGOUTIL -d $BOGOFILTER_DIR/goodlist.db > $BOGOFILTER_DIR/goodlist.txt
+
+#echo $BOGOFILTER -$alg -s I ${SYSTEST}/inputs/spam.mbx
+      $BOGOFILTER -$alg -s -I ${SYSTEST}/inputs/spam.mbx
+#echo $BOGOFILTER -$alg -n -I ${SYSTEST}/inputs/good.mbx
+      $BOGOFILTER -$alg -n -I ${SYSTEST}/inputs/good.mbx
+
+#echo $BOGOUTIL -d $BOGOFILTER_DIR/spamlist.db   $BOGOFILTER_DIR/spamlist.txt
+      $BOGOUTIL -d $BOGOFILTER_DIR/spamlist.db > $BOGOFILTER_DIR/spamlist.txt
+#echo $BOGOUTIL -d $BOGOFILTER_DIR/goodlist.db   $BOGOFILTER_DIR/goodlist.txt
+      $BOGOUTIL -d $BOGOFILTER_DIR/goodlist.db > $BOGOFILTER_DIR/goodlist.txt
+
     if  [ $verbose -ne 0 ]; then
 	ls -l $BOGOFILTER_DIR/*list.txt
     fi
@@ -76,20 +87,21 @@ for alg in r g ; do
 	out=`echo $tst | tr "." " " | awk '{print $2}'`
 	ver=`echo $tst | tr "." " " | awk '{print $3}'`
 	map_rc $BOGOFILTER -$alg -$ver 2>/dev/null \
-	< ${SYSTEST}/inputs/msg.$in.txt > ${TMPDIR}/tests-$alg || :
+	-I ${SYSTEST}/inputs/msg.$in.txt > ${TMPDIR}/tests-$alg || :
 	sed s/,.version=.*// < ${TMPDIR}/tests-$alg > ${TMPDIR}/tests/msg.$out.$alg.$ver
     done
     #
     # classify msg.2.txt a second time and rerun tests
     #    (expect different results from first run)
     #
-    $BOGOFILTER -$alg -s < ${SYSTEST}/inputs/msg.3.txt
+#echo $BOGOFILTER -$alg -s I ${SYSTEST}/inputs/msg.3.txt
+    $BOGOFILTER -$alg -s -I ${SYSTEST}/inputs/msg.3.txt
     for tst in 2.2b.vv 2.2b.vvv ; do
 	in=`echo $tst | tr "." " " | awk '{print $1}'`
 	out=`echo $tst | tr "." " " | awk '{print $2}'`
 	ver=`echo $tst | tr "." " " | awk '{print $3}'`
 	map_rc $BOGOFILTER -$alg -$ver 2>/dev/null \
-	< ${SYSTEST}/inputs/msg.$in.txt > ${TMPDIR}/tests-$alg
+	-I ${SYSTEST}/inputs/msg.$in.txt > ${TMPDIR}/tests-$alg
 	sed s/,.version=.*// < ${TMPDIR}/tests-$alg > ${TMPDIR}/tests/msg.$out.$alg.$ver
     done
     rm -f ${TMPDIR}/tests-$alg

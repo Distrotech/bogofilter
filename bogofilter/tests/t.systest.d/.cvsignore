@@ -1,2 +1,9 @@
+*.orig
+*.tgz
+???test.outputs*
+diff.inputs.txt
+inputs.*
+outputs.*
+summary.txt
 Makefile
 Makefile.in
