@@ -22,8 +22,7 @@ application or system crash.
 
 2. Prerequisites and Caveats -------------------------------------------
 
-Berkeley DB versions 3.2, 3.3, 4.0, 4.1 and 4.2 have been tested
-successfully in Mid March 2004.
+Berkeley DB version 4.2 has been tested successfully in September 2004.
 
 Berkeley DB versions 4.1 and 4.2 are recommended over the older versions.
 
@@ -53,13 +52,11 @@ Requisites to use this code successfully:
 
       /sbin/hdparm -W0 /dev/hda
 
-
   To switch off the write cache on FreeBSD, add the line
 
       hw.ata.wc="0"
 
   to /boot/loader.conf.local and reboot.
-
 
   Note that switching the write cache off adversely affects the write
   performance (of bulk transfers in particular), but guarantees on-disk
@@ -97,7 +94,7 @@ NOTE: If you need to copy your data base, DO NOT USE cp! DO USE dd INSTEAD
       and pass dd the data base page size (you can obtain this size by
       db_stat, as shown in section 4.1) as block size argument.
 
-Two failure cases are known:
+One common failure cas is known:
 
 3.1 LOCK TABLE EXHAUSTION
 
@@ -129,35 +126,6 @@ data base page and a bit of headroom for future training -- see section
 
 b. Run bogoutil -f ~/.bogofilter (use the path from step a, omitting
    the /DB_CONFIG part).
-
-
-3.2 DATA BASE RECOVERY NEEDED
-
-Problem: bogofilter environment needs recovery
-         bogofilter or the computer crashed
-
-Symptom: Operations abort with DB_RUNRECOVERY or "run recovery"
-
-Cause:   system or application abort or crash, write error
-
-Fix:
-
-a. should you have archived old log files, restore all log files into
-   their old location (make sure you take the newest version of each log
-   file in case you have multiple versions in the backup) if the system
-   has suffered data loss.
-
-b. then run bogoutil -v -F ~/.bogofilter
-
-The -F option tells bogoutil this is a "catastrophic" (as in "crash")
-recovery operation as is required after a crash. bogoutil will now use
-all the log.NNNNNNNNNN files and replay the transactions that have not
-made it into the wordlist.db file, and will rollback (backout, abort,
-undo) all operations that are not complete. After that, the data base
-will be consistent.
-
-Bogofilter does not do these recovery operations automatically because
-they take up a lot of time and are not necessary often.
 
 4. Other Information of Interest ---------------------------------------
 
@@ -197,7 +165,6 @@ WARNING: If you need to copy data base files,
 	 DO NOT USE cp, BUT DO USE dd instead and give it a block size
 	 that matches the data base's block size, which can be found by
 	 running db_stat with -d option as shown above.
-
 
 4.2 SPECIFIC INFORMATION ON RESIZING THE LOCK TABLES
 

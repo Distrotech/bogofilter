@@ -62,6 +62,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "xmalloc.h"
 #include "xstrdup.h"
 #include "mxcat.h"
+#include "db_lock.h"
 
 static DB_ENV *dbe; /* libdb environment, if in use, NULL otherwise */
 static int lockfd = -1;  /* fd of lock file to prevent concurrent recovery */
@@ -917,6 +918,15 @@ int db_init(void) {
     const u_int32_t numlocks = 16384;
     const u_int32_t numobjs = 16384;
 
+    if (needs_recovery(bogohome))
+    {
+	db_recover(0);
+    }
+
+    if (set_lock(bogohome)) {
+	exit(EX_ERROR);
+    }
+
     return db_xinit(numlocks, numobjs, /* flags */ 0, F_RDLCK);
 }
 
@@ -924,7 +934,7 @@ int db_recover(int catastrophic) {
     int ret;
 
 retry:
-    if (DEBUG_DATABASE(0) || verbose)
+    if (DEBUG_DATABASE(0))
         fprintf(dbgout, "running %s data base recovery\n",
 	    catastrophic ? "catastrophic" : "regular");
     ret = db_xinit(1024, 1024, catastrophic ? DB_RECOVER_FATAL : DB_RECOVER,
@@ -938,6 +948,7 @@ retry:
     }
 
     ds_cleanup();
+    clear_lockfile(bogohome);
 
     return 0;
 
@@ -955,6 +966,7 @@ void db_cleanup(void) {
     }
     if (lockfd >= 0)
 	close(lockfd); /* release locks */
+    clear_lock();
     dbe = NULL;
     init = false;
 }
