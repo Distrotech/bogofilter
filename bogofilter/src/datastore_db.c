@@ -321,14 +321,20 @@ static uint32_t get_psize(DB *dbp)
 
 const char *db_version_str(void)
 {
-#ifdef DB_VERSION_STRING
-    static const char v[] = DB_VERSION_STRING;
-#else
     static char v[80];
-    snprintf(v, sizeof(v), "BerkeleyDB (%d.%d.%d)%s",
-	     DB_VERSION_MAJOR, DB_VERSION_MINOR, DB_VERSION_PATCH,
-	     fTransactional ? "" : "NONTRANSACTIONAL");
+
+#ifdef DB_VERSION_STRING
+    strcpy(v, DB_VERSION_STRING);
+#else
+    snprintf(v, sizeof(v), "BerkeleyDB (%d.%d.%d)",
+	     DB_VERSION_MAJOR, DB_VERSION_MINOR, DB_VERSION_PATCH);
 #endif
+
+    if (fTransaction)
+	strcat(v, " TRANSACTIONAL");
+    else
+	strcat(v, " NON-TRANSACTIONAL");
+
     return v;
 }
 
