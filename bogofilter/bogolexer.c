@@ -24,7 +24,7 @@ NAME:
 /* exports */
 bool logflag;				/* '-l' */
 bool quiet;				/* '-q' */
-bool passthrough;			/* '-p' */
+int passthrough;			/* '-p' */
 int  verbose;				/* '-v' */
 bool replace_nonascii_characters;	/* '-n' */
 
