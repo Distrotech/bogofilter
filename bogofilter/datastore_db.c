@@ -47,10 +47,12 @@ typedef struct {
 
 #define DBT_init(dbt) do { memset(&dbt, 0, sizeof(DBT)); } while(0)
 
-#if DB_VERSION_MAJOR <= 3 || (DB_VERSION_MAJOR == 4 && DB_VERSION_MINOR == 0)
-#define	DB_OPEN(db, file, database, dbtype, flags, mode) db->open(db, file, database, dbtype, flags, mode)
-#else
+#define DB_AT_LEAST(maj, min) ((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
+
+#if DB_AT_LEAST(4,1)
 #define	DB_OPEN(db, file, database, dbtype, flags, mode) db->open(db, NULL /*txnid*/, file, database, dbtype, flags, mode)
+#else
+#define	DB_OPEN(db, file, database, dbtype, flags, mode) db->open(db, file, database, dbtype, flags, mode)
 #endif
 
 /* Function prototypes */
@@ -107,8 +109,10 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode,
     if (open_mode == DB_READ)
 	opt_flags = DB_RDONLY;
     else
-	opt_flags = DB_CREATE; /* Read-write mode implied.
-				  Allow database to be created if necessary. */
+	/* Read-write mode implied.  Allow database to be created if
+	 * necessary. DB_EXCL makes sure out locking doesn't fail if two
+	 * applications try to create a DB at the same time. */
+	opt_flags = 0;
 
     handle = dbh_init(db_file, name);
     handle->open_mode = open_mode;
@@ -120,25 +124,31 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode,
     }
 
     /* open data base */
-    if ((ret = DB_OPEN(handle->dbp, db_file, NULL, DB_BTREE, opt_flags, 0664)) != 0) {
+    if ((ret = DB_OPEN(handle->dbp, db_file, NULL, DB_BTREE, opt_flags, 0664)) != 0 &&
+	    (ret = DB_OPEN(handle->dbp, db_file, NULL, DB_BTREE, opt_flags |  DB_CREATE | DB_EXCL, 0664)) != 0) {
 	print_error(__FILE__, __LINE__, "(db) open( %s ), err: %d, %s",
 		db_file, ret, db_strerror(ret));
 	goto open_err;
     }
 
     /* see if the database byte order differs from that of the cpu's */
-#if DB_VERSION_MAJOR > 3 || (DB_VERSION_MAJOR == 3 && DB_VERSION_MINOR >= 3)
-    if ( (ret = handle->dbp->get_byteswapped (handle->dbp, &(handle->is_swapped))) != 0){
-	handle->dbp->err (handle->dbp, ret, "%s (db) get_byteswapped: %s", progname, db_file);
+#if DB_AT_LEAST(3,3)
+    ret = handle->dbp->get_byteswapped (handle->dbp, &(handle->is_swapped));
+#else
+    ret = 0;
+    handle->is_swapped = handle->dbp->get_byteswapped (handle->dbp);
+#endif
+    if (ret != 0) {
+	handle->dbp->err (handle->dbp, ret, "%s (db) get_byteswapped: %s",
+		progname, db_file);
 	db_close(handle);
 	goto open_err;
     }
-#else
-    handle->is_swapped = handle->dbp->get_byteswapped (handle->dbp);
-#endif
 
-    handle->fd = open(db_file, open_mode == DB_READ ? O_RDONLY : O_RDWR);
-    if (handle->fd < 0) {
+    ret = handle->dbp->fd(handle->dbp, &handle->fd);
+    if (ret < 0) {
+	handle->dbp->err (handle->dbp, ret, "%s (db) fd: %s",
+		progname, db_file);
 	db_close(handle);
 	goto open_err;
     }
@@ -147,7 +157,6 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode,
 		open_mode == DB_READ ? F_RDLCK : F_WRLCK))
     {
 	int e = errno;
-	(void)close(handle->fd); /* we don't expect deferred errors here */
 	handle->fd = -1;
 	db_close(handle);
 	errno = e;
@@ -351,8 +360,8 @@ void db_close(void *vhandle){
 
   if (handle == NULL) return;
   if (handle->fd >= 0) {
-      db_lock(handle->fd, F_UNLCK, handle->open_mode == DB_READ ? F_RDLCK : F_WRLCK);
-      close(handle->fd);
+      db_lock(handle->fd, F_UNLCK,
+	      handle->open_mode == DB_READ ? F_RDLCK : F_WRLCK);
   }
   if ((ret = handle->dbp->close(handle->dbp, 0))) {
     print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
