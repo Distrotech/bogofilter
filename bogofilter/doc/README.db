@@ -22,84 +22,70 @@ application or system crash.
 
 2. Prerequisites and Caveats -------------------------------------------
 
-Berkeley DB version 4.2 has been tested successfully in September 2004.
+2.1 Compatibility, Berkeley DB versions
+
+Berkeley DB version 4.2 has been tested successfully in September 2004,
+but version 3.0, 3.1, 3.2, 3.3, 4.0 and 4.1 should also work.
 
 Berkeley DB versions 4.1 and 4.2 are recommended over the previous
-versions. Note that BerkeleyDB 4.1 appears slower than 4.2 for multiple
-concurrent operations.
+versions, because these can detect data corruptions more reliably
+(through the use of checksums that detect partially written data base
+pages); Berkeley DB 4.2 appears faster than 4.1 under load (i. e. with
+multiple running copies of bogofilter/bogoutil operating on the same
+data base with at least one spam registration in progress).
 
-Berkeley DB versions 4.1 and newer support checksumming data base pages,
-these will detect if a data base page has been written only partially
-(usually as the result of a system crash or I/O error). We use this
-feature unconditionally because the state of what file system on what
-operating system writes what block sizes atomically is unknown and
-sparsely (if at all) documented on most systems.
+2.2 Recoverability
 
-Requisites to use this code successfully:
+The ability to recover the data base after a crash (power failure!)
+depends on data being written to the disk (or a battery-backed write
+cache) _immediately_ rather than delayed to be written later.
 
-- the hardware MUST NOT cheat when synchronous I/O completion is
-  requested, for instance through fsync(2). Virtually all ATA hard disk
-  drives and many SCSI hard disk drives ship with write cache enabled so
-  they give good figures in benchmarks - without giving heed to durability
-  of data sent to the drive.
+Common disk drives in current PCs and MACs are of the ATA or SATA kind
+and usually ship with their write cache enabled. They write fast, but
+can lose or corrupt up to a few MB of data when the power fails.
+Note: This problem is not specific to bogofilter.
 
-  You MUST switch off the drive's or RAID controller's write cache
-  unless the cache is battery backed and permanent or your operating
-  system guarantees synchronous I/O completion in spite of the write
-  cache.
+It is possible to sacrifice a bit bit of the the write speed and get
+reliability in turn, by switching off the disk's write cache (see
+appendix A for instructions).
 
-  To switch off the write cache under Linux, run this command for ATA
-  drives (assuming that the disk drive containing the bogofilter data
-  base is /dev/hda):
+Switching the write cache off may however adversely affect the
+performance below acceptable levels, particularly for large writes such
+as recording live audio or video data to hard disk.
+If performance is degraded too much, consider getting a separate disk
+drive and using one for fast writes (with the write cache one) and one
+for reliable writes (with the write cache off, for bogofilter, mail
+servers and other applications that need survive a power loss without
+data loss).
 
-      /sbin/hdparm -W0 /dev/hda
+2.3 Choosing a file system
 
-  For SCSI drives, use scsiinfo or scsi-config.
+If your computer saves the data on its own disk drive (a "local file
+system"), BerkeleyDB should work fine. Such file systems are ext2, ext3,
+ffs, jfs, hfs, hfs+, reiserfs, ufs, xfs.
 
-  To switch off the write cache for ATA drives on FreeBSD, add the line
+Berkeley DB does not work reliably with a networked file system. AFS,
+CIFS, Coda, NFS, SMBFS fall into this category.
 
-      hw.ata.wc="0"
+Strictly speaking, with BerkeleyDB 4.0 and older versions, the data base
+block size must be written atomically. The bogofilter maintainers are
+not currently aware of a file system that meets this requirement and is
+production quality at the same time.
 
-  to /boot/loader.conf.local and reboot. For SCSI drives, use
-  camcontrol modepage da0 -m8 -e -P3 (to save the setting)  and then
-  camcontrol modepage da0 -m8 -e -P0 (for the currently active setting).
-  This assumes da0 is your SCSI hard drive.
+2.4 Do make backups!
 
-  Note that switching the write cache off adversely affects the write
-  performance (of bulk transfers in particular), but guarantees on-disk
-  consistency in case of power failure.
+The transactional data store is no good if the disk drive has become
+inaccessible (which happens after some months or years with every
+drive), so you _must_ back up your data base regularly (see the
+db_archive utility for additional documentation of a "hot" backup),
+bogofilter cannot, of course, guess data that got lost through a hard
+drive fault.
 
-  That's the price for getting ultra-cheap hardware. If you want decent
-  performance for data bases, buy SCSI for now.
-
-  While ATA drivers and file systems are under constant development,
-  substantiated statements about the durability issue, about write ordering
-  (ordered tags) or write barriers are non-existent at this time.
-
-- the data base must be on a local file system.
-  AFS, CIFS, Coda, NFS, SMBFS will not work.
-  EXT2FS, EXT3FS, FFS, JFS, REISERFS, UFS, XFS should be fine.
-
-- the data base block size must match what the file system is writing
-  atomically. If the data base block size is larger than the file
-  system's maximum atomic write block size, undetected corruptions can
-  remain even after running a "recovery" that appeared to be successful.
-
-  This requisite does not apply if you are using Berkeley DB version 4.1
-  or 4.2, these checksum data base pages to detect partial writes.
-
-  Repeat: PARTIAL WRITES ARE USUALLY EVIL (this applies to data bases in
-  general, not only those that use transactional models).
-
-Backup your data base regularly (see the db_archive utility for
-additional documentation of a "hot" backup), bogofilter cannot, of
-course, guess data that got lost through a hard drive fault.
+Although backup strategies are beyond the scope of this document, be
+sure to store fresh backups of important data outside of your house
+regularly.
 
 3. Use and troubleshooting ---------------------------------------------
-
-NOTE: If you need to copy your data base, DO NOT USE cp! DO USE dd INSTEAD
-      and pass dd the data base page size (you can obtain this size by
-      db_stat, as shown in section 4.1) as block size argument.
 
 3.1 LOG FILE HANDLING
 
@@ -113,11 +99,9 @@ amounts of disk space and many users wish to purge or compress these log
 files. These can safely be handled with BerkeleyDB's db_checkpoint and
 db_archive utilities, which you'll run in this order:
 
-- db_checkpoint migrates written-ahead data from the log into the data
-  base, and places a checkpoint which will speed up non-catastrophic
-  data base recovery, for instance after a premature bogofilter abort.
-
-
+- db_checkpoint migrates written-ahead data from the log files into the
+  data base, and places a checkpoint which will speed up data base
+  recovery, for instance after a premature bogofilter abort.
 
 - db_archive allows to identify log files that are no longer in use so
   that you can compress or remove them.
@@ -245,3 +229,68 @@ f. run bogoutil -f ~/.bogofilter
 
 Bogofilter will re-create the lock tables automatically
 the next time it is run.
+
+A. Switching the disk drive's write cache off and on -------------------
+
+A.1 Introduction
+
+You need to determine the name of the disk device and its type.
+Type "mount", you'll usually get an output that contains lines like
+these; find the "on /home" if you have it, if you don't check for "on
+/usr" if you have it, or finally, resort to looking at the "on /" line.
+
+From this line, look at the left hand column, usually starting with /dev.
+
+If you have FreeBSD, skip to section A.3 now.
+
+A.2 Switching the write cache off or on in Linux
+
+In this line you've found (see previous section A.1), you'll usually find
+something that starts with /dev/hda, /dev/hde or /dev/sda in the left
+hand column of that line, you can ignore the trailing number. /dev/hd*
+means ATA, /dev/sd* means SCSI.
+
+If the drive name starts with /dev/hd, type the following line, but
+replace hda by hde or what else you may have found:
+
+/sbin/hdparm -W0 /dev/hda
+                 (replace -W0 by -W1 to reenable the write cache)
+
+If your drive name starts with /dev/sd, use the graphical scsi-config
+utility and add a blank the device name on the command line; for
+example:
+
+scsi-config /dev/sda
+
+You can "try changes" (they will be forgotten the next time the computer
+is switched off) or "save changes" (settings will be saved permanently);
+you can use the same utility to restore the previous setting or load
+manufacturer defaults. Skip to section 2.4.
+
+A.3 Switching the write cache off in FreeBSD
+
+Have you read section A.1 already? You should have.
+
+In this line you've found (see section A.1), you'll usually have a line
+that starts with /dev/ad0, /dev/wd0 (either means you have ATA) or
+/dev/da0 (which means you have SCSI).
+
+If you have ATA, add the line
+
+      hw.ata.wc="0"
+
+to /boot/loader.conf.local, shut down all applications and reboot. (To
+revert the change, remove the line, shut down all applications and
+reboot.)
+
+If you have SCSI, you'll need to change the setting twice. Omit the
+leading /dev and trailing s<NUMBER><LETTER> parts (/dev/da0s1a -> da0;
+/dev/da4s3f -> da4). Replace da0 by your device name in these examples,
+and leave out the part in parentheses:
+
+ camcontrol modepage da0 -m8 -e -P0 (effective until computer is switched off)
+ camcontrol modepage da0 -m8 -e -P3 (loaded next time computer is switched on)
+
+camcontrol will open a temporary file with a WCE: line on top. Edit the
+figure to read 0 (cache disabled) or 1 (cache enabled), then save the
+file and exit the editor.
