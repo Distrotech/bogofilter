@@ -81,6 +81,7 @@ static int	  txn_begin		(void *vhandle);
 static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
 static ex_t	   txn_common_close	(DB_ENV *dbe, const char *db_file);
+static int	   txn_sync		(DB_ENV *env, int ret);
 
 /* OO function lists */
 
@@ -94,7 +95,8 @@ dsm_t dsm_transactional = {
     &txn_begin,
     &txn_abort,
     &txn_commit,
-    &txn_common_close
+    &txn_common_close,
+    &txn_sync,
 };
 
 /* non-OO static function prototypes */
@@ -579,7 +581,7 @@ static void dbe_cleanup_lite(dbe_t *env)
 	 * or 120 min have passed since the previous checkpoint */
 	/*                                kB  min flags */
 	ret = BF_TXN_CHECKPOINT(env->dbe, 64, 120, 0);
-	ret = db_flush_dirty(env->dbe, ret);
+	ret = txn_sync(env->dbe, ret);
 	if (ret)
 	    print_error(__FILE__, __LINE__, "DBE->txn_checkpoint returned %s", db_strerror(ret));
 
@@ -590,6 +592,22 @@ static void dbe_cleanup_lite(dbe_t *env)
     if (env->directory)
 	free(env->directory);
     free(env);
+}
+
+static int txn_sync(DB_ENV *env, int ret)
+{
+#if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
+    /* flush dirty pages in buffer pool */
+    while (ret == DB_INCOMPLETE) {
+	rand_sleep(10000,1000000);
+	ret = BF_MEMP_SYNC(env, NULL);
+    }
+#else
+    (void)env;
+    ret = 0;
+#endif
+
+    return ret;
 }
 
 /* initialize data base, configure some lock table sizes
@@ -747,7 +765,7 @@ ex_t dbe_purgelogs(const char *directory)
 
     /* checkpoint the transactional system */
     e = BF_TXN_CHECKPOINT(env, 0, 0, 0);
-    e = db_flush_dirty(env, e);
+    e = txn_sync(env, e);
     if (e) {
 	print_error(__FILE__, __LINE__, "DB_ENV->txn_checkpoint failed: %s",
 		db_strerror(e));
