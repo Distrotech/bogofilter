@@ -382,24 +382,25 @@ void init_charset_table(const char *charset_name, bool use_default)
 
 void got_charset( const char *charset )
 {
-    char *lcl;
-    char *tmp = strchr( charset, '=' );
+    char *t = strchr( charset, '=' );
+    bool q = *t == '"';
     char *s, *d;
-    lcl = xstrdup( tmp ? tmp+1 : charset);
-    for (s = d = lcl; *s != '\0'; s++)
+    t = xstrdup( t + q);
+    for (s = d = t; *s != '\0'; s++)
     {
-	if (*s == '"')		/* skip quotes */
-	    continue;
-	if (*s == '_')		/* map underscore to dash */
-	    *s = '-';
-	*d++ = tolower(*s);	/* map upper case to lower */
-	if (*s == '-' &&	/* map "iso-" to "iso"     */
-	    memcmp(lcl, "iso-", 4) == 0)
+	char c = *s;
+	if (c == '_')		/* map underscore to dash */
+	    c = '-';
+	*d++ = tolower(c);	/* map upper case to lower */
+	if (c == '-' &&		/* map "iso-" to "iso"     */
+	    memcmp(t, "iso-", 4) == 0)
 	    d -= 1;
+	if (q && c == '"')
+	    break;
     }
     *d++ = '\0';
     if (DEBUG_CONFIG(0))
-	fprintf( stderr, "got_charset( '%s' )\n", lcl );
-    init_charset_table( lcl, false );
-    xfree(lcl);
+	fprintf( stderr, "got_charset( '%s' )\n", t );
+    init_charset_table( t, false );
+    xfree(t);
 }

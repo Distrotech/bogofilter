@@ -27,8 +27,7 @@ typedef enum {
     TOKEN,	/* regular token */
     FROM,	/* mbox message delimiter */
     BOUNDARY,	/* MIME multipart boundary line */
-    IPADDR,	/* ip address */
-    CHARSET	/* charset="..." */
+    IPADDR	/* ip address */
 } token_t;
 
 extern token_t yylex(void);

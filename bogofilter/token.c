@@ -64,12 +64,6 @@ token_t get_token(void)
 	    return (class);
 	}
 
-	if (class == CHARSET)	/* charset=name */
-	{			/* Get name; call got_charset(); return name. */
-	    get_token();
-	    got_charset(yytext);
-	}
-
 	/* eat all long words */
 	if (yyleng <= MAXTOKENLEN)
 	    break;

@@ -108,7 +108,7 @@ cellspacing	;
 center	;
 char	;
 charoff	;
-charset						{return(CHARSET);}
+charset=\"?{ID}\"?				{ got_charset(yytext); yyredo('='); }
 circle	;
 cite	;
 colspan	;
