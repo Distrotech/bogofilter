@@ -14,13 +14,8 @@ David Relson <relson@osagesoftware.com>  2003
 
 #include "common.h"
 
-#include "datastore.h"
-#include "xmalloc.h"
-#include "maint.h"
-
-#include "common.h"
-
 #include <db.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -28,7 +23,7 @@ David Relson <relson@osagesoftware.com>  2003
 #include <errno.h>
 
 #include "datastore.h"
-#if	 ! NEED_TDB
+#ifndef	ENABLE_TDB_DATASTORE
 #include "datastore_db.h"
 #else
 #include "datastore_tdb.h"
@@ -38,7 +33,6 @@ David Relson <relson@osagesoftware.com>  2003
 #include "swap.h"
 #include "word.h"
 #include "xmalloc.h"
-#include "xstrdup.h"
 
 #define struct_init(s) memset(&s, 0, sizeof(s))
 
@@ -107,7 +101,6 @@ static void convert_internal_to_external(dsh_t *dsh, dsv_t *in_data, dbv_t *ex_d
     return;
 }
 
-
 dsh_t *dsh_init(
     void *dbh,			/* database handle from db_open() */
     size_t count,		/* database count (1 or 2) */
@@ -121,14 +114,12 @@ dsh_t *dsh_init(
     return val;
 }
 
-
 void dsh_free(void *vhandle)
 {
     dsh_t *dsh = vhandle;
     xfree(dsh);
     return;
 }
-
 
 void *ds_open(const char *db_file, size_t count, const char **names, dbmode_t open_mode)
 {
@@ -202,7 +193,6 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
     return found ? 0 : 1;
 }
 
-
 int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 {
     int ret;
@@ -257,7 +247,6 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
     return ret;
 }
 
-
 int ds_delete(void *vhandle, const word_t *word)
 {
     dsh_t *dsh = vhandle;
@@ -272,7 +261,6 @@ int ds_delete(void *vhandle, const word_t *word)
 
     return ok ? 0 : 1;
 }
-
 
 typedef struct {
     ds_foreach_t *hook;
@@ -300,7 +288,6 @@ static int ds_hook(dbv_t *ex_key,
     return val;
 }
 
-
 int ds_foreach(void *vhandle, ds_foreach_t *hook, void *userdata)
 {
     dsh_t *dsh = vhandle;
@@ -324,14 +311,12 @@ void ds_init()
     }
 }
 
-
 /* Cleanup storage allocation */
 void ds_cleanup()
 {
     xfree(msg_count_tok);
     msg_count_tok = NULL;
 }
-
 
 /*
   Get the number of messages associated with database.
@@ -344,7 +329,6 @@ void ds_get_msgcounts(void *vhandle, dsv_t *val)
     return;
 }
 
-
 /*
  Set the number of messages associated with database.
 */
@@ -356,7 +340,6 @@ void ds_set_msgcounts(void *vhandle, dsv_t *val)
     ds_write(dsh, msg_count_tok, val);
     return;
 }
-
 
 /* implements locking. */
 int db_lock(int fd, int cmd, short int type)
@@ -374,5 +357,3 @@ const char *ds_version_str(void)
 {
     return db_version_str();
 }
-
-
