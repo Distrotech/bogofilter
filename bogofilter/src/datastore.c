@@ -14,6 +14,7 @@ David Relson <relson@osagesoftware.com>  2003
 
 #include "common.h"
 
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -390,6 +391,19 @@ void ds_cleanup(void *dbe)
     xfree(wordlist_version_tok);
     msg_count_tok = NULL;
     wordlist_version_tok = NULL;
+}
+
+void dbe_cleanup(void *vhandle)
+{
+    dbe_t *env = vhandle;
+
+    assert(env->magic == MAGIC_DBE);
+
+    dsm->dsm_cleanup_lite(env);
+
+    if (env->directory)
+	free(env->directory);
+    free(env);
 }
 
 /*

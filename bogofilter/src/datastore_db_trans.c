@@ -64,6 +64,7 @@ static ex_t	   dbx_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   dbx_sync		(DB_ENV *env, int ret);
 static void	   dbx_log_flush	(DB_ENV *env);
 static dbe_t 	  *dbx_init		(const char *dir);
+static void 	   dbx_cleanup_lite	(dbe_t *env);
 
 /* OO function lists */
 
@@ -72,9 +73,10 @@ dsm_t dsm_transactional = {
     &dbx_begin,
     &dbx_abort,
     &dbx_commit,
-    &dbx_init,
 
     /* private -- used in datastore_db_*.c */
+    &dbx_init,
+    &dbx_cleanup_lite,
     &dbx_get_env_dbe,
     &dbx_database_name,
     &dbx_recover_open,
@@ -93,7 +95,7 @@ static int db_try_glock(const char *directory, short locktype, int lockcmd);
 static int bf_dbenv_create(DB_ENV **env);
 static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
-static void dbe_cleanup_lite(dbe_t *env);
+static void dbx_cleanup_lite(dbe_t *env);
 static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
 static ex_t dbe_common_close(DB_ENV *env, const char *directory);
 
@@ -600,7 +602,7 @@ static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u
 }
 
 /* close the environment, but do not release locks */
-static void dbe_cleanup_lite(dbe_t *env)
+static void dbx_cleanup_lite(dbe_t *env)
 {
     if (env->dbe) {
 	int ret;
@@ -616,10 +618,10 @@ static void dbe_cleanup_lite(dbe_t *env)
 	ret = env->dbe->close(env->dbe, 0);
 	if (DEBUG_DATABASE(1) || ret)
 	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", (void *)env->dbe, db_strerror(ret));
+    clear_lock();
+    if (lockfd >= 0)
+	close(lockfd); /* release locks */
     }
-    if (env->directory)
-	free(env->directory);
-    free(env);
 }
 
 static int dbx_sync(DB_ENV *env, int ret)
@@ -668,26 +670,13 @@ retry:
     }
 
     clear_lockfile();
-    dbe_cleanup_lite(env);
+    dbx_cleanup_lite(env);
 
     return EX_OK;
 
 rec_fail:
     exit(EX_ERROR);
 }
-
-void dbe_cleanup(void *vhandle)
-{
-    dbe_t *env = vhandle;
-
-    assert(env->magic == MAGIC_DBE);
-
-    dbe_cleanup_lite(env);
-    clear_lock();
-    if (lockfd >= 0)
-	close(lockfd); /* release locks */
-}
-
 
 static ex_t dbe_common_close(DB_ENV *env, const char *directory)
 {

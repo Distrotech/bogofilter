@@ -36,7 +36,6 @@ David Relson	<relson@osagesoftware.com> 2003 - 2005
 static int	   bft_begin		(void *vhandle);
 static int  	   bft_abort		(void *vhandle);
 static int  	   bft_commit		(void *vhandle);
-static dbe_t	  *bft_init		(const char *directory);
 /* private -- used in datastore_db_*.c */
 static DB_ENV	  *bft_get_env_dbe	(dbe_t *env);
 static const char *bft_database_name	(const char *db_file);
@@ -47,6 +46,8 @@ static int	   bft_lock		(void *handle, int open_mode);
 static ex_t	   bft_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   bft_sync		(DB_ENV *env, int ret);
 static void	   bft_log_flush	(DB_ENV *env);
+static dbe_t	  *bft_init		(const char *directory);
+static void 	   bft_cleanup_lite	(dbe_t *env);
 
 /* OO function lists */
 
@@ -55,8 +56,10 @@ dsm_t dsm_traditional = {
     &bft_begin,
     &bft_abort,
     &bft_commit,
-    &bft_init,
+
     /* private -- used in datastore_db_*.c */
+    &bft_init,
+    &bft_cleanup_lite,
     &bft_get_env_dbe,
     &bft_database_name,
     &bft_recover_open,
@@ -180,4 +183,9 @@ dbe_t *bft_init(const char *directory)
     env->directory = xstrdup(directory);
 
     return env;
+}
+
+void bft_cleanup_lite(dbe_t *env)
+{
+    (void) env;
 }
