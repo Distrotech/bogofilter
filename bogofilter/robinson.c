@@ -82,6 +82,7 @@ rf_method_t rf_robinson_method = {	/* needed by config.c */
 
 void rob_print_stats(FILE *fp)
 {
+    fp = NULL; 	/* quench compiler warning */
     if (force || 
 	rob_stats.s.spamicity > thresh_stats || 
 	rob_stats.s.spamicity > thresh_rtable || 
@@ -187,6 +188,8 @@ double rob_compute_spamicity(wordhash_t *wordhash, FILE *fp) /*@globals errno@*/
 
     double spamicity;
     size_t robn = 0;
+
+    fp = NULL; 	/* quench compiler warning */
 
     if (DEBUG_WORDLIST(2)) fprintf(dbgout, "### rob_compute_spamicity() begins\n");
 
