@@ -27,11 +27,6 @@ AUTHOR:
 extern int Rtable;
 extern double min_dev;
 
-extern double robx;		/* in robinson.c */
-extern double robs;		/* in robinson.c */
-extern long msgs_good;		/* in robinson.c */
-extern long msgs_bad;		/* in robinson.c */
-
 typedef struct rstats_s rstats_t;
 struct rstats_s {
     rstats_t *next;
