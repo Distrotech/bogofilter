@@ -30,7 +30,6 @@ YYYYMMDD thresh_date  = 0;
 size_t	 size_min = 0;
 size_t	 size_max = 0;
 bool     datestamp_tokens = true;
-bool	 replace_nonascii_characters = false;
 
 /* Function Prototypes */
 static YYYYMMDD time_to_date(long days);

@@ -34,7 +34,8 @@ LDADD = libbogofilter.a @LIBOBJS@
 
 # what to build that from
 libbogofilter_a_SOURCES= \
-	common.h globals.h system.h \
+	common.h system.h \
+	globals.h globals.c \
 	directories.c version.c \
 	base64.h base64.c \
 	bogoconfig.h config.c \

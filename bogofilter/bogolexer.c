@@ -21,13 +21,6 @@ NAME:
 #include "textblock.h"
 #include "token.h"
 
-/* exports */
-bool logflag;				/* '-l' */
-bool quiet;				/* '-q' */
-bool passthrough;			/* '-p' */
-int  verbose;				/* '-v' */
-bool replace_nonascii_characters;	/* '-n' */
-
 const char *progname = "bogolexer";
 
 /* prevent larger inclusions */

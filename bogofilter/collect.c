@@ -14,8 +14,6 @@
 
 #include "collect.h"
 
-int	max_repeats;
-
 /* this is referenced by register.c, must not be static */
 void wordprop_init(void *vwordprop){
 	wordprop_t *wordprop = vwordprop;

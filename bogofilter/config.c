@@ -61,13 +61,6 @@ AUTHOR:
 
 /* Global variables */
 
-bool nonspam_exits_zero;/* '-e' */
-bool force;		/* '-F' */
-bool logflag;		/* '-l' */
-bool quiet;		/* '-q' */
-bool terse;		/* '-t' */
-bool passthrough;	/* '-p' */
-int verbose;		/* '-v' */
 int Rtable = 0;		/* '-R' */
 
 char *directory = NULL;
@@ -106,11 +99,6 @@ enum algorithm_e {
 #else
 #error No algorithms compiled in. See configure --help.
 #endif
-
-double	spam_cutoff = 0.0;			/* set during method initialization */
-double	min_dev = 0.0f;
-
-double	thresh_stats = 0.0f;
 
 /* Local variables and declarations */
 
