@@ -232,12 +232,12 @@ bool configure_wordlist(const char *val)
     bool override = false;
     bool ignore = false;
 
-    char *tmp = xstrdup(val);
+    unsigned char *tmp = (unsigned char *) xstrdup(val);
 	
     type=tmp;
     tmp += strcspn(tmp, ", \t");
     *tmp++ = '\0';
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
     switch (type[0])
     {
@@ -255,28 +255,28 @@ bool configure_wordlist(const char *val)
     name=tmp;
     tmp += strcspn(tmp, ", \t");
     *tmp++ = '\0';
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
     path=tmp;
     tmp += strcspn(tmp, ", \t");
     *tmp++ = '\0';
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
     weight=atof(tmp);
     tmp += strcspn(tmp, ", \t");
     *tmp++ = '\0';
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
     override=atoi(tmp);
     tmp += strcspn(tmp, ", \t");
     *tmp++ = '\0';
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
-    if (isdigit((unsigned char)*tmp))
+    if (isdigit(*tmp))
 	ignore=atoi(tmp);
     else {
 	ignore = false;		/* default is "don't ignore" */
-	switch (tolower((unsigned char)*tmp)) {
+	switch (tolower(*tmp)) {
 	case 'n':		/* no */
 	case 'f':		/* false */
 	    ignore = false;
@@ -287,9 +287,9 @@ bool configure_wordlist(const char *val)
 	    break;
 	}
     }
-    while (isalnum((unsigned char)*tmp))
+    while (isalnum(*tmp))
 	tmp++;
-    while (isspace((unsigned char)*tmp)) tmp += 1;
+    while (isspace(*tmp)) tmp += 1;
 
     rc = init_wordlist(&list, name, path, weight, bad, override, ignore);
     ok = rc == 0;
