@@ -1,6 +1,6 @@
 # $Id$
 dnl vim: set noai tw=0:
-AC_INIT(bogofilter, 0.16.4)
+AC_INIT(bogofilter, 0.16.4.1)
 AC_PREREQ(2.54)
 AC_CONFIG_SRCDIR([src/bogofilter.c])
 AC_CANONICAL_TARGET
@@ -242,7 +242,7 @@ AC_TYPE_UID_T
 AC_TYPE_SIGNAL
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
-AC_CHECK_TYPES([uint, ulong, uint32_t, u_int32_t, int32_t, int16_t, u_int16_t, uint16_t, u_int8_t])
+AC_CHECK_TYPES([uint, ulong, uint32_t, u_int32_t, int32_t, int16_t, u_int16_t, uint16_t, u_int8_t, ssize_t])
 AC_CHECK_TYPE(u_long, unsigned long)
 AC_CACHE_SAVE
 AC_CHECK_SIZEOF(short)
