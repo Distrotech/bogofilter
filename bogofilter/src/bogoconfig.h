@@ -13,9 +13,9 @@ AUTHOR:
 #ifndef BOGOCONFIG_H
 #define BOGOCONFIG_H
 
-#include "system.h"
-
 #include "configfile.h"
+
+/* pull in struct option */
 #include "getopt.h"
 
 /* Global variables */
