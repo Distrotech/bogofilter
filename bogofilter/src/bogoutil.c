@@ -1,4 +1,5 @@
 /* $Id$ */
+
 /*****************************************************************************
 
 NAME:
@@ -92,20 +93,10 @@ static int robx_hook(word_t *key, dsv_t *data,
     uint32_t goodness;
     uint32_t spamness;
     double   prob;
-    static word_t *x;
-    static size_t x_size = MAXTOKENLEN + 1;
 
     /* ignore system meta-data */
     if (*key->text == '.')
 	return 0;
-
-    if (x == NULL || key->leng + 1 > x_size) {
-//	if (x) word_free(x);
-	x_size = max(x_size, key->leng + 1);
-	x = word_new(NULL, x_size);
-    }
-
-    word_cpy(x, key);
 
     spamness = data->spamcount;
     goodness = data->goodcount;
@@ -126,7 +117,7 @@ static int robx_hook(word_t *key, dsv_t *data,
 	       "  sp: %3lu,  gd: %3lu,  p: %9.6f,  t: ", 
 	       (unsigned long)*rh->count, *rh->sum, *rh->sum / *rh->count,
 	       (unsigned long)spamness, (unsigned long)goodness, prob);
-	word_puts(x, 0, stdout);
+	word_puts(key, 0, stdout);
 	fputc('\n', stdout);
     }
 /*
@@ -259,7 +250,6 @@ static int load_file(const char *ds_file)
 	data.spamcount += spamcount;
 	data.goodcount += goodcount;
 	ds_write(dsh, token, &data);
-//	word_free(token);
     }
     ds_close(dsh, false);
 
@@ -318,7 +308,6 @@ static int words_from_list(const char *ds_file, int argc, char **argv)
 	    word_puts(token, 0, stdout);
 	    printf(" %lu %lu\n", (unsigned long) val.spamcount, (unsigned long) val.goodcount);
 	}
-//	buff_free(buff);
     }
     else
     {
@@ -329,7 +318,6 @@ static int words_from_list(const char *ds_file, int argc, char **argv)
 	    ds_read(dsh, token, &val);
 	    word_puts(token, 0, stdout);
 	    printf(" %lu %lu\n", (unsigned long) val.spamcount, (unsigned long) val.goodcount);
-//	    word_free(token);
 	}
     }
 
@@ -412,8 +400,6 @@ static int words_from_path(const char *dir, int argc, char **argv, bool show_pro
 	    rob_prob = ((ROBS * ROBX + spamness) / (ROBS + spamness+goodness));
 	}
 	printf(data_format, token->text, spam_count, good_count, gra_prob, rob_prob);
-//	if (argc != 0)
-//	    word_free(token);
     }
 
     ds_close(dsh, false);
@@ -520,8 +506,6 @@ static int compute_robinson_x(char *path)
 	ds_write(dsh, word_robx, &val);
 	ds_close(dsh, false);
     }
-
-//    word_free(word_robx);
 
     return 0;
 }
