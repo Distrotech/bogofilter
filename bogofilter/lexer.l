@@ -240,7 +240,16 @@ width	;
 ^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) { mime_encoding(); yyredo(':'); } }
 ^Content-Type:{MTYPE}				{ if (mime_lexer) { mime_type(); yyredo(':'); } }
 ^Content-Disposition:{MTYPE}			{ if (mime_lexer) { mime_disposition(); yyredo(':'); } }
-^From\ 						{ if (mime_lexer) { stackp = 0; resetmsgstate(&msg_stack[stackp], 0); } return(FROM); }
+^From\ 						{ if (memcmp(yytext, "From ",5) == 0 ) { 
+						      past_header = 0; 
+						      if (mime_lexer) {
+							  stackp = 0;
+							  resetmsgstate(&msg_stack[stackp], 0); 
+						      } 
+						      return(FROM);
+						  } else { 
+						      return(TOKEN);
+						  } }
 ^Date:.*|Delivery-Date:.*			;
 ^Message-ID:.*					;
 ^\tid\ .*					;
