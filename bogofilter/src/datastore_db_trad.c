@@ -45,22 +45,19 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
-/** Default flags for DB_ENV->open() */
-static const u_int32_t dbenv_defflags = DB_INIT_MPOOL | DB_INIT_LOCK
-				      | DB_INIT_LOG | DB_INIT_TXN;
-
-static int  db_begin_trad	(void *vhandle);
-static int  db_abort_trad	(void *vhandle);
-static int  db_commit_trad	(void *vhandle);
+static int  dsm_begin_trad	(void *vhandle);
+static int  dsm_abort_trad	(void *vhandle);
+static int  dsm_commit_trad	(void *vhandle);
 
 /* OO function lists */
 
-dbm_t db_traditional = {
-    &db_begin_trad,
-    &db_abort_trad,
-    &db_commit_trad,
+dsm_t dsm_traditional = {
+    &dsm_begin_trad,
+    &dsm_abort_trad,
+    &dsm_commit_trad,
 };
 
-int  db_begin_trad	(void *vhandle) { (void) vhandle; return 0; }
-int  db_abort_trad	(void *vhandle) { (void) vhandle; return 0; }
-int  db_commit_trad	(void *vhandle) { (void) vhandle; return 0; }
+int  dsm_begin_trad	(void *vhandle) { (void) vhandle; return 0; }
+int  dsm_abort_trad	(void *vhandle) { (void) vhandle; return 0; }
+int  dsm_commit_trad	(void *vhandle) { (void) vhandle; return 0; }
+

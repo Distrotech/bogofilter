@@ -272,22 +272,22 @@ int ds_delete(void *vhandle, const word_t *word)
 int ds_txn_begin(void *vhandle) {
     dsh_t *dsh = vhandle;
     dbh_t *dbh = dsh->dbh;
-    dbm_t *dbm = dbh->dbm;
-    return dbm->db_begin(dsh->dbh);
+    dsm_t *dsm = dbh->dsm;
+    return dsm->dsm_begin(dsh->dbh);
 }
 
 int ds_txn_abort(void *vhandle) {
     dsh_t *dsh = vhandle;
     dbh_t *dbh = dsh->dbh;
-    dbm_t *dbm = dbh->dbm;
-    return dbm->db_abort(dsh->dbh);
+    dsm_t *dsm = dbh->dsm;
+    return dsm->dsm_abort(dsh->dbh);
 }
 
 int ds_txn_commit(void *vhandle) {
     dsh_t *dsh = vhandle;
     dbh_t *dbh = dsh->dbh;
-    dbm_t *dbm = dbh->dbm;
-    return dbm->db_commit(dsh->dbh);
+    dsm_t *dsm = dbh->dsm;
+    return dsm->dsm_commit(dsh->dbh);
 }
 
 typedef struct {

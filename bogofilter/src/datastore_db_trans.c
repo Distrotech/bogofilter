@@ -38,9 +38,9 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #define DONT_TYPEDEF_SSIZE_T 1
 #include "common.h"
 
-#include <db.h>
 #include <assert.h>
 #include <error.h>
+#include <db.h>
 
 #include "datastore.h"
 #include "datastore_db_private.h"
@@ -59,19 +59,19 @@ bool	  db_log_autoremove = false;	/* DB_LOG_AUTOREMOVE */
 bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
-static int  db_begin_trans	(void *vhandle);
-static int  db_abort_trans	(void *vhandle);
-static int  db_commit_trans	(void *vhandle);
+static int  dsm_begin_trans	(void *vhandle);
+static int  dsm_abort_trans	(void *vhandle);
+static int  dsm_commit_trans	(void *vhandle);
 
 /* OO function lists */
 
-dbm_t db_transactional = {
-    &db_begin_trans,
-    &db_abort_trans,
-    &db_commit_trans
+dsm_t dsm_transactional = {
+    &dsm_begin_trans,
+    &dsm_abort_trans,
+    &dsm_commit_trans
 };
 
-static int db_begin_trans(void *vhandle)
+static int dsm_begin_trans(void *vhandle)
 {
     DB_TXN *t;
     int ret;
@@ -103,7 +103,7 @@ static int db_begin_trans(void *vhandle)
     return 0;
 }
 
-static int db_abort_trans(void *vhandle)
+static int dsm_abort_trans(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;
@@ -137,7 +137,7 @@ static int db_abort_trans(void *vhandle)
     }
 }
 
-static int db_commit_trans(void *vhandle)
+static int dsm_commit_trans(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;

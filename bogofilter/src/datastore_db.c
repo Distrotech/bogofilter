@@ -72,8 +72,8 @@ static int lockfd = -1;	/* fd of lock file to prevent concurrent recovery */
 static const u_int32_t dbenv_defflags = DB_INIT_MPOOL | DB_INIT_LOCK
 				      | DB_INIT_LOG | DB_INIT_TXN;
 
-extern dbm_t db_traditional;		/* in datastore_db_trad.c */
-extern dbm_t db_transactional;		/* in datastore_db_trans.c */
+extern dsm_t dsm_traditional;		/* in datastore_db_trad.c */
+extern dsm_t dsm_transactional;		/* in datastore_db_trans.c */
 
 static const DBTYPE dbtype = DB_BTREE;
 
@@ -187,9 +187,9 @@ static dbh_t *handle_init(const char *db_path, const char *db_name)
     handle->txn = NULL;
 
     if (!fTransaction)
-	handle->dbm = &db_traditional;
+	handle->dsm = &dsm_traditional;
     else
-	handle->dbm = &db_transactional;
+	handle->dsm = &dsm_transactional;
 
     return handle;
 }
@@ -609,14 +609,14 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 	ret = DS_NOTFOUND;
 	break;
     case DB_LOCK_DEADLOCK:
-	handle->dbm->db_abort(handle);
+	handle->dsm->dsm_abort(handle);
 	ret = DS_ABORT_RETRY;
 	break;
     default:
 	print_error(__FILE__, __LINE__, "(db) DB->get(TXN=%lu,  '%.*s' ), err: %s",
 		    (unsigned long)handle->txn, CLAMP_INT_MAX(token->leng),
 		    (char *) token->data, db_strerror(ret));
-	handle->dbm->db_abort(handle);
+	handle->dsm->dsm_abort(handle);
 	exit(EX_ERROR);
     }
 
@@ -649,7 +649,7 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, const dbv_t *val)
     ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
 
     if (ret == DB_LOCK_DEADLOCK) {
-	handle->dbm->db_abort(handle);
+	handle->dsm->dsm_abort(handle);
 	return DS_ABORT_RETRY;
     }
 
