@@ -752,6 +752,7 @@ const char *db_str_err(int e) {
 static bool init = false;
 int db_init(void) {
     const u_int32_t numlocks = 16384;
+    const u_int32_t numobjs = 16384;
 
     assert(bogohome);
     assert(dbe == NULL);
@@ -776,7 +777,7 @@ int db_init(void) {
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_ENV->set_cachesize(%u)\n", db_cachesize);
 
-	/* configure lock system size deadlock detector */
+	/* configure lock system size - locks */
 	if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0) {
 	    print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", dbe,
 		    (unsigned long)numlocks, db_strerror(ret));
@@ -784,6 +785,15 @@ int db_init(void) {
 	}
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", dbe, (unsigned long)numlocks);
+
+	/* configure lock system size - objects */
+	if ((ret = dbe->set_lk_max_objects(dbe, numobjs)) != 0) {
+	    print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", dbe,
+		    (unsigned long)numobjs, db_strerror(ret));
+	    exit(EXIT_FAILURE);
+	}
+	if (DEBUG_DATABASE(1))
+	    fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", dbe, (unsigned long)numlocks);
 
 	/* configure automatic deadlock detector */
 	if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
