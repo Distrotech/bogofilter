@@ -178,13 +178,13 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 
 	case DB_NOTFOUND:
 	    if (DEBUG_DATABASE(3)) {
-		fprintf(dbgout, "db_get_dbvalue: [%*s] not found\n", 
+		fprintf(dbgout, "ds_read: [%*s] not found\n", 
 			word->leng, (char *) word->text);
 	    }
 	    break;
 	    
 	default:
-	    print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%*s' ), err: %d, %s", 
+	    print_error(__FILE__, __LINE__, "ds_read( '%*s' ), err: %d, %s", 
 			word->leng, (char *) word->text, ret, db_strerror(ret));
 	    exit(EX_ERROR);
 	}
@@ -195,7 +195,7 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 
 int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 {
-    int ret;
+    int ret = 0;
     dsh_t *dsh = vhandle;
     dbv_t ex_key;
     dbv_t ex_data;
@@ -232,15 +232,14 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 
 	ret = db_set_dbvalue(dsh, &ex_key, &ex_data);
 
-	if (ret == 0) {
-	    if (DEBUG_DATABASE(3)) {
-		fprintf(dbgout, "ds_write: [%*s] -- %lu,%lu\n",
-			word->leng, word->text,
-			(unsigned long)val->spamcount,
-			(unsigned long)val->goodcount);
-	    }
-	} else {
+	if (ret != 0)
 	    break;
+
+	if (DEBUG_DATABASE(3)) {
+	    fprintf(dbgout, "ds_write: [%*s] -- %lu,%lu\n",
+		    word->leng, word->text,
+		    (unsigned long)val->spamcount,
+		    (unsigned long)val->goodcount);
 	}
     }
 
