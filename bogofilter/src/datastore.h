@@ -16,7 +16,6 @@
 #define DATASTORE_H
 
 #include "system.h"
-
 #include "word.h"
 #include "wordlists.h"
 
@@ -104,5 +103,12 @@ char *db_handle_name(void *);
 
 /* Get the database filename */
 char *db_handle_filename(void *);
+
+/* Locks and unlocks file descriptor */
+int db_lock(int /* fd */, int /* cmd */, short int /* type */);
+
+#define db_write_lock(fd) db_lock(fd, F_SETLKW, F_WRLCK)
+#define db_read_lock(fd) db_lock(fd, F_SETLK, F_RDLCK)
+#define db_unlock(fd) db_lock(fd, F_SETLK, F_UNLCK)
 
 #endif

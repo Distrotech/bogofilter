@@ -13,17 +13,11 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 
 #include "system.h"
 #include <db.h>
-#include <fcntl.h>
-#include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
-#include <db.h>
 #include <errno.h>
-#include <assert.h>
 
-#include <config.h>
 #include "common.h"
 
 #include "datastore.h"
@@ -59,10 +53,6 @@ typedef struct {
 #define	DB_OPEN(db, file, database, dbtype, flags, mode) db->open(db, file, database, dbtype, flags, mode)
 #endif
 
-
-/* Function prototypes */
-
-static int db_lock(int fd, int cmd, short int type);
 
 /* Function definitions */
 
@@ -369,17 +359,6 @@ void db_flush(void *vhandle){
     if ((ret = handle->dbp->sync(handle->dbp, 0))) {
 	print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));
     }
-}
-
-/* implements locking. */
-static int db_lock(int fd, int cmd, short int type){
-    struct flock lock;
-
-    lock.l_type = type;
-    lock.l_start = 0;
-    lock.l_whence = (short int)SEEK_SET;
-    lock.l_len = 0;
-    return (fcntl(fd, cmd, &lock));
 }
 
 int db_foreach(void *vhandle, db_foreach_t hook, void *userdata) {

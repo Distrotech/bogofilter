@@ -136,3 +136,15 @@ void db_set_msgcount(void *vhandle, uint32_t count){
             (unsigned long)count);
   }
 }
+
+/* implements locking. */
+int db_lock(int fd, int cmd, short int type){
+    struct flock lock;
+
+    lock.l_type = type;
+    lock.l_start = 0;
+    lock.l_whence = (short int)SEEK_SET;
+    lock.l_len = 0;
+    return (fcntl(fd, cmd, &lock));
+}
+
