@@ -46,25 +46,17 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include <assert.h>
 
 #include <db.h>
-#ifdef NEEDTRIO
-#include "trio.h"
-#endif
 
 #include "datastore.h"
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 #include "datastore_db_private.h"
-#include "bogohome.h"
+
 #include "error.h"
-#include "maint.h"
-#include "mxcat.h"
 #include "paths.h"		/* for build_path */
 #include "rand_sleep.h"
-#include "swap.h"
-#include "word.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
-#include "db_lock.h"
 
 static dsm_t *dsm = NULL;
 
@@ -380,6 +372,7 @@ void *db_open(void *vhandle,
     /* retry when locking failed */
     for (idx = 0; idx < COUNTOF(retryflags); idx += 1)
     {
+	int e;
 	DB *dbp;
 	DB_ENV *dbe;
 	bool err = false;
