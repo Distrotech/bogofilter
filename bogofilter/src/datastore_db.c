@@ -237,7 +237,11 @@ static uint32_t get_psize(DB *dbp)
     uint32_t ret, pagesize;
     DB_BTREE_STAT *dbstat = NULL;
 
+#if DB_AT_LEAST(4,3)
+    ret = dbp->stat(dbp, NULL, &dbstat, DB_FAST_STAT);
+#else
     ret = dbp->stat(dbp, &dbstat, DB_FAST_STAT);
+#endif
     if (ret) {
 	dbp->err (dbp, ret, "%s (db) DB->stat", progname);
 	return 0xffffffff;
