@@ -18,42 +18,45 @@ bool	config_setup = false;
 /*@null@*/ wordlist_t* word_lists=NULL;
 
 /* returns -1 for error, 0 for success */
-int init_wordlist(/*@out@*/ wordlist_t **list, 
-		  const char* name, const char* path,
-		  int override, WL_TYPE type)
+void init_wordlist(const char* name, const char* path,
+		   int override, WL_TYPE type)
 {
     wordlist_t *n = (wordlist_t *)xcalloc(1, sizeof(*n));
     wordlist_t *list_ptr;
     static int listcount;
-
-    *list = n;
 
     n->dsh=NULL;
     n->listname=xstrdup(name);
     n->filepath=xstrdup(path);
     n->index   =++listcount;
     n->type    =type;
+    n->next    =NULL;
     n->override=override;
 
     list_ptr=word_lists;
 
-    while(1) {
-	if (list_ptr == NULL ||
-	    list_ptr->override > override) {
-	    word_lists=n;
-	    n->next=list_ptr;
-	    break;
-        }
+    if (list_ptr == NULL ||
+	list_ptr->override > override) {
+	n->next=word_lists;
+	word_lists=n;
+	return;
+    }
 
+    while(1) {
         if (list_ptr->next == NULL) {
 	    /* end of list */
 	    list_ptr->next=n;
-	    n->next=NULL;
-	    break;
+	    return;
 	}
+
+	if (list_ptr->next->override > override) {
+	    n->next=list_ptr->next;
+	    list_ptr->next=n;
+	    return;
+        }
+
 	list_ptr=list_ptr->next;
     }
-    return 0;
 }
 
 /* Set default wordlist for registering messages, finding robx, etc */
@@ -63,7 +66,7 @@ wordlist_t *default_wordlist(void)
     wordlist_t *list;
     for ( list = word_lists; list != NULL; list = list->next )
     {
- 	if (list->type != 'I')
+ 	if (list->type != WL_IGNORE)
  	    return list;
     }
     return NULL;
