@@ -73,7 +73,8 @@ retry:
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
 	wordprop = node->buf;
-	ds_read(list->dsh, node->key, &val);
+	if (DS_ABORT_RETRY == ds_read(list->dsh, node->key, &val))
+	    goto abort_retry;
 	if (incr != IX_UNDF) {
 	    u_int32_t *counts = val.count;
 	    counts[incr] += wordprop->freq;
@@ -82,10 +83,12 @@ retry:
 	    u_int32_t *counts = val.count;
 	    counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
 	}
-	ds_write(list->dsh, node->key, &val);
+	if (DS_ABORT_RETRY == ds_write(list->dsh, node->key, &val))
+	    goto abort_retry;
     }
 
-    ds_get_msgcounts(list->dsh, &val);
+    if (DS_ABORT_RETRY == ds_get_msgcounts(list->dsh, &val))
+	goto abort_retry;
     list->msgcount[IX_SPAM] = val.spamcount;
     list->msgcount[IX_GOOD] = val.goodcount;
 
@@ -102,7 +105,8 @@ retry:
     val.spamcount = list->msgcount[IX_SPAM];
     val.goodcount = list->msgcount[IX_GOOD];
 
-    ds_set_msgcounts(list->dsh, &val);
+    if (DS_ABORT_RETRY == ds_set_msgcounts(list->dsh, &val))
+	goto abort_retry;
     set_msg_counts(val.goodcount, val.spamcount);
 
     switch(ds_txn_commit(list->dsh)) {
@@ -110,8 +114,8 @@ retry:
 	    break;
 	case DST_TEMPFAIL:
 	    if (--retrycount) {
-		fprintf(stderr, "commit was aborted, retrying...\n");
-		rand_sleep(4 * 1000, 1000 * 1000);
+		fprintf(stderr, "commit was aborted, retrying (%d tries left)...\n", retrycount);
+		rand_sleep(4 * 1000, 3000 * 1000);
 		goto retry;
 	    }
 	    fprintf(stderr, "giving up on this transaction.\n");
@@ -131,4 +135,20 @@ retry:
 		      list->listname, list->filepath, val.spamcount, val.goodcount);
 
     run_type = save_run_type;
+    return;
+
+abort_retry:
+    if (ds_txn_abort(list->dsh) != DST_OK) {
+	fprintf(stderr, "abort failed.\n");
+	exit(EX_ERROR);
+    }
+
+    if (--retrycount) {
+	fprintf(stderr, "transaction was aborted, retrying (%d tries left)...\n", retrycount);
+	rand_sleep(4 * 1000, 3000 * 1000);
+	goto retry;
+    }
+
+    fprintf(stderr, "giving up on this transaction.\n");
+    exit(EX_ERROR);
 }

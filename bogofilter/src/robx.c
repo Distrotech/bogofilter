@@ -72,14 +72,19 @@ static double compute_robx(dsh_t *dsh)
     double rx;
 
     dsv_t val;
-    bool ok;
     uint32_t good_cnt, spam_cnt;
     struct robhook_data rh;
-    int ret;
+    int ret, retrycount = 5;
 
-    ok = ds_get_msgcounts(dsh, &val);
+retry:
+    ret = ds_get_msgcounts(dsh, &val);
+    if (ret != 0 && --retrycount) {
+	fprintf(stderr, "transaction was aborted, retrying (%d tries left)...\n", retrycount);
+	rand_sleep(4*1000,1000*1000);
+	goto retry;
+    }
 
-    if (!ok) {
+    if (ret) {
 	fprintf(stderr, "Can't find message counts.\n");
 	exit(EX_ERROR);
     }

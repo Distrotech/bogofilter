@@ -59,6 +59,8 @@ typedef struct {
 
 /** Status value used when a key is not found in the data base. */
 #define DS_NOTFOUND (-1)
+/** Status value used when the transaction must be aborted. */
+#define DS_ABORT_RETRY (-2)
 
 /** Macro that clamps its argument to INT_MAX and casts it to int. */
 #define CLAMP_INT_MAX(i) ((int)min(INT_MAX, (i)))
@@ -147,10 +149,10 @@ extern int ds_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val);
 extern void ds_updvalues(void *vhandle, const dbv_t *token, const dbv_t *updval);
 
 /** Get the database message count. */
-extern bool ds_get_msgcounts(void *vhandle, dsv_t *val);
+extern int ds_get_msgcounts(void *vhandle, dsv_t *val);
 
 /** Set the database message count. */
-extern void ds_set_msgcounts(void *vhandle, dsv_t *val);
+extern int ds_set_msgcounts(void *vhandle, dsv_t *val);
 
 /* transactional code */
 /** Start a transaction for the data store identified by vhandle.

@@ -197,7 +197,14 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 		    CLAMP_INT_MAX(word->leng), (char *) word->text);
 	}
 	break;
-	    
+
+    case DS_ABORT_RETRY:
+	if (DEBUG_DATABASE(3)) {
+	    fprintf(dbgout, "ds_read: [%.*s] returned abort-retry\n", 
+		    CLAMP_INT_MAX(word->leng), (char *) word->text);
+	}
+	break;
+
     default:
 	fprintf(dbgout, "ret=%d, DS_NOTFOUND=%d\n", ret, DS_NOTFOUND);
 	print_error(__FILE__, __LINE__, "ds_read( '%.*s' ), err: %d, %s", 
@@ -205,7 +212,7 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 	exit(EX_ERROR);
     }
 
-    return found ? 0 : 1;
+    return ret;
 }
 
 int ds_write(void *vhandle, const word_t *word, dsv_t *val)
@@ -371,28 +378,24 @@ void ds_cleanup()
 /*
   Get the number of messages associated with database.
 */
-bool ds_get_msgcounts(void *vhandle, dsv_t *val)
+int ds_get_msgcounts(void *vhandle, dsv_t *val)
 {
     int rc;
     dsh_t *dsh = vhandle;
 
-    rc = ds_read(dsh, msg_count_tok, val);
-
-    return rc == 0;
+    return ds_read(dsh, msg_count_tok, val);
 }
 
 /*
  Set the number of messages associated with database.
 */
-void ds_set_msgcounts(void *vhandle, dsv_t *val)
+int ds_set_msgcounts(void *vhandle, dsv_t *val)
 {
     dsh_t *dsh = vhandle;
 
     val->date = today;
 
-    ds_write(dsh, msg_count_tok, val);
-
-    return;
+    return ds_write(dsh, msg_count_tok, val);
 }
 
 /*

@@ -483,7 +483,11 @@ int db_txn_commit(void *vhandle)
     dbh_t *handle = vhandle;
     DB_TXN *t = handle->txn;
     assert(dbe);
-    assert(t);
+    if (!t) {
+	print_error(__FILE__, __LINE__,
+		"db_txn_commit called without transaction open.");
+	return DST_FAILURE;
+    }
 
     ret = BF_TXN_COMMIT(t, 0);
     if (ret)
@@ -572,6 +576,9 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
     case DB_NOTFOUND:
 	ret = DS_NOTFOUND;
 	break;
+    case DB_LOCK_DEADLOCK:
+	ret = DS_ABORT_RETRY;
+	break;
     default:
 	print_error(__FILE__, __LINE__, "(db) DB->get( '%.*s' ), err: %d, %s",
 		    CLAMP_INT_MAX(token->leng), (char *) token->data, ret, db_strerror(ret));
@@ -605,20 +612,21 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 
     ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
 
-    if (ret == DB_LOCK_DEADLOCK)
-	db_txn_abort(handle);
-
-    if (ret != 0) {
+    if (ret) {
 	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%.*s' ), err: %d, %s",
-		    CLAMP_INT_MAX(token->leng), (char *)token->data, ret, db_strerror(ret));
-	exit(EX_ERROR);
+		CLAMP_INT_MAX(token->leng), (char *)token->data, ret, db_strerror(ret));
+	if (ret == DB_LOCK_DEADLOCK) {
+	    db_txn_abort(handle);
+	    return DS_ABORT_RETRY;
+	} else
+	    exit(EX_ERROR);
     }
 
     if (DEBUG_DATABASE(3))
 	fprintf(dbgout, "DB->put(%.*s): %s\n",
 		CLAMP_INT_MAX(token->leng), (char *) token->data, db_strerror(ret));
 
-    return 0;
+    return ret;
 }
 
 
