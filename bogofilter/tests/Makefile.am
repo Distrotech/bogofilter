@@ -1,8 +1,6 @@
 # $Id$
 
-SUBDIRS=. bogoutil
-
-SYSTEM_TESTS=t.systest t.grftest
+SUBDIRS=. bogoutil t.systest.d
 
 check_PROGRAMS=dehex spam_header_name dumbhead deqp deb64
 dehex_SOURCES=dehex.c
@@ -15,7 +13,7 @@ t.integrity: dehex dumbhead
 
 TESTSCRIPTS=t.score1 t.score2 t.integrity t.integrity2 \
 	    t.lock1 t.ignore_spam_header t.env \
-	    t.nullstatsprefix t.lexer $(SYSTEM_TESTS)
+	    t.nullstatsprefix t.lexer
 TESTS=$(TESTSCRIPTS)
 
 TESTS_ENVIRONMENT=RUN_FROM_MAKE=1 srcdir=$(srcdir) $(SHELL) $(VERBOSE)
@@ -23,4 +21,4 @@ TESTS_ENVIRONMENT=RUN_FROM_MAKE=1 srcdir=$(srcdir) $(SHELL) $(VERBOSE)
 EXTRA_DIST=$(TESTSCRIPTS) t.frame t.skel t.systest.d inputs outputs
 
 dist-hook:
-	cd $(distdir) && for i in t.systest.d inputs outputs ; do find $$i -name CVS -type d -prune -exec rm -r '{}' ';' ; done
+	cd $(distdir) && for i in inputs outputs ; do find $$i -name CVS -type d -prune -exec rm -r '{}' ';' ; done
