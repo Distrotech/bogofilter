@@ -19,7 +19,7 @@ AUTHOR:
 #include <sys/stat.h>
 #include <time.h>
 
-#include <config.h>
+#include "config.h"
 #include "common.h"
 
 #include "bogofilter.h"
@@ -555,13 +555,13 @@ static int compute_robinson_x(char *path)
 static void print_version(void)
 {
     fprintf(stderr,
-	    "%s: version: %s\n"
+	    "%s: (version: %s) (database: %s)\n"
 	    "Copyright (C) 2002 Gyepi Sam\n\n"
 	    "%s comes with ABSOLUTELY NO WARRANTY.\n"
 	    "This is free software, and you are welcome to redistribute\n"
 	    "it under the General Public License.\n"
 	    "See the COPYING file with the source distribution for details.\n\n",
-	    PROGNAME, version, PROGNAME);
+	    PROGNAME, version, DB_TYPE, PROGNAME);
 }
 
 static void usage(void)
@@ -595,8 +595,8 @@ static void help(void)
 	    "\t-V\tPrint program version.\n"
 	    "\t-I file\tRead this file instead of standard input.\n"
 	    "\n"
-	    "%s (version %s) is part of the bogofilter package.\n",
-	    PROGNAME, version);
+	    "%s (version %s) (database %s) is part of the bogofilter package.\n",
+	    PROGNAME, version, DB_TYPE);
 }
 
 #undef	ROBX

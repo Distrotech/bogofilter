@@ -407,7 +407,7 @@ static void help(void)
 static void print_version(void)
 {
     (void)fprintf(stderr,
-		  "%s version %s\n"
+		  "%s: (version: %s) (database: %s)\n"
 		  "Copyright (C) 2002 Eric S. Raymond\n\n"
 		  "%s comes with ABSOLUTELY NO WARRANTY. "
 		  "This is free software, and you\nare welcome to "
@@ -415,7 +415,7 @@ static void print_version(void)
 		  "See the\nCOPYING file with the source distribution for "
 		  "details.\n"
 		  "\n", 
-		  PACKAGE, version, PACKAGE);
+		  PACKAGE, version, DB_TYPE, PACKAGE);
 }
 
 #ifndef	ENABLE_GRAHAM_METHOD
