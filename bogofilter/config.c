@@ -434,6 +434,7 @@ static void help(void)
 #endif
 #endif
 		  "\t-p\t- passthrough.\n"
+		  "\t-I filename\t- read message from filename instead of stdin.\n"
 		  "\t-O filename\t- save message to filename in passthrough mode.\n"
 		  "\t-e\t- in -p mode, exit with code 0 when the mail is not spam.\n"
 		  "\t-s\t- register message as spam.\n"
@@ -501,7 +502,9 @@ int process_args(int argc, char **argv)
 
     select_algorithm(algorithm, false);	/* select default algorithm */
 
-    while ((option = getopt(argc, argv, "d:eFhl::o:snSNvVpuc:CgrRx:fqtO:y:" G R F)) != EOF)
+    fpin = stdin;
+
+    while ((option = getopt(argc, argv, "d:eFhl::o:snSNvVpuc:CgrRx:fqtI:O:y:" G R F)) != EOF)
     {
 	switch(option)
 	{
@@ -549,6 +552,14 @@ int process_args(int argc, char **argv)
         case 'V':
 	    print_version();
 	    exit(0);
+	    break;
+
+	case 'I':
+	    fpin = fopen( optarg, "r" );
+	    if (fpin == NULL) {
+		fprintf(stderr, "Can't read file '%s'\n", optarg);
+		exit(2);
+	    }
 	    break;
 
         case 'O':

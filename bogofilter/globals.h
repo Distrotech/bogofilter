@@ -12,6 +12,7 @@
 #ifdef __LCLINT__
 #define bool int
 #endif
+
 extern bool nonspam_exits_zero;	/* '-e' */
 extern bool fisher;		/* '-f' */
 extern bool force;		/* '-F' */
@@ -20,6 +21,8 @@ extern bool terse;		/* '-t' */
 extern bool quiet;		/* '-q' */
 extern bool passthrough;	/* '-p' */
 extern int verbose;		/* '-v' */
+
+extern FILE *fpin;		/* '-I' */
 
 extern bool stats_in_header;
 

@@ -545,7 +545,9 @@ int main(int argc, char *argv[])
 
     set_today();		/* compute current date for token age */
 
-    while ((option = getopt(argc, argv, "d:l:m:w:R:phvVx:a:c:s:ny:")) != -1)
+    fpin = stdin;
+
+    while ((option = getopt(argc, argv, "d:l:m:w:R:phvVx:a:c:s:ny:I:")) != -1)
 	switch (option) {
 	case 'd':
 	    flag = DUMP;
@@ -615,6 +617,14 @@ int main(int argc, char *argv[])
 
 	case 'y':		/* date as YYYYMMDD */
 	    today = string_to_date((char *)optarg);
+	    break;
+
+	case 'I':
+	    fpin = fopen( optarg, "r" );
+	    if (fpin == NULL) {
+		fprintf(stderr, "Can't read file '%s'\n", optarg);
+		exit(2);
+	    }
 	    break;
 
 	default:

@@ -50,7 +50,9 @@ int main(int argc, char **argv)
     int option;
     int count=0;
 
-    while ((option = getopt(argc, argv, ":hnpqvnx:")) != -1)
+    fpin = stdin;
+
+    while ((option = getopt(argc, argv, ":hnpqvnx:I:")) != -1)
 	switch (option) {
 	case 'h':
 	    help();
@@ -70,6 +72,13 @@ int main(int argc, char **argv)
 	    break;
 	case 'x':
 	    set_debug_mask( optarg );
+	    break;
+	case 'I':
+	    fpin = fopen( optarg, "r" );
+	    if (fpin == NULL) {
+		fprintf(stderr, "Can't read file '%s'\n", optarg);
+		exit(2);
+	    }
 	    break;
 	default:
 	    usage();

@@ -2,6 +2,7 @@
 #include "globals.h"
 
 /* exports */
+
 bool nonspam_exits_zero;		/* '-e' */
 bool force;				/* '-F' */
 bool fisher;				/* '-f' */
@@ -11,6 +12,8 @@ bool passthrough;			/* '-p' */
 bool quiet;				/* '-q' */
 bool terse;				/* '-t' */
 int verbose;				/* '-v' */
+
+FILE *fpin;				/* '-I' */
 
 int max_repeats;
 double min_dev;
