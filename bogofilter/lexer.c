@@ -101,7 +101,7 @@ int yygetline(char *buf, int max_size)
 	int c = fgetc(fpin);
 	if (c == EOF)
 	    break;
-	if (c == ' ' || c == '\t') {
+	if ((isspace((unsigned char)c))) {
 	    int add;
 	    /* continuation line */
 	    ungetc(c,fpin);
