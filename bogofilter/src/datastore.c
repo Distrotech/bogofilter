@@ -282,7 +282,7 @@ typedef struct {
 
 static int ds_hook(dbv_t *ex_key,
 		   dbv_t *ex_data,
-		   /*@unused@*/ void *userdata)
+		   void *userdata)
 {
     int val;
     word_t w_key;
@@ -293,6 +293,7 @@ static int ds_hook(dbv_t *ex_key,
     w_key.text = ex_key->data;
     w_key.leng = ex_key->leng;
 
+    memset(&in_data, 0, sizeof(in_data));
     convert_external_to_internal(dsh, ex_data, &in_data);
 
     val = (*ds_data->hook)(&w_key, &in_data, ds_data->data);
