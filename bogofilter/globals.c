@@ -1,5 +1,6 @@
 #include "system.h"
 #include "globals.h"
+#include "method.h"
 
 /* exports */
 
@@ -15,7 +16,14 @@ int verbose;				/* '-v' */
 
 FILE *fpin;				/* '-I' */
 
+const	char *stats_prefix;
+char *update_dir = NULL;
+char *directory = NULL;
+method_t *method = NULL;
+
 int max_repeats;
 double min_dev;
 double spam_cutoff;
 double thresh_stats;
+int Rtable = 0;		/* '-R' */
+

@@ -39,5 +39,6 @@ extern char *update_dir;
 extern char outfname[PATH_LEN];
 extern const char *const version;
 extern const char *const system_config_file;
+extern int Rtable;		/* '-R' */
 
 #endif
