@@ -106,6 +106,7 @@ rc_t fis_status(void)
     if ( stats.spamicity >= spam_cutoff ) 
 	return RC_SPAM;
 
+
     if (ham_cutoff < EPS || (stats.spamicity - ham_cutoff < EPS))
 	return RC_HAM;
 
