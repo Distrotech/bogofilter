@@ -341,14 +341,14 @@ void db_decrement(void *vhandle, const char *word, long value){
 /*
   Get the number of messages associated with database.
 */
-long db_getcount(void *vhandle){
+long db_get_msgcount(void *vhandle){
   return db_getvalue(vhandle, MSG_COUNT_TOK);
 }
 
 /*
  Set the number of messages associated with database.
 */
-void db_setcount(void *vhandle, long count){
+void db_set_msgcount(void *vhandle, long count){
   db_setvalue(vhandle, MSG_COUNT_TOK, count);
 }
 

@@ -61,10 +61,10 @@ void db_delete(void *, const char *);
 void db_setvalue(void *, const char *, long);
 
 /* Get the database message count */
-long db_getcount(void*);
+long db_get_msgcount(void*);
 
 /* set the database message count */
-void db_setcount(void*, long);
+void db_set_msgcount(void*, long);
 
 typedef int (*db_foreach_t)(char *key, long key_size,
 	char *value, long key_value, void *userdata);

@@ -87,7 +87,7 @@ void register_words(run_t _run_type, wordhash_t *h,
 
   for (list = word_lists; list != NULL; list = list->next){
     if (list->active) {
-      list->msgcount = db_getcount(list->dbh);
+      list->msgcount = db_get_msgcount(list->dbh);
     }
   }
 
@@ -108,7 +108,7 @@ void register_words(run_t _run_type, wordhash_t *h,
 
   for (list = word_lists; list != NULL; list = list->next){
     if (list->active) {
-      db_setcount(list->dbh, list->msgcount);
+      db_set_msgcount(list->dbh, list->msgcount);
       db_flush(list->dbh);
       if (verbose>1)
 	(void)fprintf(stderr, "bogofilter: %ld messages on the %s list\n",
