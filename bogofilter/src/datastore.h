@@ -33,9 +33,10 @@ extern YYYYMMDD today;		/* date as YYYYMMDD */
  */
 #define MSG_COUNT ".MSG_COUNT"
 
-/** Datastore handle type, used to communicate between datastore layer
- * and database layer.
- */
+/** Datastore handle type
+** - used to communicate between datastore layer and database layer
+** - known to program layer as a void*
+*/
 typedef struct {
     /** database handle from db_open() */
     void   *dbh;
@@ -207,6 +208,12 @@ extern int ds_txn_abort(void *vhandle);
 /** Permanent failure return from ds_txn_* operation, the application
  * should clean up and exit. */
 #define DST_FAILURE (2)
+
+/** Get the database version */
+extern bool ds_get_wordlist_version(void *vhandle, dsv_t *val);
+
+/** set the database version */
+extern void ds_set_wordlist_version(void *vhandle, dsv_t *val);
 
 /** Get the current process ID. */
 extern unsigned long ds_handle_pid(void *vhandle);

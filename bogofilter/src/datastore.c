@@ -319,11 +319,15 @@ int ds_oper(const char *path, dbmode_t open_mode,
 }
 
 static word_t  *msg_count_tok;
+static word_t  *wordlist_version_tok;
 
 void ds_init()
 {
     if (msg_count_tok == NULL) {
 	msg_count_tok = word_new((const byte *)MSG_COUNT, strlen(MSG_COUNT));
+    }
+    if (wordlist_version_tok == NULL) {
+	wordlist_version_tok = word_new((const byte *)WORDLIST_VERSION, strlen(WORDLIST_VERSION));
     }
     db_init();
 }
@@ -333,7 +337,9 @@ void ds_cleanup()
 {
     db_cleanup();
     xfree(msg_count_tok);
+    xfree(wordlist_version_tok);
     msg_count_tok = NULL;
+    wordlist_version_tok = NULL;
 }
 
 /*
@@ -356,10 +362,37 @@ void ds_set_msgcounts(void *vhandle, dsv_t *val)
 {
     dsh_t *dsh = vhandle;
 
-    if (timestamp_tokens && val->date != 0)
-	val->date = today;
+    val->date = today;
 
     ds_write(dsh, msg_count_tok, val);
+
+    return;
+}
+
+/*
+  Get the wordlist version associated with database.
+*/
+bool ds_get_wordlist_version(void *vhandle, dsv_t *val)
+{
+    int rc;
+    dsh_t *dsh = vhandle;
+
+    rc = ds_read(dsh, wordlist_version_tok, val);
+
+    return rc == 0;
+}
+
+/*
+ Set the wordlist version associated with database.
+*/
+void ds_set_wordlist_version(void *vhandle, dsv_t *val)
+{
+    dsh_t *dsh = vhandle;
+
+    val->date = today;
+
+    ds_write(dsh, wordlist_version_tok, val);
+
     return;
 }
 

@@ -30,6 +30,11 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
  *   as the log files are *HUGE* even compared with the data base
  */
 
+/*
+ * NOTE: this code is an "#if" nightmare due to the many different APIs
+ * in the many different BerkeleyDB versions.
+ */
+
 #define DONT_TYPEDEF_SSIZE_T 1
 #include "common.h"
 
@@ -58,6 +63,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "xstrdup.h"
 
 static DB_ENV *dbe; /* libdb environment, if in use, NULL otherwise */
+static int lockfd;  /* fd of locked file to prevent concurrent recovery etc. */
 
 static const DBTYPE dbtype = DB_BTREE;
 
@@ -112,7 +118,11 @@ static int DB_OPEN(DB *db, const char *file,
 	    file, database, type, flags, mode);
 
     if (DEBUG_DATABASE(1) || getenv("BF_DEBUG_DB_OPEN"))
-	fprintf(dbgout, "DB->open(db=%p, file=%s, database=%s, type=%x, flags=%#lx=%s, mode=%#o) -> %d %s\n", db, file, database ? database : "NIL", type, (unsigned long)flags, resolveflags(flags), mode, ret, db_strerror(ret));
+	fprintf(dbgout, "[pid %lu] DB->open(db=%p, file=%s, database=%s, "
+		"type=%x, flags=%#lx=%s, mode=%#o) -> %d %s\n",
+		(unsigned long)getpid(), (void *)db, file,
+		database ? database : "NIL", type, (unsigned long)flags,
+		resolveflags(flags), mode, ret, db_strerror(ret));
 
     return ret;
 }
@@ -645,10 +655,6 @@ void db_flush(dsh_t *dsh)
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "db_flush(%s)\n", handle->name);
 
-    ret = BF_LOG_FLUSH(dbe, NULL);
-    if (DEBUG_DATABASE(1))
-	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", dbe, db_strerror(ret));
-
     ret = dbp->sync(dbp, 0);
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->sync(%p): %s\n", dbp, db_strerror(ret));
@@ -660,6 +666,10 @@ void db_flush(dsh_t *dsh)
 #endif
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));
+
+    ret = BF_LOG_FLUSH(dbe, NULL);
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", dbe, db_strerror(ret));
 }
 
 int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
@@ -736,89 +746,181 @@ const char *db_str_err(int e) {
     return db_strerror(e);
 }
 
+/** set an fcntl-style lock on \a path.
+ * \a locktype is F_RDLCK, F_WRLCK, F_UNLCK
+ * \a mode is F_SETLK or F_SETLKW
+ * \return file descriptor of locked file if successful
+ * negative value in case of error
+ */
+static int plock(const char *path, short locktype, int mode) {
+    struct flock fl;
+    int fd, r;
+
+    fd = open(path, O_RDWR);
+    if (fd < 0) return fd;
+
+    fl.l_type = locktype;
+    fl.l_whence = SEEK_SET;
+    fl.l_start = (off_t)0;
+    fl.l_len = (off_t)0;
+    r = fcntl(fd, mode, &fl);
+    if (r < 0)
+	return r;
+    return fd;
+}
+
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
 static bool init = false;
-int db_init(void) {
-    const u_int32_t numlocks = 16384;
-    const u_int32_t numobjs = 16384;
+static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
+	u_int32_t flags, short locktype /* for fcntl */)
+{
+    char *t; size_t tl;
+    const char *const tackon = DIRSEP_S "lockfile-do-not-delete";
+    int ret;
 
     assert(bogohome);
     assert(dbe == NULL);
 
-    {
-	int ret = db_env_create(&dbe, 0);
-	if (ret != 0) {
-	    print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret,
-		    db_strerror(ret));
-	    exit(EX_ERROR);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "db_env_create: %p\n", dbe);
-
-	dbe->set_errfile(dbe, stderr);
-
-	if (db_cachesize != 0 &&
-	    (ret = dbe->set_cachesize(dbe, db_cachesize/1024, (db_cachesize % 1024) * 1024*1024, 1)) != 0) {
-	    print_error(__FILE__, __LINE__, "DB_ENV->set_cachesize(%u), err: %d, %s",
-			db_cachesize, ret, db_strerror(ret));
-	    exit(EXIT_FAILURE);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->set_cachesize(%u)\n", db_cachesize);
-
-	/* configure lock system size - locks */
-	if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0) {
-	    print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", dbe,
-		    (unsigned long)numlocks, db_strerror(ret));
-	    exit(EXIT_FAILURE);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", dbe, (unsigned long)numlocks);
-
-	/* configure lock system size - objects */
-	if ((ret = dbe->set_lk_max_objects(dbe, numobjs)) != 0) {
-	    print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", dbe,
-		    (unsigned long)numobjs, db_strerror(ret));
-	    exit(EXIT_FAILURE);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", dbe, (unsigned long)numlocks);
-
-	/* configure automatic deadlock detector */
-	if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
-	    print_error(__FILE__, __LINE__, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT), err: %s", db_strerror(ret));
-	    exit(EXIT_FAILURE);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT)\n");
-
-	/* ************************************************************* *
-	   WARNING:
-	   DO NOT ADD ANY DB_RECOVER OPTIONS HERE, RECOVERY
-	   _MUST_ _NOT_ BE RUN BY MORE THAN ONE PROCESS SIMULTANEOUSLY
-	   AND WE ARE NOT LOCKING --
-	   HENCE DB_RECOVER CAUSES DB_ENV CORRUPTION.
-	   IT WILL NOT WORK! -- BEEN THERE, TRIED THAT
-					    Matthias, 2004-03-17, BDB4.2
-	 * ************************************************************* */
-
-	ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK
-		| DB_INIT_LOG | DB_INIT_TXN | DB_CREATE, /* mode */ 0644);
-	if (ret != 0) {
-	    dbe->close(dbe, 0);
-	    print_error(__FILE__, __LINE__, "DB_ENV->open, err: %d, %s", ret, db_strerror(ret));
-	    if (ret == DB_RUNRECOVERY) {
-		fprintf(stderr, "To recover, run: db_recover -v -c -h \"%s\"\n",
-			bogohome);
-	    }
-	    exit(EXIT_FAILURE);
-	}
-	if (DEBUG_DATABASE(1))
-	    fprintf(dbgout, "DB_ENV->open(home=%s)\n", bogohome);
+    ret = db_env_create(&dbe, 0);
+    if (ret != 0) {
+	print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret,
+		db_strerror(ret));
+	exit(EX_ERROR);
     }
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "db_env_create: %p\n", dbe);
+
+    dbe->set_errfile(dbe, stderr);
+
+    if (db_cachesize != 0 &&
+	(ret = dbe->set_cachesize(dbe, db_cachesize/1024, (db_cachesize % 1024) * 1024*1024, 1)) != 0) {
+      print_error(__FILE__, __LINE__, "DB_ENV->set_cachesize(%u), err: %d, %s",
+		  db_cachesize, ret, db_strerror(ret));
+      exit(EXIT_FAILURE);
+    }
+
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->set_cachesize(%u)\n", db_cachesize);
+
+    /* configure lock system size - locks */
+    if ((ret = dbe->set_lk_max_locks(dbe, numlocks)) != 0) {
+	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_locks(%p, %lu), err: %s", dbe,
+		(unsigned long)numlocks, db_strerror(ret));
+	exit(EXIT_FAILURE);
+    }
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->set_lk_max_locks(%p, %lu)\n", dbe, (unsigned long)numlocks);
+
+    /* configure lock system size - objects */
+    if ((ret = dbe->set_lk_max_objects(dbe, numobjs)) != 0) {
+	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_max_objects(%p, %lu), err: %s", dbe,
+		(unsigned long)numobjs, db_strerror(ret));
+	exit(EXIT_FAILURE);
+    }
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->set_lk_max_objects(%p, %lu)\n", dbe, (unsigned long)numlocks);
+
+    /* configure automatic deadlock detector */
+    if ((ret = dbe->set_lk_detect(dbe, DB_LOCK_DEFAULT)) != 0) {
+	print_error(__FILE__, __LINE__, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT), err: %s", db_strerror(ret));
+	exit(EXIT_FAILURE);
+    }
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT)\n");
+
+    /* ************************************************************* *
+	WARNING:
+	DO NOT ADD ANY DB_RECOVER OPTIONS HERE, RECOVERY
+	_MUST_ _NOT_ BE RUN BY MORE THAN ONE PROCESS SIMULTANEOUSLY
+	AND WE ARE NOT LOCKING --
+	HENCE DB_RECOVER CAUSES DB_ENV CORRUPTION.
+	IT WILL NOT WORK! -- BEEN THERE, TRIED THAT
+	Matthias, 2004-03-17, BDB4.2
+     * ************************************************************* */
+
+    if (locktype) {
+	ret = mkdir(bogohome, (mode_t)0755);
+	if (ret && errno != EEXIST) {
+	    print_error(__FILE__, __LINE__, "mkdir(%s): %s",
+		    bogohome, strerror(errno));
+	    exit(EXIT_FAILURE);
+	}
+
+	tl = strlen(bogohome) + strlen(tackon) + 1;
+	t = xmalloc(tl);
+	strlcpy(t, bogohome, tl);
+	strlcat(t, tackon, tl);
+
+	ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
+	if (ret && errno != EEXIST) {
+	    print_error(__FILE__, __LINE__, "open(%s): %s",
+		    t, strerror(errno));
+	    exit(EXIT_FAILURE);
+	}
+
+	lockfd = plock(t, locktype, F_SETLKW);
+	if (lockfd < 0) {
+	    print_error(__FILE__, __LINE__, "lock(%s): %s",
+		    t, strerror(errno));
+	    exit(EXIT_FAILURE);
+	}
+
+	free(t);
+    }
+
+    ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK
+	    | DB_INIT_LOG | DB_INIT_TXN | DB_CREATE | flags, /* mode */ 0644);
+    if (ret != 0) {
+	dbe->close(dbe, 0);
+	print_error(__FILE__, __LINE__, "DB_ENV->open, err: %d, %s", ret, db_strerror(ret));
+	if (ret == DB_RUNRECOVERY) {
+	    fprintf(stderr, "To recover, run: db_recover -v -c -h \"%s\"\n",
+		    bogohome);
+	}
+	exit(EXIT_FAILURE);
+    }
+    if (DEBUG_DATABASE(1))
+	fprintf(dbgout, "DB_ENV->open(home=%s)\n", bogohome);
+
     init = true;
     return 0;
+}
+
+int db_init(void) {
+    const u_int32_t numlocks = 16384;
+    const u_int32_t numobjs = 16384;
+
+    return db_xinit(numlocks, numobjs, /* flags */ 0, F_RDLCK);
+}
+
+int db_recover(const char *name, int catastrophic) {
+    int ret;
+    void *handle;
+
+    /* PASS 1 */
+    printf("Pass 1: data base recovery, %s\n", catastrophic ? "catastrophic" : "regular");
+    ret = db_xinit(1024, 1024, catastrophic ? DB_RECOVER_FATAL : DB_RECOVER,
+	    F_WRLCK);
+    if (ret) goto rec_fail;
+
+    /* PASS 2 - determine data base size
+     * a. open data base
+     * b. stat it
+     * c. close it
+     * d. kill environment and re-open with proper sizes */
+    printf("Pass 2: resize environment\n");
+    handle = db_open(name, name, DB_READ);
+    if (!handle) goto rec_fail;
+
+    
+
+    db_close(handle, 1);
+
+    ret = dbe->remove(dbe, bogohome, 0);
+
+rec_fail:
+    exit(EX_ERROR);
 }
 
 void db_cleanup(void) {

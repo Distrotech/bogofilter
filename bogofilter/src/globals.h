@@ -52,6 +52,7 @@ extern	const char *const version;
 extern	const char *const system_config_file;
 
 /* for msgcounts.c */
+#define	MSG_COUNT	".MSG_COUNT"
 extern	double		 msgs_good;
 extern	double		 msgs_bad;
 
@@ -73,15 +74,20 @@ extern bool onlyprint;
 
 #define ROBS		0.0178	/* Robinson's s */
 #define ROBX		0.52	/* Robinson's x */
-
-#define ROBX_W		".ROBX"
-
 #define MIN_DEV		0.375
+
+#define	SP_ESF		1.0
+#define	NS_ESF		1.0
+
 #define HAM_CUTOFF	0.00	/* 0.00 for two-state, 0.45 for three-state */
 #define SPAM_CUTOFF	0.99
 
+#define ROBX_W		".ROBX"
+
 extern	double robs;
 extern	double robx;
+extern	double sp_esf;
+extern	double ns_esf;
 
 /* for  bogotune */
 extern	bool fBogotune;
@@ -99,5 +105,8 @@ extern enum passmode passmode;
 
 extern	bool	msg_count_file;
 extern	bool	unsure_stats;	/* true if print stats for unsures */
+
+#define	WORDLIST_VERSION	".WORDLIST_VERSION"
+extern	uint	wordlist_version;
 
 #endif

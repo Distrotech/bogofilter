@@ -54,6 +54,8 @@ bool fBogotune = false;
 /* for  bogoconfig.c, prob.c, rstats.c and score.c */
 double	robx = 0.0;
 double	robs = 0.0;
+double	sp_esf = SP_ESF;
+double	ns_esf = NS_ESF;
 
 /* other */
 FILE	*fpo;
@@ -64,3 +66,5 @@ const char *progtype = NULL;
 bool	unsure_stats = false;		/* true if print stats for unsures */
 
 run_t run_type = RUN_UNKNOWN;
+
+uint	wordlist_version;
