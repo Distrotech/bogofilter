@@ -318,3 +318,7 @@ const char *db_str_err(int e) {
 static bool init = false;
 int db_init(void) { init = true; return 0; }
 void db_cleanup(void) { init = false; }
+
+int db_txn_begin(dsh_t *d) { (void)d; return 0; }
+int db_txn_abort(dsh_t *d) { (void)d; return 0; }
+int db_txn_commit(dsh_t *d) { (void)d; return 0; }
