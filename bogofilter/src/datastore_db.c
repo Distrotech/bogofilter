@@ -64,8 +64,8 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "mxcat.h"
 #include "db_lock.h"
 
-static DB_ENV *dbe; /* libdb environment, if in use, NULL otherwise */
-static int lockfd = -1;  /* fd of lock file to prevent concurrent recovery */
+static DB_ENV *dbe;	/* libdb environment, if in use, NULL otherwise */
+static int lockfd = -1;	/* fd of lock file to prevent concurrent recovery */
 
 static const DBTYPE dbtype = DB_BTREE;
 
@@ -82,11 +82,11 @@ typedef struct {
     bool	created;	/* if newly created; for datastore.c (to add .WORDLIST_VERSION) */
 } dbh_t;
 
-#define DBT_init(dbt) (memset(&dbt, 0, sizeof(DBT)))
+#define DBT_init(dbt)		(memset(&dbt, 0, sizeof(DBT)))
 
-#define DB_AT_LEAST(maj, min) ((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
-#define DB_AT_MOST(maj, min) ((DB_VERSION_MAJOR < (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR <= (min))))
-#define DB_EQUAL(maj, min) ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR == (min)))
+#define DB_AT_LEAST(maj, min)	((DB_VERSION_MAJOR > (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR >= (min))))
+#define DB_AT_MOST(maj, min)	((DB_VERSION_MAJOR < (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR <= (min))))
+#define DB_EQUAL(maj, min)	((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR == (min)))
 
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
