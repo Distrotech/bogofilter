@@ -20,6 +20,7 @@ AUTHOR:
 #include "charset.h"
 #include "error.h"
 #include "token.h"
+#include "mime.h"
 
 bool block_on_subnets = false;
 
@@ -48,10 +49,15 @@ token_t get_token(void)
     }
 
     while ((class = yylex()) > 0) {
+	if (DEBUG_LEXER(3)) fprintf(stderr, "*** yylex: %d %d %-.*s\n", class, yyleng, yyleng, yytext);
 	/* don't return boundary tokens to the user */
 	if (class == BOUNDARY && yyleng >= 4)
 	    continue;
 
+	/* ignore anything when not reading text MIME types */
+	if (class == TOKEN && mime_lexer && msg_state->mime_type != MIME_TEXT)
+	    continue;
+	
 	if (class == IPADDR && block_on_subnets)
 	{
 	    const char *prefix="url:";
