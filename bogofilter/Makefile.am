@@ -69,12 +69,6 @@ bogofilter_SOURCES = bogofilter.c bogofilter.h main.c \
 		     method.c $(GRAHAM_SRC) $(ROBINSON_SRC) $(FISHER_SRC) \
 		     common.h method.h
 
-debugtest_SOURCES = debug.main.c
-
-wordhash_SOURCES = wordhash.main.c
-
-find_home_test_SOURCES = find_home.test.c
-
 # what to distribute
 extradistdirs = doc
 EXTRA_DIST = $(man_MANS) \
