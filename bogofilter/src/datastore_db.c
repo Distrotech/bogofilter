@@ -580,6 +580,7 @@ int db_delete(void *vhandle, const dbv_t *token)
 int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 {
     int ret = 0;
+    int rmw_flag;
     DBT db_key;
     DBT db_data;
 
@@ -602,7 +603,8 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_data.flags = DB_DBT_USERMEM;	/* saves the memcpy */
 
     /* DB_RMW can avoid deadlocks */
-    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, (!fTransaction || handle->open_mode == DS_READ) ? 0 : DB_RMW);
+    rmw_flag = dsm->dsm_get_rmw_flag(handle->open_mode);
+    ret = dbp->get(dbp, handle->txn, &db_key, &db_data, rmw_flag );
 
     if (DEBUG_DATABASE(3))
 	fprintf(dbgout, "DB->get(%.*s): %s\n",
