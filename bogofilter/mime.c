@@ -258,7 +258,7 @@ void set_mime_boundary(void)
     size_t len;
 
     if (DEBUG_MIME(1))
-	fprintf(stderr, "*** --> set_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
+	fprintf(stderr, "*** --> set_mime_boundary: %d  %p '%-.*s'\n", stackp, yytext, yyleng, yytext);
 
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
@@ -278,7 +278,7 @@ void chk_mime_boundary(void)
     size_t len;
 
     if (DEBUG_MIME(1))
-	fprintf(stderr, "*** --> chk_mime_boundary: %d  '%-.*s'\n", stackp, yyleng, yytext);
+	fprintf(stderr, "*** --> chk_mime_boundary: %d  %p '%-.*s'\n", stackp, yytext, yyleng, yytext);
 
     boundary = msg_state->boundary;
     if (boundary == NULL )
