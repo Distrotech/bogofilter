@@ -111,8 +111,9 @@ retry:
     {
 	list->dbh = db_open(list->filepath, list->filename, mode, directory);
 	if (list->dbh == NULL) {
+	    int err = errno;
 	    close_wordlists(); /* unlock and close */
-	    switch(errno) {
+	    switch(err) {
 		/* F_SETLK can't obtain lock */
 		case EAGAIN:
 		case EACCES:
@@ -124,7 +125,7 @@ retry:
 		    }
 		    goto retry;
 		default:
-		    fprintf(stderr, "Can't open %s\n", list->filename);
+		    fprintf(stderr, "Can't open %s (%s) - errno is %d\n", list->filename, list->filepath, err);
 		    exit(2);
 	    } /* switch */
 	} /* db_open */
