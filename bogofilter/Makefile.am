@@ -43,7 +43,7 @@ EXTRA_DIST = $(man1_MANS) \
 	     bogofilter.spec bogofilter.spec.in \
 	     bogoupgrade bogo.R \
 	     doc/integrating-with-qmail contrib/bogofilter-qfe \
-	     version.sh
+	     version.sh README.BUGS
 #
 VERSION_FROM=main.c bogofilter.c bogoutil.c lexer.l
 version.h:	version.sh $(VERSION_FROM)
