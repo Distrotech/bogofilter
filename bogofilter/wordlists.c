@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include "system.h"
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
 
 #include <config.h>
 #include "common.h"
@@ -19,23 +23,12 @@
 #include "xmalloc.h"
 #include "xstrdup.h"
 
+#define	MIN_SLEEP	1000		/* 1 millisecond */
+#define	MAX_SLEEP	1000000l	/* 1 second */
+
 wordlist_t *good_list;
 wordlist_t *spam_list;
 /*@null@*/ wordlist_t* word_lists=NULL;
-
-void *open_wordlist( const char *name, const char *filepath )
-{
-    void *dbh;			/* database handle  */
-
-    dbmode_t open_mode = (run_type==RUN_NORMAL) ? DB_READ : DB_WRITE;
-
-    if ( (dbh = db_open(filepath, name, open_mode, directory)) == NULL){
-      print_error(__FILE__, __LINE__, "Cannot initialize database %s.", name);
-      exit(2);
-    }
-
-    return dbh;
-}
 
 /* returns -1 for error, 0 for success */
 static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const char* path,
@@ -109,21 +102,33 @@ int setup_wordlists(const char* dir)
     return rc;
 }
 
-void open_wordlists(void)
+void open_wordlists(dbmode_t mode)
 {
     wordlist_t *list;
 
-    for ( list = word_lists; list != NULL; list = list->next )
+retry:
+    for (list = word_lists; list != NULL; list = list->next)
     {
-	list->dbh=open_wordlist(list->filename, list->filepath);
+	list->dbh = db_open(list->filepath, list->filename, mode, directory);
 	if (list->dbh == NULL) {
-	    fprintf(stderr, "Can't open %s\n", list->filename);
-	    close_wordlists();
-	    exit(2);
-	}
-    }
-
-    return;
+	    close_wordlists(); /* unlock and close */
+	    switch(errno) {
+		/* F_SETLK can't obtain lock */
+		case EAGAIN:
+		case EACCES:
+		    {
+			struct timeval to;
+			to.tv_sec = 0;
+			to.tv_usec = MIN_SLEEP + (long) ((MAX_SLEEP-MIN_SLEEP)*rand()/(RAND_MAX+1.0));
+			select(0,NULL,NULL,NULL,&to);
+		    }
+		    goto retry;
+		default:
+		    fprintf(stderr, "Can't open %s\n", list->filename);
+		    exit(2);
+	    } /* switch */
+	} /* db_open */
+    } /* for */
 }
 
 void close_wordlists(void)
@@ -132,12 +137,19 @@ void close_wordlists(void)
 
     for ( list = word_lists; list != NULL; list = list->next )
     {
-	db_close(list->dbh);
+	if (list->dbh) db_close(list->dbh);
+	list->dbh = NULL;
+    }
+}
+
+void free_wordlists(void) {
+    wordlist_t *list;
+
+    for ( list = word_lists; list != NULL; list = list->next )
+    {
 	if (list->filename) free(list->filename);
 	if (list->filepath) free(list->filepath);
     }
-
-    return;
 }
 
 void set_good_weight(double weight)
