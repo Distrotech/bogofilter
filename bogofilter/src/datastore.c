@@ -35,6 +35,8 @@ David Relson <relson@osagesoftware.com>  2003
 
 YYYYMMDD today;			/* date as YYYYMMDD */
 
+dsm_t *dsm = NULL;
+
 /* Function definitions */
 
 static
@@ -271,23 +273,26 @@ int ds_delete(void *vhandle, const word_t *word)
 
 int ds_txn_begin(void *vhandle) {
     dsh_t *dsh = vhandle;
-    dbh_t *dbh = dsh->dbh;
-    dsm_t *dsm = dbh->dsm;
-    return dsm->dsm_begin(dsh->dbh);
+    if (dsm == NULL)
+	return 0;
+    else
+	return dsm->dsm_begin(dsh->dbh);
 }
 
 int ds_txn_abort(void *vhandle) {
     dsh_t *dsh = vhandle;
-    dbh_t *dbh = dsh->dbh;
-    dsm_t *dsm = dbh->dsm;
-    return dsm->dsm_abort(dsh->dbh);
+    if (dsm == NULL)
+	return 0;
+    else
+	return dsm->dsm_abort(dsh->dbh);
 }
 
 int ds_txn_commit(void *vhandle) {
     dsh_t *dsh = vhandle;
-    dbh_t *dbh = dsh->dbh;
-    dsm_t *dsm = dbh->dsm;
-    return dsm->dsm_commit(dsh->dbh);
+    if (dsm == NULL)
+	return 0;
+    else
+	return dsm->dsm_commit(dsh->dbh);
 }
 
 typedef struct {
