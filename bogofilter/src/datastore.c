@@ -18,8 +18,11 @@ David Relson <relson@osagesoftware.com>  2003
 #include <stdlib.h>
 #include <limits.h>
 
+#include <db.h>
+
 #include "datastore.h"
 #include "datastore_db.h"
+#include "datastore_db_private.h"
 
 #include "error.h"
 #include "maint.h"
@@ -268,17 +271,23 @@ int ds_delete(void *vhandle, const word_t *word)
 
 int ds_txn_begin(void *vhandle) {
     dsh_t *dsh = vhandle;
-    return db_txn_begin(dsh->dbh);
+    dbh_t *dbh = dsh->dbh;
+    dbm_t *dbm = dbh->dbm;
+    return dbm->db_begin(dsh->dbh);
 }
 
 int ds_txn_abort(void *vhandle) {
     dsh_t *dsh = vhandle;
-    return db_txn_abort(dsh->dbh);
+    dbh_t *dbh = dsh->dbh;
+    dbm_t *dbm = dbh->dbm;
+    return dbm->db_abort(dsh->dbh);
 }
 
 int ds_txn_commit(void *vhandle) {
     dsh_t *dsh = vhandle;
-    return db_txn_commit(dsh->dbh);
+    dbh_t *dbh = dsh->dbh;
+    dbm_t *dbm = dbh->dbm;
+    return dbm->db_commit(dsh->dbh);
 }
 
 typedef struct {

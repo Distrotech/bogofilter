@@ -162,11 +162,7 @@ else
 if ENABLE_SQLITE_DATASTORE
 datastore_SOURCE = datastore_sqlite.c
 else
-if ENABLE_TRANSACTIONS
-datastore_SOURCE = datastore_db.c
-else
-datastore_SOURCE = datastore_olddb.c datastore_dummies.c
-endif
+datastore_SOURCE = datastore_db.c datastore_db_trad.c datastore_db_trans.c
 endif
 endif
 endif
@@ -174,7 +170,8 @@ endif
 datastore_OBJECT = $(datastore_SOURCE:.c=.o)
 
 libbogofilter_a_SOURCES += $(datastore_SOURCE)
-EXTRA_libbogofilter_a_SOURCES = datastore_db.c datastore_qdbm.c datastore_tdb.c
+EXTRA_libbogofilter_a_SOURCES = datastore_db.c datastore_db_trad.c datastore_db_trans.c \
+				datastore_qdbm.c datastore_tdb.c datastore_sqlite.c
 
 CLEANFILES=version.c directories.c bogoupgrade
 
