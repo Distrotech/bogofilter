@@ -46,11 +46,12 @@ struct type_s {
     const char *name; 
     size_t len;
 } types[] = { 
-    { MIME_TEXT_PLAIN,	"text/plain",	10, },
     { MIME_TEXT_HTML,	"text/html",	 9, },
+    { MIME_TEXT_PLAIN,	"text/plain",	10, },
     { MIME_TEXT,	"text/",	 5, },
-    { MIME_MULTIPART,	"multipart/", 	10, },
+    { MIME_APPLICATION,	"application/", 12, },
     { MIME_MESSAGE,	"message/", 	 8, },
+    { MIME_MULTIPART,	"multipart/", 	10, },
 };
 
 struct encoding_s { 
@@ -180,6 +181,7 @@ void mime_disposition(const char *text, int leng)
     size_t l = strlen("Content-Disposition:");
     char *w = getword(text+l, text + leng);
     struct disposition_s *dis;
+    msg_state->mime_disposition = MIME_DISPOSITION_UNKNOWN;
     for (dis = dispositions ; dis < dispositions+COUNTOF(dispositions); dis+= 1) {
 	if (strcasecmp(w, dis->name) == 0) {
 	    msg_state->mime_disposition = dis->disposition;
@@ -187,6 +189,8 @@ void mime_disposition(const char *text, int leng)
 	    break;
 	}
     }
+    if (msg_state->mime_disposition == MIME_DISPOSITION_UNKNOWN)
+	fprintf(stderr, "Unknown mime disposition - '%s'\n", w);
     xfree(w);
 }
 
@@ -207,6 +211,7 @@ void mime_encoding(const char *text, int leng)
     size_t l = strlen("Content-Transfer-Encoding:");
     char *w = getword(text+l, text + leng);
     struct encoding_s *enc;
+    msg_state->mime_encoding = MIME_ENCODING_UNKNOWN;
     for (enc = encodings ; enc < encodings+COUNTOF(encodings); enc+= 1) {
 	if (strcasecmp(w, enc->name) == 0) {
 	    msg_state->mime_encoding = enc->encoding;
@@ -231,7 +236,7 @@ void mime_type(const char *text, int leng)
 
     if (!w) return;
 
-    msg_state->mime_type = MIME_OTHER;
+    msg_state->mime_type = MIME_TYPE_UNKNOWN;
     for (typ = types ; typ < types+COUNTOF(types); typ+= 1) {
 	if (strncasecmp(w, typ->name, typ->len) == 0) {
 	    msg_state->mime_type = typ->type;
@@ -239,6 +244,8 @@ void mime_type(const char *text, int leng)
 	    break;
 	}
     }
+    if (msg_state->mime_type == MIME_TYPE_UNKNOWN)
+	fprintf(stderr, "Unknown mime type - '%s'\n", w);
     xfree(w);
 
     switch(msg_state->mime_type) {
@@ -247,7 +254,7 @@ void mime_type(const char *text, int leng)
     case MIME_TEXT_PLAIN:
 	/* XXX: read charset */
 	return;
-    case MIME_OTHER:
+    case MIME_TYPE_UNKNOWN:
 	return;
     case MIME_MULTIPART:
 	return;
@@ -381,6 +388,8 @@ size_t mime_decode(char *buff, size_t size)
 	break;
     case MIME_UUENCODE:
 	count = uudecode(buff, size);
+	break;
+    case MIME_ENCODING_UNKNOWN:
 	break;
     default:
 	fprintf(stderr, "Unknown mime encoding - %d\n", msg_state->mime_encoding);
