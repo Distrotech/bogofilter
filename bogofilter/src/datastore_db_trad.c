@@ -118,7 +118,7 @@ int bft_lock(void *vhandle, int open_mode)
 	    e = errno = EAGAIN;
     } else {
 	/* have lock */
-	if (handle && handle->fd > 0)
+	if (handle->fd > 0)
 	    handle->locked = true;
     }
     return e;
