@@ -72,7 +72,6 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 	  uint32_t *counts = val.count;
 	  counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
       }
-      val.date = today;
       ds_write(word_list->dbh, node->key, &val);
   }
 
