@@ -46,6 +46,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_dbcommon.h"
 
 static DB_ENV	  *tra_get_env_dbe	(dbe_t *env);
+static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
 static int	  tra_begin		(void *vhandle);
 static int  	  tra_abort		(void *vhandle);
 static int  	  tra_commit		(void *vhandle);
@@ -54,6 +55,7 @@ static int  	  tra_commit		(void *vhandle);
 
 dsm_t dsm_traditional = {
     &tra_get_env_dbe,
+    &tra_recover_open,
     &tra_begin,
     &tra_abort,
     &tra_commit,
@@ -62,6 +64,36 @@ dsm_t dsm_traditional = {
 DB_ENV *tra_get_env_dbe	(dbe_t *env)
 {
     (void) env;
+    return NULL;
+}
+
+DB_ENV *tra_recover_open	(const char *db_file, DB **dbp)
+{
+    int e;
+    int fd;
+
+    fd = open(db_file, O_RDWR);
+    if (fd < 0) {
+	print_error(__FILE__, __LINE__, "db_verify: cannot open %s: %s", db_file,
+		    strerror(errno));
+	exit(EX_ERROR);
+    }
+
+    if (db_lock(fd, F_SETLKW, (short int)F_WRLCK)) {
+	print_error(__FILE__, __LINE__,
+		    "db_verify: cannot lock %s for exclusive use: %s", db_file,
+		    strerror(errno));
+	close(fd);
+	exit(EX_ERROR);
+    }
+
+    if ((e = db_create (dbp, NULL, 0)) != 0) {
+	print_error(__FILE__, __LINE__, "db_create, err: %s",
+		    db_strerror(e));
+	close(fd);
+	exit(EX_ERROR);
+    }
+
     return NULL;
 }
 

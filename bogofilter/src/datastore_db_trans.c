@@ -60,6 +60,7 @@ bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
 static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
+static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
 static int	  txn_begin		(void *vhandle);
 static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
@@ -68,6 +69,7 @@ static int  	  txn_commit		(void *vhandle);
 
 dsm_t dsm_traditional = {
     &txn_get_env_dbe,
+    &txn_recover_open,
     &txn_begin,
     &txn_abort,
     &txn_commit,
@@ -76,6 +78,63 @@ dsm_t dsm_traditional = {
 DB_ENV *txn_get_env_dbe(dbe_t *env)
 {
     return env->dbe;
+}
+
+static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
+{
+    const uint32_t local_flags = flags | DB_CREATE;
+    DB_ENV *env;
+    int e;
+
+    char *dir;
+    char *tmp;
+
+    dir = xstrdup(db_file);
+    tmp = strrchr(dir, DIRSEP_C);
+
+    if (!tmp)
+	free(dir), dir = xstrdup(CURDIR_S);
+    else
+	*tmp = '\0';
+
+    if (DEBUG_DATABASE(0))
+        fprintf(dbgout, "trying to lock database directory\n");
+    db_try_glock(tmp, F_WRLCK, F_SETLKW); /* wait for exclusive lock */
+
+    /* run recovery */
+    bf_dbenv_create(&env);
+
+    if (DEBUG_DATABASE(0))
+        fprintf(dbgout, "running regular data base recovery%s\n",
+	       flags & DB_PRIVATE ? " and removing environment" : "");
+
+    /* quirk: DB_RECOVER requires DB_CREATE and cannot work with DB_JOINENV */
+
+    /*
+     * Hint from Keith Bostic, SleepyCat support, 2004-11-29,
+     * we can use the DB_PRIVATE flag, that rebuilds the database
+     * environment in heap memory, so we don't need to remove it.
+     */
+
+    e = env->open(env, tmp,
+		  dbenv_defflags | local_flags | DB_RECOVER, DS_MODE);
+    if (e == DB_RUNRECOVERY) {
+	/* that didn't work, try harder */
+	if (DEBUG_DATABASE(0))
+	    fprintf(dbgout, "running catastrophic data base recovery\n");
+	e = env->open(env, tmp,
+		      dbenv_defflags | local_flags | DB_RECOVER_FATAL, DS_MODE);
+    }
+    if (e) {
+	print_error(__FILE__, __LINE__, "Cannot recover environment \"%s\": %s",
+		tmp, db_strerror(e));
+	free(tmp);
+	exit(EX_ERROR);
+    }
+
+    free(tmp);
+
+    return env;
 }
 
 static int txn_begin(void *vhandle)

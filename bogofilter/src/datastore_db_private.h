@@ -13,10 +13,12 @@ typedef struct {
 
 typedef		int dsm_function		(void *vhandle);
 typedef		DB_ENV *dsm_get_env_dbe		(dbe_t *env);
+typedef		DB_ENV *dsm_recover_open	(const char *db_file, DB **dbp);
 typedef 	void dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
 
 typedef struct {
     dsm_get_env_dbe		*dsm_get_env_dbe;
+    dsm_recover_open		*dsm_recover_open;
     dsm_function	        *dsm_begin;
     dsm_function        	*dsm_abort;
     dsm_function        	*dsm_commit;

@@ -893,40 +893,9 @@ ex_t db_verify(const char *db_file)
     else
 	*tmp = '\0';
 
-    if (fTransaction) {
-	env = dbe_recover_open(dir, 0); /* this sets an exclusive lock */
-	e = db_create(&db, NULL, 0); /* do not use environment here, verify
-					does not lock by itself, we hold the
-					global lock instead! */
-	if (e != 0) {
-	    print_error(__FILE__, __LINE__, "error creating DB handle: %s",
-			db_strerror(e));
-	    free(dir);
-	    exit(EX_ERROR);
-	}
-    }
-    else {
-	int fd = open(db_file, O_RDWR);
-	if (fd < 0) {
-	    print_error(__FILE__, __LINE__, "db_verify: cannot open %s: %s", db_file,
-			strerror(errno));
-	    exit(EX_ERROR);
-	}
-
-	if (db_lock(fd, F_SETLKW, (short int)F_WRLCK)) {
-	    print_error(__FILE__, __LINE__,
-			"db_verify: cannot lock %s for exclusive use: %s", db_file,
-			strerror(errno));
-	    close(fd);
-	    exit(EX_ERROR);
-	}
-
-	if ((e = db_create (&db, NULL, 0)) != 0) {
-	    print_error(__FILE__, __LINE__, "db_create, err: %s",
-			db_strerror(e));
-	    close(fd);
-	    exit(EX_ERROR);
-	}
+    env = dsm->dsm_recover_open(db_file, &db);
+    if (env == NULL) {
+	exit(EX_ERROR);
     }
 
     e = db->verify(db, db_file, NULL, NULL, 0);
