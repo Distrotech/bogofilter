@@ -26,8 +26,8 @@ int uudecode(byte *buff, size_t size)
 	return size;
 
     /* don't process begin and end lines */
-    if ((strncasecmp(buff, "begin ", 6) == 0) ||
-	(strncasecmp(buff, "end", 3) == 0))
+    if ((strncasecmp((const char *)buff, "begin ", 6) == 0) ||
+	(strncasecmp((const char *)buff, "end", 3) == 0))
 	return size;
 
     while (s < e - 4)

@@ -20,7 +20,7 @@ int main(void) {
     if (fseek(stdin, 0, SEEK_SET)) die();
     if (!(buf = malloc(size))) die();
     if (fread(buf, 1, size, stdin) != size) die();
-    size = qp_decode(buf, size);
+    size = qp_decode((unsigned char *)buf, size);
     if (fwrite(buf, 1, size, stdout) != size) die();
     if (fflush(stdout)) die();
     if (fclose(stdout)) die();
