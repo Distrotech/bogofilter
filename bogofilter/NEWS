@@ -2,7 +2,7 @@
 
 				bogofilter news
 
-0.7.7	2002-10-30
+0.8.0	2002-11-02
 
 	* Bogofilter now supports a configuration file named
           /etc/bogofilter.cf and/or ~/.bogofilter.cf.
