@@ -276,6 +276,8 @@ void score_initialize(void)
 {
     word_t *word_robx = word_new((const byte *)ROBX_W, strlen(ROBX_W));
 
+    wordlist_t *list = default_wordlist();
+
     if (fabs(min_dev) < EPS)
 	min_dev = MIN_DEV;
     if (spam_cutoff < EPS)
@@ -291,16 +293,16 @@ void score_initialize(void)
     if (fabs(robs) < EPS)
 	robs = ROBS;
 
-    if (fabs(robx) < EPS && word_list->dsh != NULL)
+    if (fabs(robx) < EPS && list->dsh != NULL)
     {
 	int ret;
 	dsv_t val;
 
 	/* Note: .ROBX is scaled by 1000000 in the wordlist */
-	if (DST_OK != ds_txn_begin(word_list->dsh))
+	if (DST_OK != ds_txn_begin(list->dsh))
 	    ret = -1;
 	else {
-	    ret = ds_read(word_list->dsh, word_robx, &val);
+	    ret = ds_read(list->dsh, word_robx, &val);
 	    if (ret != 0)
 		robx = ROBX;
 	    else {
@@ -308,7 +310,7 @@ void score_initialize(void)
 		uint l_robx = val.count[IX_SPAM];
 		robx = l_robx ? (double)l_robx / 1000000 : ROBX;
 	    }
-	    if (DST_OK != ds_txn_commit(word_list->dsh)) {
+	    if (DST_OK != ds_txn_commit(list->dsh)) {
 		ret = -1;
 		fprintf(stderr, "transaction commit failed.\n");
 		exit(EX_ERROR);

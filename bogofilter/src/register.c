@@ -36,7 +36,7 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     u_int32_t g, b;
     u_int32_t wordcount = h->count;	/* use number of unique tokens */
 
-    wordlist_t *list;
+    wordlist_t *list = default_wordlist();	/* use default wordlist */
     sh_t incr = IX_UNDF, decr = IX_UNDF;
 
     /* If update directory explicity supplied, setup the wordlists. */
@@ -65,7 +65,7 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     run_type |= _run_type;
 
 retry:
-    if (ds_txn_begin(word_list->dsh)) {
+    if (ds_txn_begin(list->dsh)) {
 	fprintf(stderr, "ds_txn_begin error.\n");
 	exit(EX_ERROR);
     }
@@ -75,7 +75,7 @@ retry:
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
 	wordprop = node->buf;
-	ds_read(word_list->dsh, node->key, &val);
+	ds_read(list->dsh, node->key, &val);
 	if (incr != IX_UNDF) {
 	    u_int32_t *counts = val.count;
 	    counts[incr] += wordprop->freq;
@@ -84,11 +84,9 @@ retry:
 	    u_int32_t *counts = val.count;
 	    counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
 	}
-	ds_write(word_list->dsh, node->key, &val);
+	ds_write(list->dsh, node->key, &val);
     }
 
-    list = word_list; /* FIXME: this is an alias left over from the
-			 bogus for loop that used to be here. */
     ds_get_msgcounts(list->dsh, &val);
     list->msgcount[IX_SPAM] = val.spamcount;
     list->msgcount[IX_GOOD] = val.goodcount;
