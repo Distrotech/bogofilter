@@ -347,8 +347,8 @@ retry_db_open:
 	handle->created = false;
 	if ((ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags, 0664)) != 0
 	    && ( ret != ENOENT || opt_flags == DB_RDONLY ||
-		(handle->created = true),
-		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, 0664)) != 0))
+		((handle->created = true),
+		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, 0664)) != 0)))
 	{
 	    if (open_mode != DB_RDONLY && ret == EEXIST && --retries) {
 		/* sleep for 4 to 100 ms - this is just to give up the CPU

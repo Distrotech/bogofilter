@@ -488,6 +488,10 @@ static int process_arglist(int argc, char **argv)
 
     while ((option = getopt(argc, argv, OPTIONS)) != -1)
 	switch (option) {
+	case '?':
+	    fprintf(stderr, "Unknown option -%c.\n", optopt);
+	    break;
+
 	case 'd':
 	    flag = M_DUMP;
 	    count += 1;
@@ -541,10 +545,6 @@ static int process_arglist(int argc, char **argv)
 
 	case ':':
 	    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
-	    exit(EX_ERROR);
-
-	case '?':
-	    fprintf(stderr, "Unknown option -%c.\n", optopt);
 	    exit(EX_ERROR);
 
 	case 'h':

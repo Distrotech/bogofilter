@@ -24,8 +24,7 @@ PARSING_TESTS = \
 	t.split t.parsing \
 	t.lexer t.lexer.mbx \
 	t.folded_rfc2047 \
-	t.msgaddr
-# t.message_id - commented out, outputs/message_id.ref not in CVS
+	t.message_addr t.message_id t.queue_id
 
 WORDLIST_TESTS = t.dump.load t.nonascii.replace t.maint t.robx t.regtest t.upgrade.subnet.prefix t.multiple.wordlists
 
@@ -82,6 +81,8 @@ EXTRA_DIST=$(TESTSCRIPTS) t.frame t.save t.skel \
 	outputs/grftest.out \
 	outputs/lexer.out \
 	outputs/maildir.out \
+	outputs/message_addr.ref \
+	outputs/message_id.ref \
 	outputs/msg.1.f.v \
 	outputs/msg.1.g.v \
 	outputs/msg.1.r.v \
@@ -100,8 +101,8 @@ EXTRA_DIST=$(TESTSCRIPTS) t.frame t.save t.skel \
 	outputs/msg.3.f.vvv \
 	outputs/msg.3.g.vvv \
 	outputs/msg.3.r.vvv \
-	outputs/msgaddr.ref \
 	outputs/multiple.wordlists.ref   \
 	outputs/parsing.out \
+	outputs/queue_id.ref \
 	outputs/separate.out \
 	outputs/split.out
