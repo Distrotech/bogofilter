@@ -41,7 +41,6 @@ double	thresh_stats;
 const char	*update_dir;
 /*@observer@*/
 const char	*stats_prefix;
-const char *const system_config_file;
 
 /* dual definition options */
 char	*directory;		/* '-d' */
