@@ -72,17 +72,26 @@ static int dump_file(char *db_file)
 	    for (;;) {
 		ret = dbcp->c_get(dbcp, &key, &data, DB_NEXT);
 		if (ret == 0) {
-		    dbv_t *val = (dbv_t *)data.data;
-		    if (!keep_count(val->count) || !keep_date(val->date) || !keep_size(key.size))
+		    long cv[2];
+		    dbv_t val;
+		    memcpy( &cv, data.data, data.size );
+		    if (!dbh->is_swapped){			/* convert from struct to array */
+			val.count = cv[0];
+			val.date  = cv[1];
+		    } else {
+			val.count = swap_long(cv[0]);
+			val.date  = swap_long(cv[1]);
+		    }
+		    if (!keep_count(val.count) || !keep_date(val.date) || !keep_size(key.size))
 			continue;
 		    if (replace_nonascii_characters)
 			do_replace_nonascii_characters((byte *)key.data);
 		    if (data.size != 4 && data.size != 8)
 			print_error(__FILE__, __LINE__, "Unknown data size - %d.\n", data.size);
-		    if (data.size == 4 || val->date == 0)
-			printf("%.*s %lu\n", (int)key.size, (char *) key.data, val->count);
+		    if (data.size == 4 || val.date == 0)
+			printf("%.*s %lu\n", (int)key.size, (char *) key.data, val.count);
 		    else
-			printf("%.*s %lu %lu\n", (int)key.size, (char *) key.data, val->count, val->date);
+			printf("%.*s %lu %lu\n", (int)key.size, (char *) key.data, val.count, val.date);
 		}
 		else if (ret == DB_NOTFOUND) {
 		    break;
