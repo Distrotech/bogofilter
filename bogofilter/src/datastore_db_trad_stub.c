@@ -17,6 +17,7 @@ David Relson	<relson@osagesoftware.com> 2005
 #include <db.h>
 
 #include "datastore.h"
+#include "datastore_db.h"
 #include "datastore_db_private.h"
 
 /* OO function lists */
