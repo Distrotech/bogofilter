@@ -4,6 +4,11 @@
 
 $Id$
 
+	2002-12-30
+	* Spamicity score now computed from multiple wordlist pairs, i.e. all 
+	  spam and ham wordlists in directories named on command line or in 
+	  config file (via "wordlist=" lines).
+
 	2002-12-28
 	* Added mime processing capability, with decoding of base64, quoted-printable
 	  and uuencoded sections.  Ignores attachments when computing spamicity.
