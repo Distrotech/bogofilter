@@ -516,6 +516,10 @@ int db_txn_commit(void *vhandle)
 
     switch (ret) {
 	case 0:
+	    /* push out buffer pages so that >=15% are clean - we
+	     * can ignore errors here, as the log has all the data */
+	    (void)dbe->memp_trickle(dbe, 15, NULL);
+
 	    return DST_OK;
 	case DB_LOCK_DEADLOCK:
 	    return DST_TEMPFAIL;
