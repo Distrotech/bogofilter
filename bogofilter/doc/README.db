@@ -267,6 +267,32 @@ is switched off) or "save changes" (settings will be saved permanently);
 you can use the same utility to restore the previous setting or load
 manufacturer defaults. Skip to section 2.4.
 
+What is this scsi-config?
+
+The scsi-config command is a Tk script, delivered with the scsiinfo
+package.  At the time of writing, scsiinfo can be found at
+ftp://tsx-11.mit.edu/pub/linux/ALPHA/scsi/scsiinfo-1.7.tar.gz .
+
+For users who don't run X on their mail servers, there is also a
+command-line utility, scsiinfo, in the package.  Setting parameters
+with scsiinfo is a bit hairy, but the following sequence worked for two
+of us who tried it (back up your drive first):
+
+# get current disk settings and turn off the write cache
+# (substitute the appropriate device for /dev/sda in all these commands)
+parms=`scsiinfo -cX /dev/sda | sed 's/^./0/'`
+
+# write the parameters back to the hard drive's current settings
+# this needs to be put in a boot script
+scsiinfo -cXR /dev/sda $parms
+
+# if you don't want to put this in a boot script, you can alternatively
+# save the parameters to the hard drive's settings area:
+scsiinfo -cXRS /dev/sda $parms
+
+You did back up your drive before trying that, right? :)
+
+
 A.3 Switching the write cache off in FreeBSD
 
 Have you read section A.1 already? You should have.
@@ -283,13 +309,14 @@ to /boot/loader.conf.local, shut down all applications and reboot. (To
 revert the change, remove the line, shut down all applications and
 reboot.)
 
-If you have SCSI, you'll need to change the setting twice. Omit the
-leading /dev and trailing s<NUMBER><LETTER> parts (/dev/da0s1a -> da0;
-/dev/da4s3f -> da4). Replace da0 by your device name in these examples,
-and leave out the part in parentheses:
+If you have SCSI, you'll need to decide if you want the setting until the next
+reboot, or permanent (the permanent setting can be changed back, don't worry).
+In either case, omit the leading /dev and trailing s<NUMBER><LETTER> parts
+(/dev/da0s1a -> da0; /dev/da4s3f -> da4). Replace da0 by your device name in
+these examples, and leave out the part in parentheses:
 
  camcontrol modepage da0 -m8 -e -P0 (effective until computer is switched off)
- camcontrol modepage da0 -m8 -e -P3 (loaded next time computer is switched on)
+ camcontrol modepage da0 -m8 -e -P3 (save parameters permanently)
 
 camcontrol will open a temporary file with a WCE: line on top. Edit the
 figure to read 0 (cache disabled) or 1 (cache enabled), then save the
