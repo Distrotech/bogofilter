@@ -678,7 +678,7 @@ int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
     dbh_t *handle = dsh->dbh;
     DB *dbp = handle->dbp;
 
-    int ret = 0;
+    int ret = 0, eflag = 0;
 
     DBC dbc;
     DBC *dbcp = &dbc;
@@ -731,15 +731,16 @@ int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 	break;
     default:
 	print_error(__FILE__, __LINE__, "(c_get): %s", db_strerror(ret));
-	ret = -1;
+	eflag = 1;
+	break;
     }
 
     if ((ret = dbcp->c_close(dbcp))) {
 	print_error(__FILE__, __LINE__, "(c_close): %s", db_strerror(ret));
-	ret = -1;
+	eflag = -1;
     }
 
-    return ret;		/* 0 if ok */
+    return eflag ? -1 : ret;		/* 0 if ok */
 }
 
 const char *db_str_err(int e) {
