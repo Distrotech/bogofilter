@@ -186,6 +186,7 @@ static dbh_t *handle_init(const char *db_path, const char *db_name)
     handle->created    = false;
 
     handle->txn = NULL;
+    handle->dsm = dsm;
 
     return handle;
 }
