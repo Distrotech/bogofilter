@@ -98,8 +98,7 @@ static int DB_OPEN(DB *db, const char *db_path,
     int ret;
 
 #if DB_AT_LEAST(4,1)
-    if (fTransaction)
-	flags |= DB_AUTO_COMMIT;
+    flags |= dsm->dsm_auto_commit_flags();
 #endif
 
     ret = db->open(db,
