@@ -77,6 +77,8 @@ AUTHORS:
 #define	LARGE_COUNT	40000
 
 #define	HAM_CUTOFF	0.10
+#define MIN_HAM_CUTOFF	0.10	/* minimum final ham_cutoff */
+#define MAX_HAM_CUTOFF	0.45	/* maximum final ham_cutoff */
 #define	MIN_CUTOFF	0.55	/* minimum cutoff  for set_thresh() */
 #define	WARN_MIN	0.50	/* warning minimum for set_thresh() */
 #define	WARN_MAX	0.99	/* warning maximum for set_thresh() */
@@ -111,6 +113,13 @@ enum e_verbosity {
     SCORE_DETAIL	/* verbosity level for printing scores	*/
 };
 
+typedef enum e_ds_loc {
+    DS_NONE	   = 0,	/* datastore locn not specified */
+    DS_ERR	   = 1,	/* error in datastore locn spec */
+    DS_DSK	   = 2,	/* datastore on disk */
+    DS_RAM	   = 4 	/* datastore in ram  */
+} ds_loc;
+
 #define	MOD(n,m)	((n) - (floor((n)/(m)))*(m))
 #define	ROUND(m,n)	floor((m)*(n)+.5)/(n)
 
@@ -125,6 +134,7 @@ enum e_verbosity {
 const char *progname = "bogotune";
 static char *ds_file;
 static char *ds_path;
+static ds_loc ds_flag = DS_NONE;
 
 static bool    bogolex = false;		/* true if convert input to msg-count format */
 static bool    esf_flag = true;		/* test ESF factors if true */
@@ -375,6 +385,7 @@ static bool check_for_high_ns_scores(void)
 
     score_ns(ns_scores);	/* scores in descending order */
 
+    /* want at least 1 high scoring non-spam for FP determination */
     if (ns_scores[t-1] < SPAM_CUTOFF)
 	return false;
 
@@ -435,8 +446,9 @@ static bool check_for_low_sp_scores(void)
 {
     uint t = ceil(sp_cnt * check_percent);
 
-    score_sp(sp_scores);			/* get scores */
+    score_sp(sp_scores);	/* get scores */
 
+    /* low scoring spam may cause problems ... */
     if (sp_scores[t-1] > HAM_CUTOFF)
 	return false;
 
@@ -530,7 +542,7 @@ static void set_thresh(uint count, double *scores)
     uint   ftarget = 0;
     double cutoff, lgc;
 
-    score_ns(scores);				/* get scores */
+    score_ns(scores);		/* get scores */
 
 /*
 **	Use parabolic curve to fit data
@@ -684,7 +696,7 @@ static void distribute(int mode, tunelist_t *ns_or_sp)
     int good = mode == REG_GOOD;
     int bad  = 1 - good;
 
-    bool divvy = ds_file == NULL && user_robx < EPS;
+    bool divvy = ds_file == NULL && user_robx < EPS && !msg_count_file;
 
     wordhash_t *train = ns_and_sp->train;
     mlhead_t *msgs = ns_or_sp->msgs;
@@ -864,9 +876,10 @@ static int process_arglist(int argc, char **argv)
 		case 'd':
 		    argc -= 1;
 		    ds_file = *++argv;
+		    ds_flag = (ds_flag == DS_NONE) ? DS_DSK : DS_ERR;
 		    break;
 		case 'D':
-		    ds_file = NULL;
+		    ds_flag = (ds_flag == DS_NONE) ? DS_RAM : DS_ERR;
 		    break;
 		case 'E':
 		    esf_flag ^= true;
@@ -916,10 +929,15 @@ static int process_arglist(int argc, char **argv)
 	    filelist_add( (run_type == REG_GOOD) ? ham_files : spam_files, arg);
     }
 
+    if (ds_flag == DS_ERR) {
+	fprintf(stderr, "Only one '-d dir' or '-D' option is allowed.\n");
+	exit(EX_ERROR);
+    }
+
     if (!bogolex &&
 	(spam_files->count == 0 || ham_files->count == 0)) {
 	fprintf(stderr,
-		"Bogotune needs both non-spam and spam messages sets for its testing.\n");
+		"Bogotune needs both non-spam and spam message sets for its parameter testing.\n");
 	exit(EX_ERROR);
     }
 
@@ -1155,10 +1173,10 @@ static void final_recommendations(bool skip)
     printf("Performing final scoring:\n");
 
     printf("Spam...  ");
-    score_sp(sp_scores);		/* get scores (in ascending order) */
+    score_sp(sp_scores);	/* get scores (in ascending order) */
 
     printf("Non-Spam...\n");
-    score_ns(ns_scores);		/* get scores (in descending order) */
+    score_ns(ns_scores);	/* get scores (in descending order) */
 
     for(m=0; m<10; ++m) printf("%8.6f %8.6f\n", sp_scores[m], ns_scores[m]);
 
@@ -1231,8 +1249,8 @@ static void final_recommendations(bool skip)
     if (!skip) {
 	uint s = ceil(sp_cnt * 0.002 - 1);
 	ham_cutoff = sp_scores[s];
-	if (ham_cutoff < 0.10) ham_cutoff = 0.10;
-	if (ham_cutoff > 0.45) ham_cutoff = 0.45;
+	if (ham_cutoff < MIN_HAM_CUTOFF) ham_cutoff = MIN_HAM_CUTOFF;
+	if (ham_cutoff > MAX_HAM_CUTOFF) ham_cutoff = MAX_HAM_CUTOFF;
     }
 
     printf("ham_cutoff=%5.3f\t\n", ham_cutoff);
@@ -1376,8 +1394,8 @@ static rc_t bogotune(void)
     if (bogolex)
 	return status;
 
-    distribute(REG_SPAM, sp_msglists);
     distribute(REG_GOOD, ns_msglists);
+    distribute(REG_SPAM, sp_msglists);
 
     create_countlists(ns_msglists);
     create_countlists(sp_msglists);
@@ -1505,7 +1523,7 @@ static rc_t bogotune(void)
 	    if (verbose >= SUMMARY+1)
 		printf("%3s ", "cnt");
 	    if (verbose >= SUMMARY+2)
-		printf(" %s %s %s  ", "s", "m", "x");
+		printf(" %s %s %s      ", "s", "m", "x");
 	    printf(" %4s %5s   %4s %8s %8s %7s %3s %3s\n",
 		   "rs", "md", "rx", "spesf", "nsesf", "cutoff", "fp", "fn");
 	}

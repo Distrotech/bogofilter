@@ -88,6 +88,7 @@ version_sources= \
 	format.h format.c \
 	lexer.h lexer.c lexer_v3.l \
 	maint.h maint.c \
+	memstr.h memstr.c \
 	mime.h mime.c \
 	msgcounts.h msgcounts.c \
 	mxcat.h mxcat.c \

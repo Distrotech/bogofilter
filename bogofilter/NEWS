@@ -5,6 +5,35 @@
 NOTE: More information on important changes for bogofilter updaters
 is in the RELEASE.NOTES files.  Read them!!
 
+	2004-10-09
+
+	* Fix a potential crash on malformatted input (writing a NUL byte to
+	  the wrong place) in the RFC-2047 decoder. Reported by Clint Adams.
+
+0.92.7	2004-10-02
+
+	* '-M' allows processing 1 msg-count file with multiple
+	  messages.  Otherwise allow multiple msg-count files with 1
+	  message in each.
+
+	2004-09-30
+
+	* Allow only one of '-d' and '-D' options for bogotune.
+
+	2004-09-28
+
+	* Remove check for bogohome since it breaks "bogotune -D".
+
+	2004-09-25
+
+	* Fixed minor formatting defects in bogotune.
+	* Fixed bogotune man page error for "-d" option.
+	* Additional portability fix for SunOS 4.1.X
+
+	2004-09-23
+
+	* Fixed help messages for bogofilter's "-m" and "-o" options.
+
 	2004-09-21
 	* bogofilter can now be used with Berkeley DB 3.0 or 3.1 although this
 	  is not recommended. You should prefer 4.2 or 4.1 instead.
@@ -14,6 +43,10 @@ is in the RELEASE.NOTES files.  Read them!!
 	2004-09-13
 	* Updates doc/README.db with a section on the log file size and
 	  pointers to db_checkpoint and db_archive.
+
+	2004-09-10
+
+	* bogofilter-tuning.HOWTO revised and converted to html.
 
 	2004-09-03 (txn 2.1)
 	* The on-line crash detector would consider its own process a zombie,
