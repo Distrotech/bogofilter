@@ -47,6 +47,7 @@ static ex_t	   bft_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   bft_sync		(DB_ENV *dbe, int ret);
 static void	   bft_log_flush	(DB_ENV *dbe);
 static dbe_t	  *bft_init		(const char *directory);
+static void 	   bft_cleanup		(dbe_t *env);
 static void 	   bft_cleanup_lite	(dbe_t *env);
 
 /* OO function lists */
@@ -59,6 +60,7 @@ dsm_t dsm_traditional = {
 
     /* private -- used in datastore_db_*.c */
     &bft_init,
+    &bft_cleanup,
     &bft_cleanup_lite,
     &bft_get_env_dbe,
     &bft_database_name,
@@ -183,6 +185,11 @@ dbe_t *bft_init(const char *directory)
     env->directory = xstrdup(directory);
 
     return env;
+}
+
+void bft_cleanup(dbe_t *env)
+{
+    (void) env;
 }
 
 void bft_cleanup_lite(dbe_t *env)

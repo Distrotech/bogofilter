@@ -386,24 +386,12 @@ void *ds_init(const char *directory)
 /* Cleanup storage allocation */
 void ds_cleanup(void *dbe)
 {
-    dbe_cleanup(dbe);
+    if (dsm)
+	dsm->dsm_cleanup(dbe);
     xfree(msg_count_tok);
     xfree(wordlist_version_tok);
     msg_count_tok = NULL;
     wordlist_version_tok = NULL;
-}
-
-void dbe_cleanup(void *vhandle)
-{
-    dbe_t *env = vhandle;
-
-    assert(env->magic == MAGIC_DBE);
-
-    dsm->dsm_cleanup_lite(env);
-
-    if (env->directory)
-	free(env->directory);
-    free(env);
 }
 
 /*

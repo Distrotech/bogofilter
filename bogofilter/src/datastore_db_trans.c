@@ -64,6 +64,7 @@ static ex_t	   dbx_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   dbx_sync		(DB_ENV *dbe, int ret);
 static void	   dbx_log_flush	(DB_ENV *dbe);
 static dbe_t 	  *dbx_init		(const char *dir);
+static void 	   dbx_cleanup		(dbe_t *env);
 static void 	   dbx_cleanup_lite	(dbe_t *env);
 
 /* OO function lists */
@@ -76,6 +77,7 @@ dsm_t dsm_transactional = {
 
     /* private -- used in datastore_db_*.c */
     &dbx_init,
+    &dbx_cleanup,
     &dbx_cleanup_lite,
     &dbx_get_env_dbe,
     &dbx_database_name,
@@ -601,6 +603,15 @@ static dbe_t *dbe_xinit(dbe_t *env, const char *directory, u_int32_t numlocks, u
     return env;
 }
 
+static void dbx_cleanup(dbe_t *env)
+{
+    dbx_cleanup_lite(env);
+
+    if (env->directory)
+	free(env->directory);
+    free(env);
+}
+ 
 /* close the environment, but do not release locks */
 static void dbx_cleanup_lite(dbe_t *env)
 {
