@@ -108,8 +108,7 @@ static void convert_internal_to_external(dsh_t *dsh, dsv_t *in_data, dbv_t *ex_d
     return;
 }
 
-dsh_t *dsh_init(
-    void *dbh)			/* database handle from db_open() */
+dsh_t *dsh_init(void *dbh)		/* database handle from db_open() */
 {
     dsh_t *val = xmalloc(sizeof(*val));
     val->dbh = dbh;
@@ -386,7 +385,7 @@ void *ds_init(const char *directory)
 /* Cleanup storage allocation */
 void ds_cleanup(void *dbe)
 {
-    if (dsm)
+    if (dsm != NULL)
 	dsm->dsm_cleanup(dbe);
     xfree(msg_count_tok);
     xfree(wordlist_version_tok);
