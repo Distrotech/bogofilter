@@ -42,8 +42,6 @@ David Relson <relson@osagesoftware.com>  2003
 
 #define struct_init(s) memset(&s, 0, sizeof(s))
 
-bool is_swapped = false;
-
 /* Function prototypes */
 
 void ds_init(void);
@@ -51,7 +49,7 @@ void ds_cleanup(void);
 
 /* Function definitions */
 
-static void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data)
+static void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data, bool is_swapped)
 {
     size_t i = 0;
     uint32_t *cv = ex_data->data;
@@ -72,7 +70,7 @@ static void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data)
     return;
 }
 
-static void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data)
+static void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data, bool is_swapped)
 {
     size_t i = 0;
     uint32_t *cv = ex_data->data;
@@ -88,6 +86,28 @@ static void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data)
 }
 
 
+dsh_t *dsh_init(
+    void *dbh,			/* database handle from db_open() */
+    size_t count,		/* database count (1 or 2) */
+    bool is_swapped)
+{
+    dsh_t *val = xmalloc(sizeof(*val));
+    val->dbh = dbh;
+    val->count = count;
+    val->index = 0;
+    val->is_swapped = is_swapped;
+    return val;
+}
+
+
+void dsh_free(void *vhandle)
+{
+    dsh_t *dsh = vhandle;
+    xfree(dsh);
+    return;
+}
+
+
 void *ds_open(const char *db_file, size_t count, const char **names, dbmode_t open_mode)
 {
     void *v = db_open(db_file, count, names, open_mode);
@@ -96,22 +116,24 @@ void *ds_open(const char *db_file, size_t count, const char **names, dbmode_t op
 
 void ds_close(/*@only@*/ void *vhandle, bool nosync  /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */)
 {
-    db_close(vhandle, nosync);
+    dsh_t *dsh = vhandle;
+    db_close(dsh->dbh, nosync);
+    xfree(dsh);
 }
 
 void ds_flush(void *vhandle)
 {
-    db_flush(vhandle);
+    dsh_t *dsh = vhandle;
+    db_flush(dsh);
 }
 
 int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 {
+    dsh_t *dsh = vhandle;
     int ret;
     dbv_t ex_key;
     dbv_t ex_data;
     uint32_t cv[3];
-
-    is_swapped = db_is_swapped(vhandle);
 
     struct_init(ex_key);
     struct_init(ex_data);
@@ -122,10 +144,10 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
     ex_data.data = cv;
     ex_data.leng = ex_data.size = sizeof(cv);
 
-    ret = db_get_dbvalue(vhandle, &ex_key, &ex_data);
+    ret = db_get_dbvalue(dsh, &ex_key, &ex_data);
 
     if (ret == 0) {
-	convert_external_to_internal(&ex_data, val);
+	convert_external_to_internal(&ex_data, val, dsh->is_swapped);
 
 	if (DEBUG_DATABASE(3)) {
 	    fprintf(dbgout, "ds_read: [%*s] -- %lu,%lu\n",
@@ -143,12 +165,11 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 
 int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 {
+    dsh_t *dsh = vhandle;
     bool ok;
     dbv_t ex_key;
     dbv_t ex_data;
     uint32_t cv[3];
-
-    is_swapped = db_is_swapped(vhandle);
 
     struct_init(ex_key);
     struct_init(ex_data);
@@ -163,9 +184,9 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
     if (datestamp_tokens || today != 0)
 	val->date = today;
 
-    convert_internal_to_external(val, &ex_data);
+    convert_internal_to_external(val, &ex_data, dsh->is_swapped);
 
-    ok = db_set_dbvalue(vhandle, &ex_key, &ex_data);
+    ok = db_set_dbvalue(dsh, &ex_key, &ex_data);
 
     if (ok) {
 	if (DEBUG_DATABASE(3)) {
@@ -182,6 +203,7 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 
 int ds_delete(void *vhandle, const word_t *word)
 {
+    dsh_t *dsh = vhandle;
     bool ok;
     dbv_t ex_key;
 
@@ -189,7 +211,7 @@ int ds_delete(void *vhandle, const word_t *word)
     ex_key.data = word->text;
     ex_key.leng = word->leng;
 
-    ok = db_delete(vhandle, &ex_key);
+    ok = db_delete(dsh, &ex_key);
 
     return ok ? 0 : 1;
 }
@@ -197,6 +219,7 @@ int ds_delete(void *vhandle, const word_t *word)
 
 typedef struct {
     ds_foreach_t *hook;
+    dsh_t	 *dsh;
     void         *data;
 } ds_userdata_t;
 
@@ -210,7 +233,7 @@ static int ds_hook(dbv_t *ex_key,
     ds_userdata_t *ds_data = userdata;
     w_key.text = ex_key->data;
     w_key.leng = ex_key->leng;
-    convert_external_to_internal(ex_data, &in_data);
+    convert_external_to_internal(ex_data, &in_data, ds_data->dsh->is_swapped);
     val = (*ds_data->hook)(&w_key, &in_data, ds_data->data);
     return val;
 }
@@ -218,12 +241,14 @@ static int ds_hook(dbv_t *ex_key,
 
 int ds_foreach(void *vhandle, ds_foreach_t *hook, void *userdata)
 {
+    dsh_t *dsh = vhandle;
     int val;
     ds_userdata_t ds_data;
     ds_data.hook = hook;
+    ds_data.dsh  = dsh;
     ds_data.data = userdata;
 
-    val = db_foreach(vhandle, ds_hook, &ds_data);
+    val = db_foreach(dsh, ds_hook, &ds_data);
 
     return val;
 }
@@ -251,8 +276,9 @@ void ds_cleanup()
 */
 void ds_get_msgcounts(void *vhandle, dsv_t *val)
 {
+    dsh_t *dsh = vhandle;
     ds_init();
-    ds_read(vhandle, msg_count_tok, val);
+    ds_read(dsh, msg_count_tok, val);
     return;
 }
 
@@ -262,9 +288,10 @@ void ds_get_msgcounts(void *vhandle, dsv_t *val)
 */
 void ds_set_msgcounts(void *vhandle, dsv_t *val)
 {
+    dsh_t *dsh = vhandle;
     if (val->date == 0 && datestamp_tokens)
 	val->date = today;
-    ds_write(vhandle, msg_count_tok, val);
+    ds_write(dsh, msg_count_tok, val);
     return;
 }
 

@@ -115,9 +115,9 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 }
 
 
-void dbh_print_names(void *vhandle, const char *msg)
+void dbh_print_names(dsh_t *dsh, const char *msg)
 {
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
 
     if (handle->count == 1)
 	fprintf(dbgout, "%s (%s)", msg, handle->name[0]);
@@ -144,12 +144,6 @@ static void check_db_version(void)
     }
 }
 
-bool db_is_swapped(void *vhandle)
-{
-    dbh_t *handle = vhandle;
-    return handle->is_swapped;
-}
-
 /*
   Initialize database.
   Returns: pointer to database handle on success, NULL otherwise.
@@ -158,6 +152,7 @@ void *db_open(const char *db_file, size_t count, const char **names, dbmode_t op
 {
     int ret;
     int is_swapped;
+
     dbh_t *handle;
     uint32_t opt_flags = 0;
     /*
@@ -264,12 +259,14 @@ void *db_open(const char *db_file, size_t count, const char **names, dbmode_t op
 
     if (handle) {
 	unsigned int i;
+	dsh_t *dsh;
 	handle->locked = true;
 	for (i = 0; i < handle->count; i += 1) {
 	    if (handle->fd[i] < 0)
 		handle->locked=false;
 	}
-	return (void *)handle;
+	dsh = dsh_init(handle, handle->count, handle->is_swapped);
+	return (void *)dsh;
     }
 
     return NULL;
@@ -281,11 +278,11 @@ void *db_open(const char *db_file, size_t count, const char **names, dbmode_t op
 }
 
 
-int db_delete(void *vhandle, const dbv_t *token)
+int db_delete(dsh_t *dsh, const dbv_t *token)
 {
     int ret = 0;
     size_t i;
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
 
     DBT db_key;
     DBT_init(db_key);
@@ -308,7 +305,7 @@ int db_delete(void *vhandle, const dbv_t *token)
 }
 
 
-int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
+int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 {
     int ret;
     bool found = false;
@@ -316,7 +313,7 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
     DBT db_key;
     DBT db_data;
 
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
 
     db_enforce_locking(handle, "db_get_dbvalue");
 
@@ -360,12 +357,12 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 }
 
 
-int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
+int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
 {
     DBT db_key;
     DBT db_data;
     size_t i;
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
 
     db_enforce_locking(handle, "db_set_dbvalue");
 
@@ -431,9 +428,9 @@ void db_close(void *vhandle, bool nosync)
 /*
  flush any data in memory to disk
 */
-void db_flush(void *vhandle)
+void db_flush(dsh_t *dsh)
 {
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
     int ret;
     size_t i;
     for (i = 0; i < handle->count; i += 1) {
@@ -444,11 +441,11 @@ void db_flush(void *vhandle)
 }
 
 
-int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
+int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
 {
     size_t i;
     int ret = 0;
-    dbh_t *handle = vhandle;
+    dbh_t *handle = dsh->dbh;
 
     for (i = 0; i < handle->count; i += 1)
     {

@@ -89,6 +89,13 @@ extern void ds_flush(void *);
 /** Cleanup storage allocation */
 extern void ds_cleanup(void);
 
+dsh_t *dsh_init(
+    void *dbh,			/* database handle from db_open() */
+    size_t count,		/* database count (1 or 2) */
+    bool is_swapped);
+
+void dsh_free(void *vhandle);
+
 /** Retrieve the value associated with a given word in a list. 
  * \return zero if the word does not exist in the database. Front-end
  */
@@ -127,7 +134,7 @@ extern char *ds_handle_filename(void *vhandle);
 extern int ds_lock(int fd, int cmd, short int type);
 
 /* Prints wordlist name(s) */
-extern void dbh_print_names(void *vhandlevhandle, const char *msg);
+extern void dbh_print_names(dsh_t *dsh, const char *msg);
 
 /* Returns version string */
 extern const char *ds_version_str(void);

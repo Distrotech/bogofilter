@@ -35,52 +35,50 @@ void *db_open(const char *path	/** path to database file */,
 void  db_close(/*@only@*/ void *vhandle, bool nosync  /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */);
 
 /** Flush pending writes to disk */
-void db_flush(void *vhandle);
+void db_flush(dsh_t *dsh);
 
 /** Cleanup storage allocation */
 void db_cleanup(void);
 
-bool db_is_swapped(void *vhandle);
-
 /** Retrieve the value associated with a given word in a list.
  * \return zero if the word does not exist in the database. Front-end
  */
-bool db_getvalues(void *vhandle, const dbv_t *key, dbv_t *val);
+bool db_getvalues(dsh_t *dsh, const dbv_t *key, dbv_t *val);
 
 /** Retrieve the value associated with a given word in a list. 
  * \return zero if the word does not exist in the database. Implementation
  */
-int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val);
+int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val);
 
 /** Delete the key */
-int db_delete(void *vhandle, const dbv_t *data);
+int db_delete(dsh_t *dsh, const dbv_t *data);
 
 /** Set the value associated with a given word in a list. Front end */
-int db_setvalues(void *vhandle, const dbv_t *token, dbv_t *val);
+int db_setvalues(dsh_t *dsh, const dbv_t *token, dbv_t *val);
 
 /** Set the value associated with a given word in a list. Implementation */
-int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val);
+int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val);
 
 /** Update the value associated with a given word in a list */
-void db_updvalues(void *vhandle, const dbv_t *token, const dbv_t *updval);
+void db_updvalues(dsh_t *dsh, const dbv_t *token, const dbv_t *updval);
 
 /** Iterate over all elements in data base and call \p hook for each item.
  * \p userdata is passed through to the hook function unaltered.
  */
 typedef int (*db_foreach_t)(dbv_t *token, dbv_t *data, void *userdata);
-int db_foreach(void *vhandle, db_foreach_t hook, void *userdata);
+int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata);
 
 /* Get the current process id */
-unsigned long db_handle_pid(void *vhandle);
+unsigned long db_handle_pid(dsh_t *dsh);
 
 /* Get the database filename */
-char *db_handle_filename(void *vhandle);
+char *db_handle_filename(dsh_t *dsh);
 
 /* Locks and unlocks file descriptor */
 int db_lock(int fd, int cmd, short int type);
 
 /* Prints wordlist name(s) */
-void dbh_print_names(void *vhandle, const char *msg);
+void dbh_print_names(dsh_t *dsh, const char *msg);
 
 /* Returns version string */
 const char *db_version_str(void);
