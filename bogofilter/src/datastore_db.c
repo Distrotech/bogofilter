@@ -149,6 +149,15 @@ static int DB_SET_FLAGS(DB *db, u_int32_t flags)
 }
 #endif
 
+void *db_get_env(void *vhandle)
+{
+    dbh_t *handle = vhandle;
+
+    assert(handle->magic == MAGIC_DBH);
+
+    return handle->dbenv;
+}
+
 /* implements locking. */
 int db_lock(int fd, int cmd, short int type)
 {
