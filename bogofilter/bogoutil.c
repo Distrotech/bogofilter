@@ -193,7 +193,7 @@ int get_token(char *buf, size_t bufsize, FILE *fp)
     return rv;
 }
 
-int words_from_list(char *db_file, int argc, char **argv)
+int words_from_list(const char *db_file, int argc, char **argv)
 {
     dbh_t *dbh;
     int rv = 0;
@@ -222,7 +222,7 @@ int words_from_list(char *db_file, int argc, char **argv)
     return rv;
 }
 
-int words_from_path(char *directory, int argc, char **argv, bool show_probability)
+int words_from_path(const char *directory, int argc, char **argv, bool show_probability)
 {
     dbh_t *dbh_good;
     dbh_t *dbh_spam;
