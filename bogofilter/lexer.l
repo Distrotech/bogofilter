@@ -279,8 +279,18 @@ static int yygetline(char *buf, int max_size)
     if (hdrlen==0)
 	hdrlen=strlen(spam_header_name);
 
-    if (yysave == NULL)
+    if (yysave == NULL) {
 	count = fgetsl(buf, max_size, yyin);
+
+	/* Also, save the text on a linked list of lines.
+	 * Note that we store fixed-length blocks here, not lines.
+	 * One very long physical line could break up into more
+	 * than one of these. */
+	if (passthrough)
+	    textblock_add(textblocks, buf, count);
+	lineno += 1;
+	if (DEBUG_LEXER(0)) fprintf(stdout, "### %2d %d %s", lineno, past_header, buf);
+    }
     else {
 	count = strlcpy(buf, yysave, max_size-2);
 	buf[count++] = '\n';
@@ -289,15 +299,15 @@ static int yygetline(char *buf, int max_size)
 	yysave = NULL;
     }
 
-    lineno += 1;
-    if (DEBUG_LEXER(0)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf);
-
-    while (count != -1
-	   && !past_header
+    /* skip spam_header ("X-Bogosity:") lines */
+    while (!past_header
+	   && count != -1
 	   && memcmp(buf,spam_header_name,hdrlen) == 0)
     {
 	do {
 	    count = fgetsl(buf, max_size, yyin);
+	    if (passthrough)
+		textblock_add(textblocks, buf, count);
 	    lineno += 1;
 	    if (DEBUG_LEXER(0)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf);
 
@@ -320,9 +330,11 @@ static int yygetline(char *buf, int max_size)
 	    ungetc(c,yyin);
 	    if (buf[count - 1] == '\n') count --;
 	    add = fgetsl(buf + count, max_size - count, yyin);
+	    if (add == EOF) break;
+	    if (passthrough)
+		textblock_add(textblocks, buf+count, add);
 	    lineno += 1;
 	    if (DEBUG_LEXER(1)) fprintf(stderr, "*** %2d %d %s\n", lineno, past_header, buf+count);
-	    if (add == EOF) break;
 	    count += add;
 	} else {
 	    ungetc(c,yyin);
@@ -343,15 +355,6 @@ static int yygetline(char *buf, int max_size)
 	fprintf(stderr, "%d: ", count);
 	fwrite(buf, 1, count, stderr);
 	fprintf(stderr, "\n");
-    }
-
-    if (passthrough)
-    {
-	/* Also, save the text on a linked list of lines.
-	 * Note that we store fixed-length blocks here, not lines.
-	 * One very long physical line could break up into more
-	 * than one of these. */
-	textblock_add(textblocks, buf, count);
     }
 
     /* \r\n -> \n */
