@@ -19,7 +19,6 @@ typedef struct {
     long date;
 } dbv_t;
 
-long swap_long(long x);
 void db_setvalue_and_date(void *vhandle, const char * word, long value, long date);
 
 #endif	/* DATASTORE_H */

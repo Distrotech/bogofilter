@@ -26,6 +26,7 @@ AUTHOR:
 #include "datastore_db.h"
 #include "error.h"
 #include "maint.h"
+#include "swap.h"
 #include "xmalloc.h"
 #include "xstrdup.h"
 
@@ -52,12 +53,6 @@ static void db_enforce_locking(dbh_t *handle, const char *func_name){
 	print_error(__FILE__, __LINE__, "%s (%s): Attempt to access unlocked handle.", func_name, handle->name);
 	exit(2);
     }
-}
-
-/* stolen from glibc's byteswap.c */
-long swap_long(long x){
-  return ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) |
-          (((x) & 0x0000ff00) <<  8) | (((x) & 0x000000ff) << 24));
 }
 
 static dbh_t *dbh_init(const char *filename, const char *name){
@@ -181,13 +176,13 @@ long db_get_dbvalue(void *vhandle, const char *word, dbv_t *val){
       val->count = cv[0];
       val->date  = cv[1];
     } else {
-      val->count = swap_long(cv[0]);
-      val->date  = swap_long(cv[1]);
+      val->count = swap_32bit(cv[0]);
+      val->date  = swap_32bit(cv[1]);
     }
     if (handle->is_swapped){
-      val->count = swap_long(val->count);
+      val->count = swap_32bit(val->count);
       if (db_data.ulen > sizeof(long))
-	val->date  = swap_long(val->date);
+	val->date  = swap_32bit(val->date);
     }
     return ret;
   case DB_NOTFOUND:
@@ -241,8 +236,8 @@ void db_set_dbvalue(void *vhandle, const char * word, dbv_t *val){
     cv[0] = val->count;
     cv[1] = val->date;
   } else {
-    val->count = swap_long(cv[0]);
-    val->date  = swap_long(cv[1]);
+    val->count = swap_32bit(cv[0]);
+    val->date  = swap_32bit(cv[1]);
   }
 
   db_data.data = &cv;			/* and save array in wordlist */

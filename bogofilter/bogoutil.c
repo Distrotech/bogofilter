@@ -30,6 +30,7 @@ AUTHOR:
 #include "error.h"
 #include "maint.h"
 #include "robinson.h"			/* for ROBS and ROBX */
+#include "swap.h"
 
 #define PROGNAME "bogoutil"
 
@@ -79,8 +80,8 @@ static int dump_file(char *db_file)
 			val.count = cv[0];
 			val.date  = cv[1];
 		    } else {
-			val.count = swap_long(cv[0]);
-			val.date  = swap_long(cv[1]);
+			val.count = swap_32bit(cv[0]);
+			val.date  = swap_32bit(cv[1]);
 		    }
 		    if (!keep_count(val.count) || !keep_date(val.date) || !keep_size(key.size))
 			continue;
