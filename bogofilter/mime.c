@@ -535,14 +535,14 @@ mime_decode (char *buff, size_t size)
     /* do nothing */
     break;
   case MIME_QP:
-    count = qp_decode (buff, size);
+    count = qp_decode((unsigned char *)buff, size);
     break;
   case MIME_BASE64:
     if (size > 4)
-      count = base64_decode (buff, size);
+      count = base64_decode((unsigned char *)buff, size);
     break;
   case MIME_UUENCODE:
-    count = uudecode (buff, size);
+    count = uudecode((unsigned char *)buff, size);
     break;
   case MIME_ENCODING_UNKNOWN:
     break;
