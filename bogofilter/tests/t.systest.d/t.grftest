@@ -1,7 +1,5 @@
 #!/bin/sh
 
-relpath="`pwd`/../.." . ${srcdir:=.}/../t.frame -no-db
-
 set -e
 
 # Note:  This test DOES leave its output files on the hard drive.
@@ -14,6 +12,10 @@ set -e
 #		grftest.out - comparison of directories:
 #			      outputs - known correct outputs
 #			      tests   - outputs of the individual tests
+
+: ${srcdir=.}
+relpath="`pwd`/../.."
+. ${srcdir}/../t.frame -no-db
 
 verbose=0
 if [ "$1" = "-v" ]; then

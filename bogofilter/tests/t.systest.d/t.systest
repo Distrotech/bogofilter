@@ -1,13 +1,15 @@
 #! /bin/sh
 
-relpath="`pwd`/../.." . ${srcdir:=.}/../t.frame -no-db
-
 set -e
 
 #        In directory t.systest.d are:
 #
 #		inputs  - test inputs
 #		outputs - known correct outputs
+
+: ${srcdir=.}
+relpath="`pwd`/../.."
+. ${srcdir}/../t.frame -no-db
 
 verbose=0
 if [ "$1" = "-v" ]; then

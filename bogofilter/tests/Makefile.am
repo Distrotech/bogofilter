@@ -11,7 +11,7 @@ spam_header_name_SOURCES=spam_header_name.c
 
 AM_CPPFLAGS = -I$(srcdir)/..
 AM_LDFLAGS = -L..
-LIBS = -lbogofilter
+LDADD = -lbogofilter
 
 t.integrity: dehex dumbhead
 
