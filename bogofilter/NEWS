@@ -17,7 +17,7 @@ is in the RELEASE.NOTES files.  Read them!!
 	  This was particularly prominent with BerkeleyDB 4.1 with
 	  x86/gcc-assembly mutexes as this combination appears rather slow when
 	  facing lock contention, causing t.lock3 failure. BDB 4.1 compiled to
-	  use POSIX mutexes (where working) appear to be a lot faster in this
+	  use POSIX mutexes (where working) appears to be a lot faster in this
 	  situation.
 
 	2004-09-01 (txn 2.0)
