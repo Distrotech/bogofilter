@@ -342,7 +342,9 @@ static int display_words(const char *path, int argc, char **argv, bool show_prob
 	    char filepath2[PATH_LEN];
 	    char *filepaths[IX_SIZE];
 
+#if BROKEN
 	    set_wordlist_mode(path);
+#endif
 	    filepaths[0] = filepath1;
 	    filepaths[1] = filepath2;
 	
@@ -635,9 +637,11 @@ static int process_args(int argc, char **argv)
 	    print_version();
 	    exit(EX_OK);
 
+#if BROKEN
 	case 'W':
 	    incr_wordlist_mode();
 	    break;
+#endif
 
 	case 'x':
 	    set_debug_mask( (char *) optarg );
