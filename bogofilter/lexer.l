@@ -52,7 +52,7 @@
 
 extern char *spam_header_name;
 
-static int past_header;
+static int msg_header = 1;
 static int yyinput(char *buf, int max_size);
 static int yyredo(char del);
 
@@ -238,11 +238,11 @@ width	;
 -->	;
 
 ^MIME-Version:.*				{ if (mime_lexer) { mime_version(); yyredo(':'); } }
-^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) {  mime_encoding(); yyredo(':'); } }
+^Content-Transfer-Encoding:{MTYPE}		{ if (mime_lexer) { mime_encoding(); yyredo(':'); } }
 ^Content-Type:{MTYPE}				{ if (mime_lexer) { mime_type(); yyredo(':'); } }
 ^Content-Disposition:{MTYPE}			{ if (mime_lexer) { mime_disposition(); yyredo(':'); } }
 ^From\ 						{ if (memcmp(yytext, "From ",5) == 0 ) { 
-						      past_header = 0; 
+						      msg_header = 1; 
 						      if (mime_lexer) {
 							  stackp = 0;
 							  resetmsgstate(&msg_stack[stackp], 0); 
@@ -264,7 +264,7 @@ filename=\"?					;
 {IPADDR}					{return(IPADDR);}
 {TOKEN}						{return(TOKEN);}
 .						;
-^\n						{ past_header = 1;  if (mime_lexer) { msg_stack[stackp].mime_header = 0; /* eat token */ }}
+^\n						{ msg_header = 0;  if (mime_lexer) { msg_stack[stackp].mime_header = 0; /* eat token */ }}
 \n						;
 
 %%
@@ -290,7 +290,7 @@ static int yygetline(char *buf, int max_size)
 	if (passthrough)
 	    textblock_add(textblocks, buf, count);
 	lineno += 1;
-	if (DEBUG_LEXER(0)) fprintf(stdout, "### %2d %d %s", lineno, past_header, buf);
+	if (DEBUG_LEXER(0)) fprintf(stdout, "### %2d %d %s", lineno, msg_header, buf);
     }
     else {
 	count = strlcpy(buf, yysave, max_size-2);
@@ -301,7 +301,7 @@ static int yygetline(char *buf, int max_size)
     }
 
     /* skip spam_header ("X-Bogosity:") lines */
-    while (!past_header
+    while (msg_header
 	   && count != -1
 	   && memcmp(buf,spam_header_name,hdrlen) == 0)
     {
@@ -310,7 +310,7 @@ static int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf, count);
 	    lineno += 1;
-	    if (DEBUG_LEXER(0)) fprintf(stdout, "*** %2d %d %s\n", lineno, past_header, buf);
+	    if (DEBUG_LEXER(0)) fprintf(stdout, "*** %2d %d %s\n", lineno, msg_header, buf);
 
 	    if (count != -1 && *buf == '\n')
 		break;
@@ -321,7 +321,7 @@ static int yygetline(char *buf, int max_size)
 ** 	causes "^\tid" to be treated as continuation of previous line
 ** 	hence doesn't match lexer pattern which specifies beginning of line
 */
-    while (0 && !past_header) {
+    while (0 && msg_header) {
 	int c = fgetc(yyin);
 	if (c == EOF)
 	    break;
@@ -335,7 +335,7 @@ static int yygetline(char *buf, int max_size)
 	    if (passthrough)
 		textblock_add(textblocks, buf+count, add);
 	    lineno += 1;
-	    if (DEBUG_LEXER(1)) fprintf(stdout, "*** %2d %d %s\n", lineno, past_header, buf+count);
+	    if (DEBUG_LEXER(1)) fprintf(stdout, "*** %2d %d %s\n", lineno, msg_header, buf+count);
 	    count += add;
 	} else {
 	    ungetc(c,yyin);
@@ -373,7 +373,7 @@ static int yyinput(char *buf, int max_size)
     int i, count, decoded_count;
     count = yygetline(buf, max_size);
 
-    if ((count > 0) && past_header){
+    if ((count > 0) && !msg_header){
      
 	decoded_count = mime_decode(buf, count);
 
