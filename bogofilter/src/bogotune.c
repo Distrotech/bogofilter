@@ -1700,6 +1700,8 @@ int main(int argc, char **argv) /*@globals errno,stderr,stdout@*/
 
     bogotune_free();
 
+    ds_cleanup();
+
     exit(exitcode);
 }
 
