@@ -22,6 +22,14 @@
 #define	MIN_SLEEP	0.5e+3		/* 0.5 milliseconds */
 #define	MAX_SLEEP	2.0e+6		/* 2.0 seconds */
 
+#ifndef	RAND_MAX
+#ifdef ENABLE_DEPRECATED_CODE
+#error "RAND_MAX is not defined. Compile without --enable-deprecated-code."
+#else
+#define	RAND_MAX	2147483647	/* may not work on SysV */
+#endif
+#endif
+
 wordlist_t *good_list;
 wordlist_t *spam_list;
 
