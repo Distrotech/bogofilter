@@ -67,7 +67,10 @@ if ($sig =~ m/^\# bogofilter wordlist \(format version A\):\s(\d+)$/){
 elsif ($sig =~ m/^\# bogofilter email-count \(format version B\):\s(\d+)/){
   my $msg_count = $1;
   my $in_db = $in;
-  $in_db =~ s/count$/db/;
+
+  my $db_ext = $ENV{DB_EXT} ||  'db';
+ 
+  $in_db =~ s/count$/$db_ext/;
 
   unless (-f $in_db){
     warn("Cannot find database file [$in_db] corresponding to input file [$in]\n");
