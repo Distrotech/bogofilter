@@ -65,14 +65,14 @@ static void dbh_free(/*@only@*/ dbh_t *handle){
 */
 void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 {
+
+  int open_flags;
+  int tdb_flags = 0;
+  TDB_CONTEXT *tdb;
   dbh_t *handle;
  
-  int tdb_flags = 0;
-  int open_flags;
-  TDB_CONTEXT *tdb;
 
-  if (open_mode ==  DB_WRITE){
-    /* tdb_flags = TDB_NOMMAP; */
+  if (open_mode == DB_WRITE){
     open_flags = O_RDWR | O_CREAT;
   }
   else {
@@ -96,7 +96,7 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
     }
     
     if (open_mode == DB_WRITE){
-      if (tdb_lockall(handle->dbp) == 0){
+      if (tdb_lockall(tdb) == 0){
         handle->locked = 1;
       }
       else {
