@@ -95,7 +95,9 @@ static void dbh_free(dbh_t *handle){
   Initialize database.
   Returns: pointer to database handle on success, NULL otherwise.
 */
-void *db_open(const char *db_file, const char *name, dbmode_t open_mode, const char *dir) {
+void *db_open(const char *db_file, const char *name, dbmode_t open_mode,
+	const char *dir)
+{
     int ret;
     dbh_t *handle;
     u_int32_t opt_flags = 0;
@@ -105,45 +107,58 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode, const c
     if (open_mode == DB_READ)
 	opt_flags = DB_RDONLY;
     else
-	opt_flags = DB_CREATE; /* Read-write mode implied. Allow database to be created if necessary. */
+	opt_flags = DB_CREATE; /* Read-write mode implied.
+				  Allow database to be created if necessary. */
 
     handle = dbh_init(db_file, name);
     handle->open_mode = open_mode;
+    /* create DB handle */
     if ((ret = db_create (&(handle->dbp), NULL, 0)) != 0) {
-	print_error(__FILE__, __LINE__, "(db) create, err: %d, %s", ret, db_strerror(ret));
-    } else if ((ret = DB_OPEN(handle->dbp, db_file, NULL, DB_BTREE, opt_flags, 0664)) != 0) {
-	print_error(__FILE__, __LINE__, "(db) open( %s ), err: %d, %s", db_file, ret, db_strerror(ret));
-    } else {
-	/* see if the database byte order differs from that of the cpu's */
-	int had_err = 0;
-
-#if DB_VERSION_MAJOR > 3 || (DB_VERSION_MAJOR == 3 && DB_VERSION_MINOR >= 3)
-	if ( (ret = handle->dbp->get_byteswapped (handle->dbp, &(handle->is_swapped))) != 0){
-	    handle->dbp->err (handle->dbp, ret, "%s (db) get_byteswapped: %s", progname, db_file);
-	    had_err = 1;
-	}
-#else
-	handle->is_swapped = handle->dbp->get_byteswapped (handle->dbp);
-#endif
-	if (had_err)
-	    return NULL;
-
-	handle->fd = open(db_file, open_mode == DB_READ ? O_RDONLY : O_RDWR);
-	if (handle->fd < 0) { db_close(handle); }
-
-	if (db_lock(handle->fd, F_SETLK, open_mode == DB_READ ? F_RDLCK : F_WRLCK)) {
-	    int e = errno;
-	    close(handle->fd);
-	    handle->fd = -1;
-	    db_close(handle);
-	    errno = e;
-	    return NULL;
-	}
-
-	handle->locked = true;
-	return (void *)handle;
+	print_error(__FILE__, __LINE__, "(db) create, err: %d, %s",
+		ret, db_strerror(ret));
+	goto open_err;
     }
 
+    /* open data base */
+    if ((ret = DB_OPEN(handle->dbp, db_file, NULL, DB_BTREE, opt_flags, 0664)) != 0) {
+	print_error(__FILE__, __LINE__, "(db) open( %s ), err: %d, %s",
+		db_file, ret, db_strerror(ret));
+	goto open_err;
+    }
+
+    /* see if the database byte order differs from that of the cpu's */
+#if DB_VERSION_MAJOR > 3 || (DB_VERSION_MAJOR == 3 && DB_VERSION_MINOR >= 3)
+    if ( (ret = handle->dbp->get_byteswapped (handle->dbp, &(handle->is_swapped))) != 0){
+	handle->dbp->err (handle->dbp, ret, "%s (db) get_byteswapped: %s", progname, db_file);
+	db_close(handle);
+	goto open_err;
+    }
+#else
+    handle->is_swapped = handle->dbp->get_byteswapped (handle->dbp);
+#endif
+
+    handle->fd = open(db_file, open_mode == DB_READ ? O_RDONLY : O_RDWR);
+    if (handle->fd < 0) {
+	db_close(handle);
+	goto open_err;
+    }
+
+    if (db_lock(handle->fd, F_SETLK,
+		open_mode == DB_READ ? F_RDLCK : F_WRLCK))
+    {
+	int e = errno;
+	(void)close(handle->fd); /* we don't expect deferred errors here */
+	handle->fd = -1;
+	db_close(handle);
+	errno = e;
+	/* do not goto open_err here, db_close frees the handle! */
+	return NULL;
+    }
+
+    handle->locked = true;
+    return (void *)handle;
+
+open_err:
     dbh_free(handle);
     return NULL;
 }
