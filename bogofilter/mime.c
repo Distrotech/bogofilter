@@ -97,12 +97,9 @@ void reset_msg_state(struct msg_state *ms, int new)
 {
     while (new > 0) {
 	struct msg_state *t = ms + new;
-	if (t->boundary)
-	    xfree(t->boundary);
-	if (t->charset)
-	    xfree(t->charset);
-	if (t->version)
-	    xfree(t->version);
+	xfree(t->boundary);
+	xfree(t->charset);
+	xfree(t->version);
 	new -= 1;
     }
     msg_state = ms;

@@ -271,8 +271,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 	case CP_DIRECTORY:
 	    {
 		char *dir = *arg->addr.s;
-		if (dir)
-		    xfree(dir);
+		xfree(dir);
 		*arg->addr.s = dir = xstrdup(val);
 		if (DEBUG_CONFIG(0))
 		    fprintf( stderr, "%s -> '%s'\n", arg->name, dir );
@@ -517,8 +516,7 @@ int process_args(int argc, char **argv)
 	switch(option)
 	{
 	case 'd':
-	    if (directory)
-		xfree(directory);
+	    xfree(directory);
 	    directory = xstrdup(optarg);
 	    if (setup_wordlists(directory) != 0)
 		exit(2);

@@ -75,10 +75,10 @@ static dbh_t *dbh_init(const char *filename, const char *name){
 }
 
 static void dbh_free(dbh_t *handle){
-	if (handle == NULL) return;
-	if (handle->filename != NULL) xfree(handle->filename);
-	if (handle->name != NULL) xfree(handle->name);
-        xfree(handle);
+    if (handle == NULL) return;
+    xfree(handle->filename);
+    xfree(handle->name);
+    xfree(handle);
 }
 
 
