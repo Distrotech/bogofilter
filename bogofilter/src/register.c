@@ -17,9 +17,10 @@
 
 #define PLURAL(count) ((count == 1) ? "" : "s")
 
-/*
- * tokenize text on stdin and register it to a specified list
+/**
+ * register wordhash to a specified list
  * and possibly out of another list
+ * exits the program in case of error.
  */
 void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
 {
@@ -27,6 +28,9 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     hashnode_t *node;
     wordprop_t *wordprop;
     dsv_t val;
+    int retrycount = 5;			/* we'll retry an aborted
+					   registration five times
+					   before giving up. */
 
     u_int32_t g = 0, b = 0;
     u_int32_t wordcount = h->count;	/* use number of unique tokens */
@@ -47,17 +51,20 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     if (wordcount == 0)
 	msgcount = 0;
 
-    format_log_update(msg_register, msg_register_size, u, r, wordcount, msgcount);
+    format_log_update(msg_register, msg_register_size, u, r,
+	    wordcount, msgcount);
 
     if (verbose)
-	(void)fprintf(dbgout, "# %u word%s, %u message%s\n", 
+	(void)fprintf(dbgout, "# %u word%s, %u message%s\n",
 		      wordcount, PLURAL(wordcount), msgcount, PLURAL(msgcount));
 
 retry:
     if (ds_txn_begin(word_list->dsh)) {
 	fprintf(stderr, "ds_txn_begin error.\n");
-	abort();
+	exit(EX_ERROR);
     }
+
+    /* register words */
     for (node = wordhash_first(h); node != NULL; node = wordhash_next(h))
     {
 	wordprop = node->buf;
@@ -73,6 +80,7 @@ retry:
 	ds_write(word_list->dsh, node->key, &val);
     }
 
+    /* register counts */
     ds_get_msgcounts(word_list->dsh, &val);
     word_list->msgcount[IX_SPAM] = val.spamcount;
     word_list->msgcount[IX_GOOD] = val.goodcount;
@@ -92,17 +100,20 @@ retry:
 
     ds_set_msgcounts(word_list->dsh, &val);
 
-    g += val.goodcount;
-    b += val.spamcount;
-
     switch(ds_txn_commit(word_list->dsh)) {
 	case DST_OK:
 	    break;
 	case DST_TEMPFAIL:
-	    goto retry;
+	    if (--retrycount) {
+		fprintf(stderr, "commit was aborted, retrying...\n");
+		rand_sleep(4 * 1000, 1000 * 1000);
+		goto retry;
+	    }
+	    fprintf(stderr, "giving up on this transaction.\n");
+	    exit(EX_ERROR);
 	case DST_FAILURE:
 	    fprintf(stderr, "commit failed.\n");
-	    abort();
+	    exit(EX_ERROR);
 	default:
 	    fprintf(stderr, "unknown return.\n");
 	    abort();
@@ -113,6 +124,9 @@ retry:
     if (DEBUG_REGISTER(1))
 	(void)fprintf(dbgout, "bogofilter: word_list %s - %ul spam, %ul good\n",
 		      word_list->filename, word_list->msgcount[IX_SPAM], word_list->msgcount[IX_GOOD]);
+
+    g += val.goodcount;
+    b += val.spamcount;
 
     set_msg_counts(g, b);
 }
