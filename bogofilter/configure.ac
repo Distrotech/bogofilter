@@ -1,6 +1,6 @@
 # $Id$
 dnl vim: set noai tw=0:
-AC_INIT(bogofilter, 0.91.1+txn.cvs)
+AC_INIT(bogofilter, 0.92.0+txn.cvs)
 AC_PREREQ(2.54)
 AC_CONFIG_SRCDIR([src/bogofilter.c])
 AC_CANONICAL_TARGET
@@ -17,14 +17,29 @@ AC_PATH_PROGS(PERL, perl perl5, $PATH:/usr/local/bin:/usr/bin)
 AC_PATH_PROGS(NSGMLS,onsgmls nsgmls,nsgmls)
 AM_PROG_LEX
 
+dnl Check for "extern inline", using a modified version
+dnl of the test for AC_C_INLINE from acspecific.mt.
+dnl Run this before AC_C_INLINE to avoid skewing the results?
+dnl Imported from the GSL 1.4 documentation (section "Autoconf Macros")
+dnl and modified to define HAVE_EXTERN_INLINE.
+AC_CACHE_CHECK([for extern inline], ac_cv_c_extern_inline,
+	       [ac_cv_c_extern_inline=no
+		AC_TRY_COMPILE([extern $ac_cv_c_inline double foo(double x);
+				extern $ac_cv_c_inline double foo(double x) { return x+1.0; };
+				double foo (double x) { return x + 1.0; };],
+				[  foo(1.0)  ],
+				[ac_cv_c_extern_inline="yes"])
+		])
+
+if test "$ac_cv_c_extern_inline" != no ; then
+    AC_DEFINE(HAVE_EXTERN_INLINE,1,Define to 1 if your compiler supports extern inline storage class.)
+    AC_SUBST(HAVE_EXTERN_INLINE)
+fi
+
 dnl Check compiler capabilities
 AC_C_CONST
 AC_C_INLINE
 AC_C_VOLATILE
-if test "$ac_cv_c_inline" != no ; then
-    AC_DEFINE(HAVE_INLINE,1,[Define to 1 if your compiler supports inline])
-    AC_SUBST(HAVE_INLINE)
-fi
 
 dnl Check for extension
 AC_EXEEXT
@@ -276,6 +291,8 @@ AC_ARG_WITH(database,
 
 case "x$WITH_DB_ENGINE" in
     xtdb)
+	AC_MSG_WARN([This data base engine is lightly tested and may not work.])
+	AC_MSG_WARN([Proceed at your own risk.])
 	AC_DEFINE(ENABLE_TDB_DATASTORE,1, [Enable tdb datastore])
 	AC_DEFINE_UNQUOTED(DB_TYPE, "tdb", [database type])
 	AC_DEFINE_UNQUOTED(DB_EXT, ".tdb", [database file extension])
@@ -292,6 +309,8 @@ case "x$WITH_DB_ENGINE" in
 	LIBS="$saveLIBS"
     ;;
     xqdbm)
+	AC_MSG_WARN([This data base engine is lightly tested and may not work.])
+	AC_MSG_WARN([Proceed at your own risk.])
 	AC_DEFINE(ENABLE_QDBM_DATASTORE,1, [Enable qdbm datastore])
 	AC_DEFINE_UNQUOTED(DB_TYPE, "qdbm")
 	AC_DEFINE_UNQUOTED(DB_EXT, ".qdbm")

@@ -38,9 +38,17 @@ typedef struct {
     char *path;
     char *name;
     bool locked;
+    bool created;
     DEPOT *dbp;
 } dbh_t;
 
+
+/* dummy infrastructure, to be expanded by environment
+ * or transactional initialization/shutdown */
+
+static bool init = false;
+int db_init(void) { init = true; return 0; }
+void db_cleanup(void) { init = false; }
 
 /* Function definitions */
 
@@ -67,6 +75,7 @@ static dbh_t *dbh_init(const char *path, const char *name)
     build_path(handle->name, len, path, name);
 
     handle->locked = false;
+    handle->created = false;
 
     return handle;
 }
@@ -83,10 +92,19 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 }
 
 
+/* Returns is_swapped flag */
 bool db_is_swapped(void *vhandle)
 {
-    vhandle = NULL;	/* assignment to suppress compiler warning */
+    (void) vhandle;		/* suppress compiler warning */
     return false;
+}
+
+
+/* Returns created flag */
+bool db_created(void *vhandle)
+{
+    dbh_t *handle = vhandle;
+    return handle->created;
 }
 
 
@@ -98,24 +116,32 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 {
     dbh_t *handle;
 
-    int flags;
+    int open_flags;
     DEPOT *dbp;
 
-    if (open_mode == DS_WRITE)
-	flags = DP_OWRITER | DP_OCREAT;
+    if (open_mode & DS_WRITE)
+	open_flags = DP_OWRITER;
     else
-	flags = DP_OREADER;
+	open_flags = DP_OREADER;
 
     handle = dbh_init(db_file, name);
 
     if (handle == NULL) return NULL;
 
-    dbp = handle->dbp = dpopen(handle->name, flags, DB_INITBNUM);
+    db_init();
+
+    dbp = handle->dbp = dpopen(handle->name, open_flags, DB_INITBNUM);
+
+    if ((dbp == NULL) && (open_mode & DS_WRITE)) {
+	dbp = handle->dbp = dpopen(handle->name, open_flags | DP_OCREAT, DB_INITBNUM);
+	if (dbp != NULL)
+	    handle->created = true;
+    }
 
     if (dbp == NULL)
 	goto open_err;
 
-    if (flags & DP_OWRITER) {
+    if (open_flags & DP_OWRITER) {
 	if (!dpsetalign(dbp, DB_ALIGNSIZE)){
 	    dpclose(dbp);
 	    goto open_err;
@@ -129,7 +155,7 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 
  open_err:
     print_error(__FILE__, __LINE__, "(qdbm) dpopen(%s, %d) failed: %s",
-		handle->name, flags, dperrmsg(dpecode));
+		handle->name, open_flags, dperrmsg(dpecode));
     dbh_free(handle);
 
     return NULL;
@@ -250,6 +276,8 @@ void db_close(void *vhandle, bool nosync)
     handle->dbp = NULL;
 
     dbh_free(handle);
+
+    db_cleanup();
 }
 
 
@@ -319,10 +347,6 @@ const char *db_str_err(int e) {
 
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
-static bool init = false;
-int db_init(void) { init = true; return 0; }
-void db_cleanup(void) { init = false; }
-
-int db_txn_begin(dsh_t *d) { (void)d; return 0; }
-int db_txn_abort(dsh_t *d) { (void)d; return 0; }
-int db_txn_commit(dsh_t *d) { (void)d; return 0; }
+int db_txn_begin(void *d) { (void)d; return 0; }
+int db_txn_abort(void *d) { (void)d; return 0; }
+int db_txn_commit(void *d) { (void)d; return 0; }

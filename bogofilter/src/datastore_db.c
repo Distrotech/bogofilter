@@ -67,7 +67,8 @@ static int lockfd;  /* fd of locked file to prevent concurrent recovery etc. */
 
 static const DBTYPE dbtype = DB_BTREE;
 
-static bool init;
+static bool init = false;
+bool create_flag = false;		/* For datastore.c (to add .WORDLIST_VERSION) */
 
 typedef struct {
     char	*path;
@@ -77,6 +78,7 @@ typedef struct {
     DB		*dbp;		/* data base handle */
     bool	is_swapped;	/* set if CPU and data base endianness differ */
     DB_TXN	*txn;		/* stores the transaction handle */
+    bool	created;	/* if newly created; for datastore.c (to add .WORDLIST_VERSION) */
 } dbh_t;
 
 #define DBT_init(dbt) (memset(&dbt, 0, sizeof(DBT)))
@@ -147,6 +149,7 @@ static dbh_t *dbh_init(const char *path, const char *name)
     build_path(handle->name, len, path, name);
 
     handle->is_swapped = false;
+    handle->created    = false;
 
     handle->txn = NULL;
 
@@ -168,12 +171,24 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 /* If header and library version do not match,
  * print an error message on stderr and exit with EX_ERROR. */
 
+/* Returns is_swapped flag */
 bool db_is_swapped(void *vhandle)
 {
     dbh_t *handle = vhandle;
     return handle->is_swapped;
 }
 
+
+/* Returns created flag */
+bool db_created(void *vhandle)
+{
+    dbh_t *handle = vhandle;
+    return handle->created;
+}
+
+
+/* If header and library version do not match,
+ * print an error message on stderr and exit with EX_ERROR. */
 static void check_db_version(void)
 {
     int maj, min;
@@ -274,7 +289,7 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
     char *t;
 
     dbh_t *handle = NULL;
-    uint32_t opt_flags = 0;
+    uint32_t open_flags = 0;
 
     if (!init)
 	/* internal error: must be called only after initialization */
@@ -283,9 +298,9 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
     check_db_version();
 
     if (open_mode & DS_READ )
-	opt_flags = DB_RDONLY;
+	open_flags = DB_RDONLY;
     if (open_mode & DS_CREATE )
-	opt_flags = DB_CREATE | DB_EXCL;
+	open_flags = DB_CREATE | DB_EXCL;
 
     {
 #if DB_AT_LEAST(4,1)
@@ -293,6 +308,7 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 #endif
 	DB *dbp;
 	uint32_t pagesize;
+	bool err = false;
 
 	handle = dbh_init(path, name);
 
@@ -334,11 +350,29 @@ void *db_open(const char *path, const char *name, dbmode_t open_mode)
 	    t = handle->name;
 
 retry_db_open:
-	if ((ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags, 0664)) != 0
-	    && ( ret != ENOENT || opt_flags == DB_RDONLY ||
-		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, 0664)) != 0))
+	ret = DB_OPEN(dbp, t, NULL, dbtype, open_flags, 0664);
+
+	if (ret != 0) {
+	    err = (ret != ENOENT) || (open_flags & DB_RDONLY);
+	    if (!err) {
+		ret = DB_OPEN(dbp, t, NULL, dbtype, open_flags | DB_CREATE | DB_EXCL, 0664);
+		if (ret != 0)
+		    err = true;
+		else
+		    handle->created = true;
+	    }
+	}
+
+	if (ret != 0) {
+	    if (ret == ENOENT && open_flags != DB_RDONLY)
+		return NULL;
+	    else
+		err = true;
+	}
+
+	if (err)
 	{
-	    if (opt_flags != DB_RDONLY && ret == EEXIST && --retries) {
+	    if (open_flags != DB_RDONLY && ret == EEXIST && --retries) {
 		/* sleep for 4 to 100 ms - this is just to give up the CPU
 		 * to another process and let it create the data base
 		 * file in peace */
@@ -347,8 +381,9 @@ retry_db_open:
 	    }
 
 	    /* close again and bail out without further tries */
-	    print_error(__FILE__, __LINE__, "(db) DB->open(%s) - actually %s bogohome: %s -, err: %d, %s",
-		    handle->name, t, bogohome, ret, db_strerror(ret));
+	    if (DEBUG_DATABASE(0))
+		print_error(__FILE__, __LINE__, "(db) DB->open(%s) - actually %s, bogohome %s, err %d, %s",
+			    handle->name, t, bogohome, ret, db_strerror(ret));
 	    dbp->close(dbp, 0);
 	    goto open_err;
 	}
@@ -788,7 +823,6 @@ static int plock(const char *path, short locktype, int mode) {
 
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
-static bool init = false;
 static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 	u_int32_t flags, short locktype /* for fcntl */)
 {

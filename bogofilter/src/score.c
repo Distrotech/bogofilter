@@ -293,27 +293,33 @@ void score_initialize(void)
     if (fabs(robs) < EPS)
 	robs = ROBS;
 
-    if (fabs(robx) < EPS && list->dsh != NULL)
+    if (fabs(robx) < EPS)
     {
 	int ret;
 	dsv_t val;
 
-	/* Note: .ROBX is scaled by 1000000 in the wordlist */
-	if (DST_OK != ds_txn_begin(list->dsh))
-	    ret = -1;
-	else {
-	    ret = ds_read(list->dsh, word_robx, &val);
-	    if (ret != 0)
-		robx = ROBX;
-	    else {
-		/* If found, unscale; else use predefined value */
-		uint l_robx = val.count[IX_SPAM];
-		robx = l_robx ? (double)l_robx / 1000000 : ROBX;
-	    }
-	    if (DST_OK != ds_txn_commit(list->dsh)) {
+	/* Assign default value in case there's no wordlist
+	 * or no wordlist entry */
+	robx = ROBX;
+
+	if (list->dsh) {
+	    /* Note: .ROBX is scaled by 1000000 in the wordlist */
+	    if (DST_OK != ds_txn_begin(list->dsh))
 		ret = -1;
-		fprintf(stderr, "transaction commit failed.\n");
-		exit(EX_ERROR);
+	    else {
+		ret = ds_read(list->dsh, word_robx, &val);
+		if (ret != 0)
+		    robx = ROBX;
+		else {
+		    /* If found, unscale; else use predefined value */
+		    uint l_robx = val.count[IX_SPAM];
+		    robx = l_robx ? (double)l_robx / 1000000 : ROBX;
+		}
+		if (DST_OK != ds_txn_commit(list->dsh)) {
+		    ret = -1;
+		    fprintf(stderr, "transaction commit failed.\n");
+		    exit(EX_ERROR);
+		}
 	    }
 	}
     }

@@ -115,7 +115,7 @@ typedef enum st_e { IS_DIR, IS_FILE, IS_ERR } st_t;
 
 /* Function Definitions */
 
-static bool is_eol(const char *buf, size_t len)
+bool is_eol(const char *buf, size_t len)
 {
     bool ans = ((len == 1 && memcmp(buf, NL, 1) == 0) ||
 		(len == 2 && memcmp(buf, CRLF, 2) == 0));
@@ -128,7 +128,7 @@ static reader_line_t *get_reader_line(FILE *fp) {
     reader_line_t *fcn = mailbox_getline;
 
     if (fp == NULL)
-	return simple_getline ; /* which will return EOF immediately */
+	return NULL;
 
     c = fgetc(fp);
     ungetc(c, fp);

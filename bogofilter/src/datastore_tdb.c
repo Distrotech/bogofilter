@@ -29,8 +29,16 @@ typedef struct {
     char *path;
     char *name;
     bool locked;
+    bool created;
     TDB_CONTEXT *dbp;
 } dbh_t;
+
+/* dummy infrastructure, to be expanded by environment
+ * or transactional initialization/shutdown */
+
+static bool init = false;
+int db_init(void) { init = true; return 0; }
+void db_cleanup(void) { init = false; }
 
 /* Function definitions */
 
@@ -52,7 +60,8 @@ static dbh_t *dbh_init(const char *path, const char *name)
     handle->name = xmalloc(len);
     build_path(handle->name, len, path, name);
 
-    handle->locked = false;
+    handle->locked  = false;
+    handle->created = false;
 
     return handle;
 }
@@ -69,10 +78,19 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 }
 
 
+/* Returns is_swapped flag */
 bool db_is_swapped(void *vhandle)
 {
+    (void) vhandle;		/* suppress compiler warning */
+    return false;
+}
+
+
+/* Returns created flag */
+bool db_created(void *vhandle)
+{
     dbh_t *handle = vhandle;
-    return handle->is_swapped;
+    return handle->created;
 }
 
 
@@ -84,23 +102,32 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 {
     dbh_t *handle;
 
-    int tdb_flags = 0;
+    int tdb_flags;
     int open_flags;
     TDB_CONTEXT *dbp;
 
-    if (open_mode == DS_WRITE) {
-	open_flags = O_RDWR | O_CREAT;
+    if (open_mode & DS_WRITE) {
+	open_flags = O_RDWR;
+	tdb_flags = 0;
     }
     else {
-    	tdb_flags = TDB_NOLOCK;
     	open_flags = O_RDONLY;
+    	tdb_flags = TDB_NOLOCK;
     }
 
     handle = dbh_init(db_file, name);
 
     if (handle == NULL) return NULL;
 
+    db_init();
+
     dbp = handle->dbp = tdb_open(handle->name, 0, tdb_flags, open_flags, 0664);
+
+    if ((dbp == NULL) && (open_mode & DS_WRITE)) {
+	dbp = handle->dbp = tdb_open(handle->name, 0, tdb_flags, open_flags | O_CREAT, 0664);
+	if (dbp != NULL)
+	    handle->created = true;
+    }
 
     if (dbp == NULL)
 	goto open_err;
@@ -108,7 +135,7 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "(db) tdb_open( %s ), %d )\n", handle->name, open_mode);
       
-    if (open_mode == DS_WRITE) {
+    if (open_mode & DS_WRITE) {
 	if (tdb_lockall(dbp) == 0) {
 	    handle->locked = 1;
 	}
@@ -231,6 +258,8 @@ void db_close(void *vhandle, bool nosync)
     }
 
     dbh_free(handle);
+
+    db_cleanup();
 }
 
 /*
@@ -332,10 +361,7 @@ const char *db_str_err(int j)
 
 /* dummy infrastructure, to be expanded by environment
  * or transactional initialization/shutdown */
-static bool init = false;
-int db_init(void) { init = true; return 0; }
-void db_cleanup(void) { init = false; }
 
-int db_txn_begin(dsh_t *d) { (void)d; return 0; }
-int db_txn_abort(dsh_t *d) { (void)d; return 0; }
-int db_txn_commit(dsh_t *d) { (void)d; return 0; }
+int db_txn_begin(void *d) { (void)d; return 0; }
+int db_txn_abort(void *d) { (void)d; return 0; }
+int db_txn_commit(void *d) { (void)d; return 0; }

@@ -90,6 +90,9 @@ int db_txn_commit(void *handle);
 /* Returns is_swapped flag */
 bool db_is_swapped(void *vhandle);
 
+/* Returns created flag */
+bool db_created(void *vhandle);
+
 /* This is not currently used ...
  *
 #define db_write_lock(fd) db_lock(fd, F_SETLKW, F_WRLCK)

@@ -2,6 +2,48 @@
 				BOGOFILTER NEWS
 			       =================
 
+0.92.0	2004-06-26
+
+* Fixed problem recognizing empty line ending of header in
+  files with CRLFs and X-Bogosity line as last header line.
+
+* Added ESF options to bogofilter's and man page.
+* Revised man pages' description of multi-parameter options.
+
+* t.lock3 regression modified for solaris shell compatibility.
+
+0.91.4	2004-06-20
+
+* Fix abort during db_open (ds_open wasn't first calling
+  ds_init).
+* Added regression test t.lock3 for this fix.
+* Revise datastore and database levels so that each level
+  calls its own init() and cleanup() routines.
+
+0.91.3	2004-06-15
+	
+* Added format specification '%I' to allow logging of the IP
+  address from which an email was received.
+
+* Avoid "Invalid buffer size, exiting." problems by discarding
+  text from an excessively long html tag.
+
+0.91.2	2004-06-11
+
+* FAQ updated with info on multiple wordlists and ignore
+  lists.
+* FAQ updated with info on building as non-root user.
+
+* Bogofilter's creation of new wordlists now includes
+  .WORDLIST_VERSION token.
+* Fix erroneous double opening of wordlists specified on
+  command line.
+* Corrected tests so that "make check" passes with qdbm and
+  tdb.
+
+* Fix included GSL compile for compilers that do not support
+  "extern inline", such as Compaq C V6.3.
+
 0.91.1	2004-06-04
 
 * Use named constants for wordlist 'type' attribute to

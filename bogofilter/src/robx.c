@@ -14,6 +14,7 @@ AUTHOR:
 #include "common.h"
 
 #include "datastore.h"
+#include "rand_sleep.h"
 #include "robx.h"
 #include "wordlists.h"
 

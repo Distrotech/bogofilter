@@ -380,7 +380,6 @@ void ds_cleanup()
 */
 int ds_get_msgcounts(void *vhandle, dsv_t *val)
 {
-    int rc;
     dsh_t *dsh = vhandle;
 
     return ds_read(dsh, msg_count_tok, val);
