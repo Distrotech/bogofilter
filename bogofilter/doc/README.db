@@ -94,7 +94,7 @@ NOTE: If you need to copy your data base, DO NOT USE cp! DO USE dd INSTEAD
       and pass dd the data base page size (you can obtain this size by
       db_stat, as shown in section 4.1) as block size argument.
 
-One common failure cas is known:
+One common failure case is known:
 
 3.1 LOCK TABLE EXHAUSTION
 
