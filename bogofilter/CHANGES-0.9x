@@ -2,6 +2,21 @@
 				BOGOFILTER NEWS
 			       =================
 
+0.92.5	2004-08-??
+
+	2004-08-10
+
+	* Improve documentation of '-B' and '-y' options.
+	* Validate dates used with '-y'.
+	* Diagnose missing wordlist specification.
+
+	2004-08-07
+
+	* Cross reference man pages to one another.
+	* OS/2 compatibility changes (contributed by Yuri Dario).
+	* Removed obsolete test output files - degen.out,
+          combined.out, and separate.out
+
 0.92.4	2004-07-29
 
 	* Warn on invalid options, rather than exit.

@@ -2,6 +2,25 @@
 				BOGOFILTER NEWS
 			       =================
 
+Caution: If upgrading from an old version and skipping several
+intervening versions of bogofilter, be smart and verify that the new
+version is working for you before putting it into production.
+Bogofilter's developers recommend that you run a few manual command
+line tests.  Use options, config files, and wordlists from your
+production environment.  This will help ensure that the new version of
+bogofilter is working properly.
+
+0.92.5	2004-08-??
+
+* Improve documentation of '-B' and '-y' options.
+* Validate dates used with '-y'.
+* Diagnose missing wordlist specification.
+
+* Cross reference man pages to one another.
+* OS/2 compatibility changes (contributed by Yuri Dario).
+* Removed obsolete test output files - combined.out, separate.out, and
+  degen.out
+
 0.92.4	2004-07-29
 
 * Warn on invalid options, rather than exit.

@@ -460,7 +460,7 @@ static void help(void)
 	    "\t-c cnt\tExclude tokens with lower counts.\n"
 	    "\t-s l,h\tExclude tokens with lengths between 'l' and 'h' (low and high).\n"
 	    "\t-n\tReplace non-ascii characters with '?'.\n"
-	    "\t-y day\tSet default day-of-year (1..366).\n"
+	    "\t-y date\tSet default date (format YYYYMMDD).\n"
 	    "\t-x list\tSet debug flags.\n"
 	    "\t-D\tDirect debug output to stdout.\n"
 	    "\t-V\tPrint program version.\n"
@@ -485,6 +485,11 @@ static int process_arglist(int argc, char **argv)
 
     fpin = stdin;
     dbgout = stderr;
+
+#ifdef __EMX__
+    _response (&argc, &argv);	/* expand response files (@filename) */
+    _wildcard (&argc, &argv);	/* expand wildcards (*.*) */
+#endif
 
     while ((option = getopt(argc, argv, OPTIONS)) != -1)
 	switch (option) {
@@ -602,9 +607,16 @@ static int process_arglist(int argc, char **argv)
 	    break;
 
 	case 'y':		/* date as YYYYMMDD */
+	{
+	    YYYYMMDD date = string_to_date((char *)optarg);
 	    maintain = true;
-	    today = string_to_date((char *)optarg);
+	    if (date != 0 && date < 19990000) {
+		fprintf(stderr, "Date format for '-y' option is YYYYMMDD\n");
+		exit(EX_ERROR);
+	    }
+	    set_date( date );
 	    break;
+	}
 
 	case 'I':
 	    fpin = fopen( optarg, "r" );

@@ -183,6 +183,11 @@ void process_parameters(int argc, char **argv, bool warn_on_error)
     fpin = stdin;
     set_today();		/* compute current date for token age */
 
+#ifdef __EMX__
+    _response (&argc, &argv);	/* expand response files (@filename) */
+    _wildcard (&argc, &argv);	/* expand wildcards (*.*) */
+#endif
+
     process_arglist(argc, argv, PR_COMMAND, PASS_1_CLI);
     process_config_files(warn_on_error);
     process_arglist(argc, argv, PR_COMMAND, PASS_3_CLI);
@@ -274,8 +279,8 @@ static const char *help_text[] = {
     "  -e, --ham-true            - in -p mode, exit with code 0 when the mail is not spam.\n",
     "  -u, --update-as-classified- classify message as spam or non-spam and register accordingly.\n",
     "  -M, --clasify-mbox        - set mailbox mode.  Classify multiple messages in an mbox formatted file.\n",
-    "  -b, --clasify-stdin       - set streaming bulk mode. Process multiple messages whose filenames are read from STDIN.\n",
-    "  -B, --classify-files=list - set bulk mode. Process multiple messages named as files on the command line.\n",
+    "  -b, --clasify-stdin       - set streaming bulk mode. Process multiple messages (files or directories) read from STDIN.\n",
+    "  -B, --classify-files=list - set bulk mode. Process multiple messages (files or directories) named on the command line.\n",
     "  -R, --dataframe           - print an R data frame.\n",
     "registration options:\n",
     "  -s, --register-spam       - register message(s) as spam.\n",
@@ -389,6 +394,9 @@ static void process_arglist(int argc, char **argv, priority_t precedence, int pa
 
     if (pass != PASS_1_CLI) {
 	optind = opterr = 1;
+#ifdef __EMX__
+	optind = 0;
+#endif
 	/* don't use #ifdef here: */
 #if HAVE_DECL_OPTRESET
 	optreset = 1;
@@ -566,9 +574,16 @@ void process_arg(int option, const char *name, const char *val, priority_t prece
 	break;
 
     case 'y':		/* date as YYYYMMDD */
-	set_date( string_to_date(val) );
+    {
+	YYYYMMDD date = string_to_date((char *)optarg);
+	if (date != 0 && date < 19990000) {
+	    fprintf(stderr, "Date format for '-y' option is YYYYMMDD\n");
+	    exit(EX_ERROR);
+	}
+	set_date( date );
 	break;
-
+    }
+	
     case ':':
 	fprintf(stderr, "Option -%c requires an argument.\n", optopt);
 	exit(EX_ERROR);
