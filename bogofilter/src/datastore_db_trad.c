@@ -56,6 +56,7 @@ static const char *tra_database_name	(const char *db_file);
 static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
 static int	   tra_auto_commit_flags(void);
 static int	   tra_get_rmw_flag	(int open_mode);
+static int	   tra_lock		(void *handle, int open_mode);
 static int	  tra_begin		(void *vhandle);
 static int  	  tra_abort		(void *vhandle);
 static int  	  tra_commit		(void *vhandle);
@@ -68,6 +69,7 @@ dsm_t dsm_traditional = {
     &tra_recover_open,
     &tra_auto_commit_flags,
     &tra_get_rmw_flag,
+    &tra_lock,
     &tra_begin,
     &tra_abort,
     &tra_commit,
@@ -87,6 +89,29 @@ const char *tra_database_name(const char *db_file)
 int  tra_auto_commit_flags(void)
 {
     return 0;
+}
+
+int tra_lock(void *vhandle, int open_mode)
+{
+    int e = 0;
+    dbh_t *handle = vhandle;
+
+    /* try fcntl lock */
+    handle->locked = false;
+    if (db_lock(handle->fd, F_SETLK,
+		(short int)(open_mode == DS_READ ? F_RDLCK : F_WRLCK)))
+    {
+	e = errno;
+	db_close(handle);
+	errno = e;
+	if (errno == EACCES)
+	    e = errno = EAGAIN;
+    } else {
+	/* have lock */
+	if (handle && handle->fd > 0)
+	    handle->locked = true;
+    }
+    return e;
 }
 
 int tra_get_rmw_flag(int open_mode)

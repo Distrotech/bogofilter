@@ -18,6 +18,7 @@ typedef		DB_ENV *dsm_recover_open	(const char *db_file, DB **dbp);
 typedef		int	dsm_auto_commit_flags	(void);
 typedef		int	dsm_get_rmw_flag	(int open_mode);
 typedef 	void dsm_init_config		(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
+typedef		int	dsm_lock		(void *handle, int open_mode);
 
 typedef struct {
     dsm_get_env_dbe		*dsm_get_env_dbe;
@@ -25,6 +26,7 @@ typedef struct {
     dsm_recover_open		*dsm_recover_open;
     dsm_auto_commit_flags	*dsm_auto_commit_flags;
     dsm_get_rmw_flag		*dsm_get_rmw_flag;
+    dsm_lock			*dsm_lock;
     dsm_function	        *dsm_begin;
     dsm_function        	*dsm_abort;
     dsm_function        	*dsm_commit;

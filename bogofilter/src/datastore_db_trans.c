@@ -76,6 +76,7 @@ static const char *txn_database_name	(const char *db_file);
 static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
 static int	   txn_auto_commit_flags(void);
 static int	   txn_get_rmw_flag	(int open_mode);
+static int	   txn_lock		(void *handle, int open_mode);
 static int	  txn_begin		(void *vhandle);
 static int  	  txn_abort		(void *vhandle);
 static int  	  txn_commit		(void *vhandle);
@@ -88,6 +89,7 @@ dsm_t dsm_transactional = {
     &txn_recover_open,
     &txn_auto_commit_flags,
     &txn_get_rmw_flag,
+    &txn_lock,
     &txn_begin,
     &txn_abort,
     &txn_commit,
@@ -129,6 +131,14 @@ int  txn_auto_commit_flags(void)
 #else
     return 0;
 #endif
+}
+
+int txn_lock(void *vhandle, int open_mode)
+{
+    (void) vhandle;
+    (void) open_mode;
+
+    return 0;
 }
 
 int txn_get_rmw_flag(int open_mode)
