@@ -257,6 +257,7 @@ static bool open_mailstore(const char *name)
 	    return false;
 	} else {
 	    mail_first = true;
+	    msg_count_file = false;
 	    reader_getline = get_reader_line(fpin);
 	    mailstore_next_mail = mbox_mode ? mailbox_next_mail : mail_next_mail;
 	    return true;
@@ -339,11 +340,9 @@ static bool b_args_next_mailstore(void)
  * returns false on all subsequent runs */
 static bool mail_next_mail(void)
 {
-    if (mail_first) {
-	mail_first = false;
-	return true;
-    }
-    return false;
+    bool val = mail_first;
+    mail_first = false;
+    return val;
 }
 
 /* always returns true on the first run
