@@ -46,4 +46,5 @@ EXTRA_DIST=$(TESTSCRIPTS) t.frame t.save t.skel inputs outputs \
 	run.sh
 
 dist-hook:
-	cd $(distdir) && for i in inputs outputs ; do find $$i -name CVS -type d -prune -exec rm -r '{}' ';' ; done
+	cd $(distdir) && find inputs outputs -name CVS -type d -prune -exec rm -r '{}' ';'
+	cd $(distdir) && find inputs outputs -name '.#*' -exec rm '{}' ';'
