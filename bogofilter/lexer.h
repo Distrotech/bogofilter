@@ -10,9 +10,6 @@ NAME:
 #ifndef	LEXER_H
 #define	LEXER_H
 
-/* length of *yylval will not exceed this... */
-#define MAXTOKENLEN	30
-
 extern FILE *yyin;
 extern int yyleng;
 extern char *yytext;
