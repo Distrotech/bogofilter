@@ -458,15 +458,31 @@ const char *ds_version_str(void)
 
 int ds_recover(const char *directory, bool catastrophic)
 {
+#ifdef	DISABLE_TRANSACTIONS
+    (void) directory;
+    (void) catastrophic;
+    return 0;
+#else
     return dbe_recover(directory, catastrophic, true);
+#endif
 }
 
 int ds_remove(const char *directory) {
+#ifdef	DISABLE_TRANSACTIONS
+    (void) directory;
+    return 0;
+#else
     return dbe_remove(directory);
+#endif
 }
 
 int ds_purgelogs(const char *directory) {
+#ifdef	DISABLE_TRANSACTIONS
+    (void) directory;
+    return 0;
+#else
     return dbe_purgelogs(directory);
+#endif
 }
 
 int ds_verify(const char *file) {

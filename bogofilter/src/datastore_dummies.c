@@ -9,7 +9,7 @@
 
 void *dbe_init(const char *unused) {
     (void)unused;
-    return (void *)0;
+    return (void *)~0;
 }
 
 int db_txn_begin(void *vhandle) { (void)vhandle; return 0; }

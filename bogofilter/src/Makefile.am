@@ -162,7 +162,15 @@ else
 if ENABLE_SQLITE_DATASTORE
 datastore_SOURCE = datastore_sqlite.c
 else
+if ENABLE_TRANSACTIONS
+datastore_SOURCE = datastore_db.c datastore_db_trans.c
+else
+if DISABLE_TRANSACTIONS
+datastore_SOURCE = datastore_db.c datastore_db_trad.c
+else
 datastore_SOURCE = datastore_db.c datastore_db_trad.c datastore_db_trans.c
+endif
+endif
 endif
 endif
 endif

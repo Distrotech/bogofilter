@@ -164,10 +164,19 @@ int db_lock(int fd, int cmd, short int type)
 
 static void dsm_init(void)
 {
+#if	!defined(ENABLE_TRANSACTIONS) && !defined(DISABLE_TRANSACTIONS)
     if (!fTransaction)
 	dsm = &dsm_traditional;
     else
 	dsm = &dsm_transactional;
+#else
+#ifdef	ENABLE_TRANSACTIONS
+	dsm = &dsm_transactional;
+#endif
+#ifdef	DISABLE_TRANSACTIONS
+	dsm = &dsm_traditional;
+#endif
+#endif
 }
 
 /** "constructor" - allocate our handle and initialize its contents */
@@ -737,7 +746,6 @@ void db_close(void *vhandle)
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
     uint32_t f = DB_NOSYNC;	/* safe as long as we're logging TXNs */
-    DB_ENV *dbe = handle->dbenv->dbe;
 
     assert(handle->magic == MAGIC_DBH);
 
@@ -788,7 +796,7 @@ void db_close(void *vhandle)
 	ret = 0;
 #endif
 
-    ret = dsm->dsm_sync(dbe, ret);
+    ret = dsm->dsm_sync(handle->dbenv->dbe, ret);
 
     if (ret)
 	print_error(__FILE__, __LINE__, "DB->close error: %s",
@@ -807,7 +815,6 @@ void db_flush(void *vhandle)
     int ret;
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
-    DB_ENV *dbe = handle->dbenv->dbe;
 
     assert(handle->magic == MAGIC_DBH);
 
@@ -821,7 +828,7 @@ void db_flush(void *vhandle)
 	ret = 0;
 #endif
 
-    ret = dsm->dsm_sync(dbe, ret);
+    ret = dsm->dsm_sync(handle->dbenv->dbe, ret);
 
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
@@ -829,7 +836,7 @@ void db_flush(void *vhandle)
     if (ret)
 	print_error(__FILE__, __LINE__, "db_sync: err: %s", db_strerror(ret));
 
-    dsm->dsm_log_flush(dbe);
+    dsm->dsm_log_flush(handle->dbenv->dbe);
 }
 
 ex_t db_foreach(void *vhandle, db_foreach_t hook, void *userdata)

@@ -62,6 +62,7 @@ static int process_arg(int option, const char *name, const char *arg);
 double msg_spamicity(void) { return .0; }
 rc_t msg_status(void) { return RC_OK; }
 
+#if	!defined(ENABLE_TRANSACTIONS) && !defined(DISABLE_TRANSACTIONS)
 static bool get_bool(const char *name, const char *arg)
 {
     bool b = str_to_bool(arg);
@@ -70,6 +71,7 @@ static bool get_bool(const char *name, const char *arg)
 		b ? "Yes" : "No");
     return b;
 }
+#endif
 
 static int ds_dump_hook(word_t *key, dsv_t *data,
 			/*@unused@*/ void *userdata)
@@ -750,7 +752,9 @@ static int process_arg(int option, const char *name, const char *val)
 	break;
 
     case O_DB_TRANSACTION:
+#if	!defined(ENABLE_TRANSACTIONS) && !defined(DISABLE_TRANSACTIONS)
 	fTransaction = get_bool(name, val);
+#endif
 	break;
 
     case O_DB_VERIFY:
@@ -783,6 +787,7 @@ static int process_arg(int option, const char *name, const char *val)
 	count += 1;
 	break;
 
+#ifndef	DISABLE_TRANSACTIONS
 #ifdef	HAVE_DECL_DB_CREATE
     case O_DB_MAX_OBJECTS:	
 	db_max_objects = atoi(val);
@@ -797,6 +802,7 @@ static int process_arg(int option, const char *name, const char *val)
     case O_DB_TXN_DURABLE:
 	db_txn_durable    = get_bool(name, val);
 	break;
+#endif
 #endif
 #endif
 
