@@ -32,6 +32,9 @@ debugtest
 directories.c
 find_home.test
 lexer.c
+lexer_head.c
+lexer_text_html.c
+lexer_text_plain.c
 stamp-h.in
 stamp-h1
 version.c
