@@ -61,12 +61,12 @@ AUTHOR:
 
 /* Global variables */
 
-int nonspam_exits_zero;	/* '-e' */
+bool nonspam_exits_zero;/* '-e' */
 bool force;		/* '-F' */
 bool logflag;		/* '-l' */
 bool quiet;		/* '-q' */
 bool terse;		/* '-t' */
-int passthrough;	/* '-p' */
+bool passthrough;	/* '-p' */
 int verbose;		/* '-v' */
 int Rtable = 0;		/* '-R' */
 
@@ -521,7 +521,7 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'e':
-	    nonspam_exits_zero = 1;
+	    nonspam_exits_zero = true;
 	    break;
 
 	case 's':
@@ -564,7 +564,7 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'p':
-	    passthrough = 1;
+	    passthrough = true;
 	    break;
 
 	case 'u':
@@ -572,7 +572,7 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'l':
-	    logflag = 1;
+	    logflag = true;
 	    if (optarg)
 		logtag = optarg;
 	    break;
@@ -609,11 +609,11 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'q':
-	    quiet = 1;
+	    quiet = true;
 	    break;
 
 	case 'F':
-	    force = 1;
+	    force = true;
 	    break;
 
 	case 'c':
@@ -638,7 +638,7 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'M':
-	    mime_lexer = true;
+	    mime_lexer ^= true;
 	    break;
 
 	default:

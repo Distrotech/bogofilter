@@ -24,7 +24,7 @@ NAME:
 /* exports */
 bool logflag;				/* '-l' */
 bool quiet;				/* '-q' */
-int passthrough;			/* '-p' */
+bool passthrough;			/* '-p' */
 int  verbose;				/* '-v' */
 bool replace_nonascii_characters;	/* '-n' */
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 	    set_debug_mask( optarg );
 	    break;
 	case 'M':
-	    mime_lexer = true;
+	    mime_lexer ^= true;
 	    break;
 	default:
 	    usage();

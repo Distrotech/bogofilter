@@ -8,13 +8,13 @@
 
 #include "system.h" /* has bool */
 
-extern int nonspam_exits_zero;	/* '-e' */
+extern bool nonspam_exits_zero;	/* '-e' */
 extern bool fisher;		/* '-f' */
 extern bool force;		/* '-F' */
 extern bool logflag;		/* '-l' */
 extern bool terse;		/* '-t' */
 extern bool quiet;		/* '-q' */
-extern int passthrough;		/* '-p' */
+extern bool passthrough;	/* '-p' */
 extern int verbose;		/* '-v' */
 
 extern bool stats_in_header;
