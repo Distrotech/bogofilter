@@ -20,10 +20,10 @@ struct msg_state {
     char *charset;
     char *boundary; /* only valid if mime_type is MIME_MULTIPART or
 		       MIME_MESSAGE */
-    int boundary_len;
+    size_t boundary_len;
     char *version;
-    int mime_header;
-    int mime_mail;
+    bool mime_header;
+    bool mime_mail;
     enum mimetype mime_type;
     enum mimeencoding mime_encoding;
     enum mimedisposition mime_disposition;

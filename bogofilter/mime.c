@@ -74,15 +74,23 @@ struct disposition_s {
 /* Function Prototypes */
 
 static char *skipws(char *t, char *e);
-static char *skipsemi(char *t, char *e);
 static char *getword(char *t, char *e);
 #if	0
 static char *getparam(char *t, char *e, const char *param);
 #endif
 
-void mime_read_block(const char *boundary);
+void msg_state_init(bool header, char *boundary, size_t len);
 
 /* Function Definitions */
+
+void msg_state_init(bool header, char *boundary, size_t len)
+{
+    msg_state->mime_header = header;
+    msg_state->mime_type = MIME_TEXT;
+    msg_state->mime_encoding = MIME_7BIT;
+    msg_state->boundary = boundary;
+    msg_state->boundary_len = len;
+}
 
 void resetmsgstate(struct msg_state *ms, int new)
 {
@@ -96,12 +104,9 @@ void resetmsgstate(struct msg_state *ms, int new)
 	    xfree(t->version);
 	new -= 1;
     }
+    msg_state = ms;
     ms->mime_mail = 0;
-    ms->mime_header = 0;
-    ms->mime_type = MIME_TEXT;
-    ms->mime_encoding = MIME_7BIT;
-    ms->boundary = NULL;
-    ms->boundary_len = 0;
+    msg_state_init(false, NULL, 0);
     ms->charset = xstrdup("US-ASCII");
 }
 
@@ -115,12 +120,14 @@ char *skipws(char *t, char *e)
 }
 
 /* skips [ws]";"[ws] */
+#if	0
 char *skipsemi(char *t, char *e)
 {
     if (!(t = skipws(t, e))) return NULL;
     if (*t == ';') t++;
     return skipws(t, e);
 }
+#endif
 
 /* get next MIME word, NULL when none found.
  * caller must free returned string with xfree() */
@@ -256,25 +263,17 @@ void mime_boundary(void)
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
 	boundary = getword(yytext+len, yytext + yyleng);
-	msg_state->boundary = boundary;
-	msg_state->boundary_len = strlen(boundary);
-	msg_state->mime_type = MIME_TEXT;
-	msg_state->mime_encoding  = MIME_7BIT;
-	msg_state->mime_header = 1;
+	msg_state_init(true, boundary, strlen(boundary));
     } else {			/* verify that it's really a boundary line */
 	boundary = msg_state->boundary;
 	if (boundary == NULL )
 	    return;
-	len = strlen(boundary);
+	len = msg_state->boundary_len;
 	/* XXX FIXME: recover from missing end boundaries? */
 	if (memcmp(yytext+2, boundary, len) == 0) {
 	    msg_state = &msg_stack[stackp];
 	    memset(msg_state, 0, sizeof(*msg_state));
-	    msg_state->mime_type = MIME_TEXT;
-	    msg_state->mime_encoding  = MIME_7BIT;
-	    msg_state->mime_header = 1;
-	    msg_state->boundary = boundary;
-	    msg_state->boundary_len = len;
+	    msg_state_init(true, boundary, len);
 	}
     }
 
