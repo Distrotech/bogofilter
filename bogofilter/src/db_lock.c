@@ -78,7 +78,7 @@ static int check_celllock(int fd, off_t offset) {
     if (offset == lockpos && locked)
 	return 1;
 
-    fl.l_type = F_RDLCK;
+    fl.l_type = F_WRLCK;
     fl.l_whence = SEEK_SET;
     fl.l_start = offset;
     fl.l_len = cellsize;
