@@ -125,7 +125,7 @@ retry:
 		    }
 		    goto retry;
 		default:
-		    fprintf(stderr, "Can't open %s (%s) - errno is %d\n", list->filename, list->filepath, err);
+		    fprintf(stderr, "Can't open %s (%s): %s\n", list->filename, list->filepath, strerror(err));
 		    exit(2);
 	    } /* switch */
 	} /* db_open */
