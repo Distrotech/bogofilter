@@ -168,28 +168,6 @@ dnl May not be complete with future extensions, but appears to work
 dnl today, 2003-10-02. Matthias Andree
 AC_DEFINE(__NO_CTYPE,1,[Define __NO_CTYPE to 1 to avoid GLIBC_2.3-specific ctype.h functions.])
 
-dnl Allow the user to disable BerkeleyDB transactions
-
-USE_TXN=YES
-AC_ARG_ENABLE(txn,
-	AC_HELP_STRING([--enable-txn],
-	[Enable BerkeleyDB transactions]),
-	if test "$enableval" = no; then
-		[USE_TXN=NO]
-	else
-		[USE_TXN=YES]
-	fi
-)
-
-dnl Enable building with BerkeleyDB transactions
-
-if test x$USE_TXN = xYES ; then
-	AC_DEFINE(ENABLE_TXN,1,
-	[Enable BerkeleyDB transactions])
-fi
-
-dnl Enable building statically linked executables
-
 AC_ARG_ENABLE(static,
       AC_HELP_STRING([--enable-static], [Build static versions as well.]))
 
