@@ -52,6 +52,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "error.h"
 
 static DB_ENV	  *tra_get_env_dbe	(dbe_t *env);
+static const char *tra_database_name	(const char *db_file);
 static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
 static int	   tra_auto_commit_flags(void);
 static int	   tra_get_rmw_flag	(int open_mode);
@@ -63,6 +64,7 @@ static int  	  tra_commit		(void *vhandle);
 
 dsm_t dsm_traditional = {
     &tra_get_env_dbe,
+    &tra_database_name,
     &tra_recover_open,
     &tra_auto_commit_flags,
     &tra_get_rmw_flag,
@@ -75,6 +77,11 @@ DB_ENV *tra_get_env_dbe	(dbe_t *env)
 {
     (void) env;
     return NULL;
+}
+
+const char *tra_database_name(const char *db_file)
+{
+    return db_file;
 }
 
 int  tra_auto_commit_flags(void)

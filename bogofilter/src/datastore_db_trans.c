@@ -72,6 +72,7 @@ bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
 static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
+static const char *txn_database_name	(const char *db_file);
 static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
 static int	   txn_auto_commit_flags(void);
 static int	   txn_get_rmw_flag	(int open_mode);
@@ -83,6 +84,7 @@ static int  	  txn_commit		(void *vhandle);
 
 dsm_t dsm_transactional = {
     &txn_get_env_dbe,
+    &txn_database_name,
     &txn_recover_open,
     &txn_auto_commit_flags,
     &txn_get_rmw_flag,
@@ -107,6 +109,17 @@ static ex_t dbe_common_close(DB_ENV *env, const char *directory);
 DB_ENV *txn_get_env_dbe(dbe_t *env)
 {
     return env->dbe;
+}
+
+const char *txn_database_name(const char *db_file)
+{
+    const char *t;
+
+    t = strrchr(db_file, DIRSEP_C);
+    if (t != NULL)
+	t += 1;
+
+    return t;
 }
 
 int  txn_auto_commit_flags(void)
