@@ -81,8 +81,6 @@ ex_t bogomain(int argc, char **argv) /*@globals errno,stderr,stdout@*/
 
     output_cleanup();
 
-    output_cleanup();
-
     /* cleanup storage */
     mime_cleanup();
     token_cleanup();

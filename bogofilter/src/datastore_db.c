@@ -88,9 +88,6 @@ typedef struct {
 #define DB_AT_MOST(maj, min)	((DB_VERSION_MAJOR < (maj)) || ((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR <= (min))))
 #define DB_EQUAL(maj, min)	((DB_VERSION_MAJOR == (maj)) && (DB_VERSION_MINOR == (min)))
 
-/* dummy infrastructure, to be expanded by environment
- * or transactional initialization/shutdown */
-
 /* Function definitions */
 
 /** translate BerkeleyDB \a flags bitfield back to symbols */
