@@ -2,7 +2,7 @@
 
 				bogofilter news
 
-0.8.0	2002-11-02
+0.8.0	2002-11-06
 
 	* Fixed bogofilter 0.7.6 passthrough regression on some systems:
 	  The X-Bogofilter header would be added to the body and a bogus
