@@ -38,9 +38,12 @@ NAME:
 extern int Rtable;
 static double scalefactor;
 
-double	thresh_rtable = 0.0f;		/* used in fis_parms in fisher.c */
-double	robx = 0.0f;			/* used in fis_parms in fisher.c */
-double	robs = 0.0f;			/* used in fis_parms in fisher.c */
+long msgs_good = 0L;			/* used in rstats.c */
+long msgs_bad  = 0L;			/* used in rstats.c */
+
+double	thresh_rtable = 0.0f;		/* used in fisher.c */
+double	robx = 0.0f;			/* used in fisher.c and rstats.c */
+double	robs = 0.0f;			/* used in fisher.c and rstats.c */
 
 static rob_stats_t  rob_stats;
 
@@ -96,15 +99,27 @@ static void wordprob_init(/*@out@*/ wordprob_t* wordstats)
     wordstats->good = wordstats->bad = 0.0;
 }
 
-static void wordprob_add(wordprob_t* wordstats, double newprob, int bad)
+static void wordprob_add(wordprob_t* wordstats, int count, int bad)
 {
     if (bad)
-	wordstats->bad+=newprob;
+	wordstats->bad += (double) count;
     else
-	wordstats->good+=newprob;
+	wordstats->good += (double) count;
 }
 
 static double wordprob_result(wordprob_t* wordstats)
+{
+    double n, fw, pw;
+
+    n = wordstats->good + wordstats->bad;
+    pw = (n < EPS) ? 0.0 : ((wordstats->bad / msgs_bad) / 
+			    (wordstats->bad / msgs_bad + wordstats->good / msgs_good));
+    fw = (robs * robx + n * pw) / (robs + n);
+
+    return (fw);
+}
+
+static double wordprob_result_old(wordprob_t* wordstats)
 {
     double prob = 0.0;
     double count = wordstats->good + wordstats->bad;
@@ -117,20 +132,19 @@ static double wordprob_result(wordprob_t* wordstats)
 static double compute_scale(void)
 {
     wordlist_t* list;
-    long goodmsgs=0L, badmsgs=0L;
-    
+
     for(list=word_lists; list != NULL; list=list->next)
     {
 	if (list->bad)
-	    badmsgs += list->msgcount;
+	    msgs_bad += list->msgcount;
 	else
-	    goodmsgs += list->msgcount;
+	    msgs_good += list->msgcount;
     }
 
-    if (goodmsgs == 0L)
+    if (msgs_good == 0L)
 	return(1.0f);
     else
-	return ((double)badmsgs / (double)goodmsgs);
+	return ((double)msgs_bad / (double)msgs_good);
 }
 
 static double compute_probability(const char *token)
@@ -154,12 +168,8 @@ static double compute_probability(const char *token)
 	    if (list->ignore)
 		return EVEN_ODDS;
 	    override=list->override;
-	    prob = (double)count;
 
-	    if (!list->bad)
-		prob *= scalefactor;
-
-	    wordprob_add(&wordstats, prob, list->bad);
+	    wordprob_add(&wordstats, count, list->bad);
 	}
     }
 
@@ -254,8 +264,8 @@ double rob_get_spamicity(size_t robn, FLOAT P, FLOAT Q)
 
 void rob_print_summary(void)
 {
-    (void)fprintf(stdout, "%-20s %9.5f %9.5f %9.6f %9.3f %9.3f %4.2f\n",
-		  "P_Q_S_invs_logs_md", 
+    (void)fprintf(stdout, "%*s %9.5f %9.5f %9.6f %9.3f %9.3f %4.2f\n",
+		  MAXTOKENLEN+2, "\"P_Q_S_invs_logs_md\"", 
 		  rob_stats.p_pr, rob_stats.q_pr, rob_stats.s.spamicity, rob_stats.p_ln, rob_stats.q_ln, min_dev);
 }
 

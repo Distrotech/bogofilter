@@ -27,6 +27,11 @@ AUTHOR:
 extern int Rtable;
 extern double min_dev;
 
+extern double robx;		/* in robinson.c */
+extern double robs;		/* in robinson.c */
+extern long msgs_good;		/* in robinson.c */
+extern long msgs_bad;		/* in robinson.c */
+
 typedef struct rstats_s rstats_t;
 struct rstats_s {
     rstats_t *next;
@@ -204,19 +209,23 @@ void rstats_print_rtable(rstats_t **rstats_array, size_t count)
     size_t r;
 
     /* print header */
-    (void)fprintf(stdout, "%-20s%10s%10s%10s%10s%10s\n",
-		  "","pgood","pbad","fw","invfwlog","fwlog");
+    (void)fprintf(stdout, "%*s%6s%10s%10s%10s%10s%10s %s\n",
+		  MAXTOKENLEN+2,"","n", "pgood","pbad","fw","invfwlog","fwlog", "U");
 
     /* Print 1 line per token */
     for (r= 0; r<count; r+=1)
     {
 	rstats_t *cur = rstats_array[r];
-	double prob = cur->prob;
-	char flag = (fabs(prob-EVEN_ODDS) < min_dev) ? '-' : '+';
+	const char *token = cur->token;
+	int len = max(0, MAXTOKENLEN-(int)strlen(token));
+	double n = cur->good + cur->bad;
+	double fw = cur->prob;
+	char flag = (fabs(fw-EVEN_ODDS) < min_dev) ? '-' : '+';
 
-	(void)fprintf(stdout, "%-20s  %8.2f  %8.0f  %8.6f  %8.5f  %8.5f %c\n",
-		      cur->token, cur->good, cur->bad, prob, 
-		      log(1.0 - prob), log(prob), flag);
+	(void)fprintf(stdout, "\"%s\"%*s %5d  %8.6f  %8.6f  %8.6f%10.5f%10.5f %c\n",
+		      token, len, " ",
+		      (int)n, cur->good / n, cur->bad / n, 
+		      fw, log(1.0 - fw), log(fw), flag);
     }
 
     /* print trailer */
