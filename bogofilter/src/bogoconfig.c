@@ -712,11 +712,12 @@ rc_t query_config(void)
     Q2 fprintf(stdout, "%-18s = %s\n", "user-config-file", NB(user_config_file));
     Q2 fprintf(stdout, "\n");
 
-    Q2 fprintf(stdout, "%-18s = %s\n", "bogofilter-dir", bogohome);
+    Q2 fprintf(stdout, "%-18s = %s\n", "bogofilter-dir", 	bogohome);
     Q2 display_wordlists(word_lists, "%-18s   ");
     Q2 fprintf(stdout, "\n");
 
     Q2 fprintf(stdout, "%-18s = %d\n", "db-cachesize",        	db_cachesize);
+
 #ifdef	HAVE_DECL_DB_CREATE
     Q2 fprintf(stdout, "%-18s = %d\n", "db-lk-max-locks",   	db_max_locks);
     Q2 fprintf(stdout, "%-18s = %d\n", "db-lk-max-objects", 	db_max_objects);
