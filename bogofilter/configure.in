@@ -25,7 +25,7 @@ then
       -Wmissing-format-attribute -Wnested-externs \
       -ggdb -fno-common -Wchar-subscripts -Wcomment -pedantic \
       -Wformat=2 -Wimplicit -Wsequence-point -Wreturn-type \
-      -Wfloat-equal -Wpointer-arith -Wconversion  \
+      -Wfloat-equal -Wpointer-arith  \
       -Wmissing-noreturn -Wmissing-format-attribute -Wredundant-decls
    do
        if $CC $i $ac_cv_prog_gcc_flags -c configure-dummy.c >/dev/null 2>&1 
