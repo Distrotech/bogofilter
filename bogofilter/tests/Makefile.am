@@ -20,7 +20,7 @@ TESTSCRIPTS=t.score1 t.score2 t.integrity t.integrity2 \
 	    t.nullstatsprefix t.lexer
 TESTS=$(TESTSCRIPTS)
 
-TESTS_ENVIRONMENT=RUN_FROM_MAKE=1 srcdir=$(srcdir) $(SHELL) $(VERBOSE)
+TESTS_ENVIRONMENT=RUN_FROM_MAKE=1 AWK=$(AWK) srcdir=$(srcdir) $(SHELL) $(VERBOSE)
 
 EXTRA_DIST=$(TESTSCRIPTS) t.frame t.skel inputs outputs
 
