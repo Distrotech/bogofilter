@@ -90,7 +90,8 @@
 	    <option>file.db</option> is the path to a database file, the tokens will be looked up in
 	    the database and the value for each token will be displayed.  When <option>file.db</option>
 	    is a directory name, each token will be looked up in both spamlist.db and goodlist.db and 
-	    the values will be displayed.
+	    the values will be displayed. Note that the files goodlist.db and spamlist.db may also be
+        named goodlist.tdb and spamlist.tdb, depending on the compiled in database subsystem.
 	</para>
 	<para>
 	    The <option>-p</option> option tells <application>bogoutil</application> 
@@ -140,7 +141,11 @@
 	    Option <option>-y date</option> is specifies the date to give to tokens that don't have dates.
 	</para>
 	<para>The <option>-h</option> option prints the help message and exits.</para>
-	<para>The <option>-V</option> option prints the version number and exits.</para>
+    <para>
+        The <option>-V</option> option prints the version number, builtin database type and 
+        copyright notice, then exits.
+    </para>
+
     </refsect1>
 
     <refsect1 id="dataformat">

@@ -116,7 +116,8 @@ In its normal mode of operation, it takes an email message or other
 text on standard input, does a statistical check against lists of
 "good" and "bad" words, and returns a status code indicating whether
 or not the message is spam.  Bogofilter is designed with fast
-algorithms, uses the Berkeley DB for fast startup and lookups,
+algorithms, supports several fast database packages such as,
+the Berkeley DB and trivial database (tdb) for fast startup and lookups,
 coded directly in C, and tuned for speed, so it can be used for
 production by sites that process a lot of mail.</para>
 </refsect1>
@@ -168,15 +169,16 @@ miscounts.</para>
 
 <refsect1 id='options'><title>OPTIONS</title>
 <para>Without command-line options, <application>bogofilter</application>
-returns 1 if the message is non-spam, 0 if it is spam.  The non-spam
-wordfile is created if absent.</para>
+returns 1 if the message is non-spam, 0 if it is spam.
+It prints a message to stderr and returns an error if the word list
+databases do not exist.</para>
 
 <para>HELP OPTIONS</para>
 
 <para>The <option>-h</option> option prints the help message and exits.</para>
 
-<para>The <option>-V</option> option prints the version number and 
-exits.</para>
+<para>The <option>-V</option> option prints the version number, builtin database type and 
+copyright notice, then exits.</para>
 
 <para>The <option>-Q</option> (query) option prints bogofilter's configuration, 
 i.e. registration parameters, parsing options, bogofilter directory, etc.</para>
@@ -302,7 +304,8 @@ tells <application>bogofilter</application> to read the config file named.
     sets the cache size for the BerkeleyDB subsystem.  Properly sizing
     the cache improves <application>bogofilter</application>'s
     performance.  Run the <application>bogotune</application> 
-    script to determine the recommended size.</para>
+    script to determine the recommended size.
+    This option has no effect if BerkeleyDB is not compiled in.</para>
 
 <para>The <option>-l</option> option writes an informational line
     to the system log each time <application>bogofilter</application>
@@ -625,10 +628,12 @@ bogofilter[6244]: register-s, 1273 words, 4 messages
 </varlistentry>
 <varlistentry>
 <term><filename>~/.bogofilter/goodlist.db</filename></term>
+<term><filename>~/.bogofilter/goodlist.tdb</filename></term>
 <listitem><para>List of good tokens.</para></listitem>
 </varlistentry>
 <varlistentry>
 <term><filename>~/.bogofilter/spamlist.db</filename></term>
+<term><filename>~/.bogofilter/spamlist.tdb</filename></term>
 <listitem><para>List of spam tokens.</para></listitem>
 </varlistentry>
 </variablelist>
