@@ -434,3 +434,8 @@ const char *ds_version_str(void)
 {
     return db_version_str();
 }
+
+int ds_recover(int catastrophic)
+{
+    return db_recover(catastrophic);
+}

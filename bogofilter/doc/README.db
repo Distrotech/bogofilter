@@ -127,7 +127,7 @@ You may need to adjust these figures. You will need up to one lock per
 data base page and a bit of headroom for future training -- see section
 4.2 below to determine the size of the data base and data base page.
 
-b. Run db_recover -h ~/.bogofilter (use the path from step a, omitting
+b. Run bogoutil -f ~/.bogofilter (use the path from step a, omitting
    the /DB_CONFIG part).
 
 
@@ -147,10 +147,10 @@ a. should you have archived old log files, restore all log files into
    file in case you have multiple versions in the backup) if the system
    has suffered data loss.
 
-b. then run db_recover -c -h ~/.bogofilter
+b. then run bogoutil -v -F ~/.bogofilter
 
-The -c option tells db_recover this is a "catastrophic" (as in "crash")
-recovery operation as is required after a crash. db_recover will now use
+The -F option tells bogoutil this is a "catastrophic" (as in "crash")
+recovery operation as is required after a crash. bogoutil will now use
 all the log.NNNNNNNNNN files and replay the transactions that have not
 made it into the wordlist.db file, and will rollback (backout, abort,
 undo) all operations that are not complete. After that, the data base
@@ -174,10 +174,9 @@ db_stat -h ~/.bogofilter -m # buffer pool statistics
 db_stat -h ~/.bogofilter -l # log statistics
 db_stat -h ~/.bogofilter -t # transaction statistics
 
-Note that statistics - except data base statistics - are erased when
-db_recover is run. They will reappear after running bogofilter and are
-the more reliable the more often bogofilter has been used since the last
-db_recover action.
+Note that statistics may disappear when the data base is recovered. They
+will reappear after running bogofilter and are the more reliable the
+more often bogofilter has been used since the last recovery.
 
 You MUST NOT remove files named __db.NNN and log.NNNNNNNNNN - where
 NNN are numbers - in the ~/.bogofilter directory.
@@ -240,7 +239,7 @@ but may require you to to resize the lock region more often.
 e. Use this rounded-up figure for both of the the two DB_CONFIG file
    lines mentioned in section 3.1
 
-f. run db_recover (you don't need the -c option).
+f. run bogoutil -f ~/.bogofilter
 
 Bogofilter will re-create the lock tables automatically
 the next time it is run.

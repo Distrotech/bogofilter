@@ -87,6 +87,8 @@ int  db_txn_begin(void *handle);
 int  db_txn_abort(void *handle);
 int db_txn_commit(void *handle);
 
+int db_recover(int catastrophic);
+
 /* Returns is_swapped flag */
 bool db_is_swapped(void *vhandle);
 

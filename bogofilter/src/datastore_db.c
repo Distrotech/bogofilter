@@ -813,6 +813,37 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     assert(bogohome);
     assert(dbe == NULL);
 
+    /* lock */
+    ret = mkdir(bogohome, (mode_t)0755);
+    if (ret && errno != EEXIST) {
+	print_error(__FILE__, __LINE__, "mkdir(%s): %s",
+		bogohome, strerror(errno));
+	exit(EXIT_FAILURE);
+    }
+
+    tl = strlen(bogohome) + strlen(tackon) + 1;
+    t = xmalloc(tl);
+    strlcpy(t, bogohome, tl);
+    strlcat(t, tackon, tl);
+
+    /* FIXME: this may be dead code if we leave recover outside */
+    ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
+    if (ret && errno != EEXIST) {
+	print_error(__FILE__, __LINE__, "open(%s): %s",
+		t, strerror(errno));
+	exit(EXIT_FAILURE);
+    }
+
+    lockfd = plock(t, locktype, F_SETLKW);
+    if (lockfd < 0) {
+	print_error(__FILE__, __LINE__, "lock(%s): %s",
+		t, strerror(errno));
+	exit(EXIT_FAILURE);
+    }
+
+    free(t);
+    /* lock set up */
+
     ret = db_env_create(&dbe, 0);
     if (ret != 0) {
 	print_error(__FILE__, __LINE__, "db_env_create, err: %d, %s", ret,
@@ -860,61 +891,18 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->set_lk_detect(DB_LOCK_DEFAULT)\n");
 
-    /* ************************************************************* *
-	WARNING:
-	DO NOT ADD ANY DB_RECOVER OPTIONS HERE, RECOVERY
-	_MUST_ _NOT_ BE RUN BY MORE THAN ONE PROCESS SIMULTANEOUSLY
-	AND WE ARE NOT LOCKING --
-	HENCE DB_RECOVER CAUSES DB_ENV CORRUPTION.
-	IT WILL NOT WORK! -- BEEN THERE, TRIED THAT
-	Matthias, 2004-03-17, BDB4.2
-     * ************************************************************* */
-
-    /* this code is not yet useful - but it may become if we have
-     * recovery code in bogoutil for instance */
-    if (locktype) {
-	ret = mkdir(bogohome, (mode_t)0755);
-	if (ret && errno != EEXIST) {
-	    print_error(__FILE__, __LINE__, "mkdir(%s): %s",
-		    bogohome, strerror(errno));
-	    exit(EXIT_FAILURE);
-	}
-
-	tl = strlen(bogohome) + strlen(tackon) + 1;
-	t = xmalloc(tl);
-	strlcpy(t, bogohome, tl);
-	strlcat(t, tackon, tl);
-
-	/* FIXME: this may be dead code if we leave recover outside */
-	ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
-	if (ret && errno != EEXIST) {
-	    print_error(__FILE__, __LINE__, "open(%s): %s",
-		    t, strerror(errno));
-	    exit(EXIT_FAILURE);
-	}
-
-	lockfd = plock(t, locktype, F_SETLKW);
-	if (lockfd < 0) {
-	    print_error(__FILE__, __LINE__, "lock(%s): %s",
-		    t, strerror(errno));
-	    exit(EXIT_FAILURE);
-	}
-	/* END FIXME :-) */
-
-	free(t);
-    } /* if(locktype) */
-
     ret = dbe->open(dbe, bogohome, DB_INIT_MPOOL | DB_INIT_LOCK
 	    | DB_INIT_LOG | DB_INIT_TXN | DB_CREATE | flags, /* mode */ 0644);
     if (ret != 0) {
 	dbe->close(dbe, 0);
 	print_error(__FILE__, __LINE__, "DB_ENV->open, err: %d, %s", ret, db_strerror(ret));
 	if (ret == DB_RUNRECOVERY) {
-	    fprintf(stderr, "To recover, run: db_recover -v -c -h \"%s\"\n",
+	    fprintf(stderr, "To recover, run: bogoutil -v -f \"%s\"\n",
 		    bogohome);
 	}
 	exit(EXIT_FAILURE);
     }
+
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->open(home=%s)\n", bogohome);
 
@@ -934,36 +922,30 @@ int db_init(void) {
     return db_xinit(numlocks, numobjs, /* flags */ 0, F_RDLCK);
 }
 
-#ifdef COMPILE_DEAD_CODE
-int db_recover(const char *name, int catastrophic) {
+int db_recover(int catastrophic) {
     int ret;
-    void *handle;
 
-    /* PASS 1 */
-    printf("Pass 1: data base recovery, %s\n", catastrophic ? "catastrophic" : "regular");
+retry:
+    if (DEBUG_DATABASE(0) || verbose)
+        fprintf(dbgout, "running %s data base recovery\n",
+	    catastrophic ? "catastrophic" : "regular");
     ret = db_xinit(1024, 1024, catastrophic ? DB_RECOVER_FATAL : DB_RECOVER,
 	    F_WRLCK);
-    if (ret) goto rec_fail;
+    if (ret) {
+	if(!catastrophic) {
+	    catastrophic = 1;
+	    goto retry;
+	}
+	goto rec_fail;
+    }
 
-    /* PASS 2 - determine data base size
-     * a. open data base
-     * b. stat it
-     * c. close it
-     * d. kill environment and re-open with proper sizes */
-    printf("Pass 2: resize environment\n");
-    handle = db_open(name, name, DS_READ);
-    if (!handle) goto rec_fail;
+    ds_cleanup();
 
-    
-
-    db_close(handle, 1);
-
-    ret = dbe->remove(dbe, bogohome, 0);
+    return 0;
 
 rec_fail:
     exit(EX_ERROR);
 }
-#endif
 
 void db_cleanup(void) {
     if (!init)

@@ -439,6 +439,8 @@ static void help(void)
     fprintf(stderr,
 	    "\n"
 	    "\t-h\tPrint this message.\n"
+	    "\t-f dir\tRun recovery on data base in dir.\n"
+	    "\t-F dir\tRun catastrophic recovery on data base in dir.\n"
 	    "\t-d file\tDump data from file to stdout.\n"
 	    "\t-l file\tLoad data from stdin into file.\n"
 	    "\t-u file\tUpgrade wordlist version.\n"
@@ -473,10 +475,11 @@ static void help(void)
 static char *ds_file = NULL;
 static bool  prob = false;
 
-typedef enum { M_NONE, M_DUMP, M_LOAD, M_WORD, M_MAINTAIN, M_ROBX, M_HIST } cmd_t;
+typedef enum { M_NONE, M_DUMP, M_LOAD, M_WORD, M_MAINTAIN, M_ROBX, M_HIST,
+    M_RECOVER, M_CRECOVER } cmd_t;
 static cmd_t flag = M_NONE;
 
-#define	OPTIONS	":a:c:d:DhH:I:k:l:m:np:r:R:s:u:vVw:x:X:y:"
+#define	OPTIONS	":a:c:d:Df:F:hH:I:k:l:m:np:r:R:s:u:vVw:x:X:y:"
 
 static int process_arglist(int argc, char **argv)
 {
@@ -495,6 +498,18 @@ static int process_arglist(int argc, char **argv)
 	switch (option) {
 	case '?':
 	    fprintf(stderr, "Unknown option -%c.\n", optopt);
+	    break;
+
+	case 'f':
+	    flag = M_RECOVER;
+	    count += 1;
+	    ds_file = (char *) optarg;
+	    break;
+
+	case 'F':
+	    flag = M_CRECOVER;
+	    count += 1;
+	    ds_file = (char *) optarg;
 	    break;
 
 	case 'd':
@@ -636,7 +651,7 @@ static int process_arglist(int argc, char **argv)
 
     if (count != 1)
     {
-      fprintf(stderr, "%s: Exactly one of the -d, -l, -R or -w flags "
+      fprintf(stderr, "%s: Exactly one of the -d, -f, -F, -l, -R or -w flags "
 	      "must be present.\n", progname);
       exit(EX_ERROR);
     }
@@ -667,6 +682,13 @@ int main(int argc, char *argv[])
     atexit(bf_exit);
 
     set_bogohome(ds_file);
+
+    if (flag == M_RECOVER) {
+	return ds_recover(0);
+    } else if (flag == M_CRECOVER) {
+	return ds_recover(1);
+    }
+
     ds_init();
 
     switch(flag) {
