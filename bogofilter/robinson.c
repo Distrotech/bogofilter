@@ -32,9 +32,6 @@ NAME:
 
 #define ROBINSON_MAX_REPEATS	1	/* cap on word frequency per message */
   
-#define ROBS			0.001f	/* Robinson's s */
-#define ROBX			0.415f	/* Robinson's x */
-
 extern int Rtable;
 static double scalefactor;
 
