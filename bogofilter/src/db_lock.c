@@ -115,11 +115,18 @@ static int set_celllock(int fd, off_t offset, int locktype) {
 
 static int init_lockfile(const char *fn) {
     char b[1024];	/* XXX FIXME: make lock size configurable */
+    int rc = 0;
 
     memset(b, (unsigned char)cell_free, sizeof(b)); /* XXX FIXME: only works for char */
-    if (sizeof(b) != write(lockfd, b, sizeof(b))
-	    || fsync(lockfd)) {
+    if (lseek(lockfd, (off_t)0, SEEK_SET) != (off_t)0)
+	rc = -1;
+
+    if (rc
+	    || sizeof(b) != write(lockfd, b, sizeof(b))
+	    || fsync(lockfd))
+    {
 	close(lockfd);
+	lockfd = -1;
 	if (fn)
 	    unlink(fn);
 	return -1;
@@ -149,6 +156,7 @@ static int create_lockfile(const char *fn, int modes) {
 	if (link(tmp, fn)) {
 	    int e = errno;
 	    close(lockfd);
+	    lockfd = -1;
 	    unlink(tmp);
 	    free(tmp);
 	    errno = e;
@@ -194,13 +202,13 @@ static int close_lockfile(void) {
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "close_lockfile\n");
 	r = close(lockfd);
+	lockfd = -1;
 	if (r) {
 	    int e = errno;
 	    print_error(__FILE__, __LINE__, "close_lockfile: close(%d) failed: %s",
 		    lockfd, strerror(errno));
 	    errno = e;
 	}
-	lockfd = -1;
     }
     return r;
 }
