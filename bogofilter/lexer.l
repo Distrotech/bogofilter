@@ -72,9 +72,7 @@ char *yylval;
 
 UINT8		([01]?[0-9]?[0-9]|2([0-4][0-9]|5[0-5]))
 IPADDR		{UINT8}\.{UINT8}\.{UINT8}\.{UINT8}
-BCHARS		[0-9a-zA-Z\'()+_,-./:=?]
-BCHARSNOSPC	[0-9a-zA-Z'()+_,-./:=?]
-MIME_BOUNDARY	{BCHARS}*{BCHARSNOSPC}
+MIME_BOUNDARY	[0-9a-zA-Z\'()+_,-./:=?]*
 
 ID		[0-9a-zA-Z-]*
 MTYPE		[ \t]*[0-9a-zA-Z/-]*
@@ -256,7 +254,7 @@ width	;
 ^\tid\ {ID}					;
 
 E?SMTP\ id\ {ID}				;
-boundary=.*					{ if (mime_lexer) { set_mime_boundary(); }}
+boundary=[ ]*\"{MIME_BOUNDARY}\"$		{ if (mime_lexer) { set_mime_boundary(); }}
 name=\"?					;
 filename=\"?					;
 ^--{MIME_BOUNDARY}(--)?$			{ if (mime_lexer) { chk_mime_boundary(); return (BOUNDARY); }}
