@@ -71,13 +71,9 @@ YYYYMMDD string_to_date(const char *s)
 /* Keep high counts */
 bool keep_count(uint32_t count)
 {
-    if (thresh_count == 0)
-	return true;
-    else {
-	bool ok = count > thresh_count;
-	if (DEBUG_DATABASE(1)) fprintf(dbgout, "keep_count:  %d > %d -> %c\n", count, thresh_count, ok ? 't' : 'f' );
-	return ok;
-    }
+    bool ok = count > thresh_count;
+    if (count > 0 && DEBUG_DATABASE(1)) fprintf(dbgout, "keep_count:  %d > %d -> %c\n", count, thresh_count, ok ? 't' : 'f' );
+    return ok;
 }
 
 /* Keep recent dates */
@@ -134,6 +130,8 @@ int maintain_wordlist_file(const char *db_file)
 	return 2;
 
     rc = maintain_wordlist(dbh);
+
+    db_close(dbh, false);
 
     return rc;
 }

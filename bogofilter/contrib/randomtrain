@@ -6,11 +6,13 @@
 #                 and train if the result is wrong or uncertain
 #  needs:    bash basename rm grep awk wc perl dd bogofilter
 #  usage:    see function usage() of this file
-#  version:  0.6 (Greg Louis <glouis@dynamicro.on.ca>)
+#
+#  original author: 	Greg Louis <glouis@dynamicro.on.ca>
+#  modified by: 	David Relson <relson@osagesoftware.com>
 
 function usage() {
     name=`basename $0`
-    echo "Usage: $name [bogodir] [-p pid] [-c cfg] [-]n|s filename [-]n|s filename [...]"
+    echo "Usage: $name [-d bogodir] [-p pid] [-c cfg] [-]n|s filename [-]n|s filename [...]"
     echo "       Messages contained in the files are fed to bogofilter"
     echo "       in random order.  If bogofilter is wrong or uncertain"
     echo "       about whether a message is spam, that message is used"

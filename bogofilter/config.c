@@ -141,6 +141,7 @@ static const parm_desc sys_parms[] =
     { "kill_html_comments", 		CP_BOOLEAN, { (void *) &kill_html_comments } },
     { "count_html_comments",  		CP_INTEGER, { (void *) &count_html_comments } },
     { "score_html_comments",  		CP_BOOLEAN, { (void *) &score_html_comments } },
+    { "db_cachesize",	  CP_INTEGER,	{ (void *) &db_cachesize } },
     { NULL,		  CP_NONE,	{ (void *) NULL } },
 };
 
@@ -420,7 +421,7 @@ static void help(void)
 		  "\t-e\t- in -p mode, exit with code 0 when the mail is not spam.\n"
 		  "\t-s\t- register message as spam.\n"
 		  "\t-n\t- register message as non-spam.\n"
-		  "\t-o val\t- set user defined spamicity cutoff.\n"
+		  "\t-o val [,val]\t- set user defined spam and ham cutoff values.\n"
 		  "\t-u\t- classify message as spam or non-spam and register accordingly.\n"
 		  "\t-S\t- move message's words from non-spam list to spam list.\n"
 		  "\t-N\t- move message's words from spam list to spam non-list.\n"
@@ -618,8 +619,14 @@ int process_args(int argc, char **argv)
 	    break;
 
 	case 'o':
-	    spam_cutoff = atof( optarg );
-	    break;
+	{
+	    char *del = strchr(optarg, ',');
+	    c_spam_cutoff = atof( optarg );
+	    if (del != NULL) {
+		c_ham_cutoff = atof( del+1 );
+	    }
+	}
+	break;
 
 	case 't':
 	    terse = true;

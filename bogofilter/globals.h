@@ -36,10 +36,14 @@ extern	int	max_repeats;
 extern	double	min_dev;
 extern	double	ham_cutoff;
 extern	double	spam_cutoff;
+extern	double	c_ham_cutoff;		/* value from command line */
+extern	double	c_spam_cutoff;		/* value from command line */
 extern	double	thresh_stats;
 
 extern	int	abort_on_error;
 extern	bool	stats_in_header;
+
+extern	int	db_cachesize;
 
 extern	const char	*update_dir;
 extern	const char	*progname;
