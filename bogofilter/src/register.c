@@ -35,7 +35,7 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
   dsv_t val;
 
   wordlist_t *list;
-  int incr = -1, decr = -1;
+  sh_t incr = IX_UNDF, decr = IX_UNDF;
 
   /* If update directory explicity supplied, setup the wordlists. */
   if (update_dir) {
@@ -43,10 +43,10 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 	  exit(EX_ERROR);
   }
 
-  if (_run_type & REG_SPAM)	{ r = "s"; incr = SPAM; }
-  if (_run_type & REG_GOOD)	{ r = "n"; incr = GOOD; }
-  if (_run_type & UNREG_SPAM)	{ u = "S"; decr = SPAM; }
-  if (_run_type & UNREG_GOOD)	{ u = "N"; decr = GOOD; }
+  if (_run_type & REG_SPAM)	{ r = "s"; incr = IX_SPAM; }
+  if (_run_type & REG_GOOD)	{ r = "n"; incr = IX_GOOD; }
+  if (_run_type & UNREG_SPAM)	{ u = "S"; decr = IX_SPAM; }
+  if (_run_type & UNREG_GOOD)	{ u = "N"; decr = IX_GOOD; }
 
   if (wordcount == 0)
       msgcount = 0;
@@ -65,11 +65,11 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
   {
       wordprop = node->buf;
       ds_read(word_list->dsh, node->key, &val);
-      if (incr >= 0) {
+      if (incr != IX_UNDF) {
 	  uint32_t *counts = val.count;
 	  counts[incr] += wordprop->freq;
       }
-      if (decr >= 0) {
+      if (decr != IX_UNDF) {
 	  uint32_t *counts = val.count;
 	  counts[decr] = ((long)counts[decr] < wordprop->freq) ? 0 : counts[decr] - wordprop->freq;
       }
@@ -85,21 +85,21 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 */
 
       ds_get_msgcounts(list->dsh, &val);
-      list->msgcount[SPAM] = val.spamcount;
-      list->msgcount[GOOD] = val.goodcount;
+      list->msgcount[IX_SPAM] = val.spamcount;
+      list->msgcount[IX_GOOD] = val.goodcount;
 
-      if (incr >= 0)
+      if (incr != IX_UNDF)
 	  list->msgcount[incr] += msgcount;
       
-      if (decr >= 0) {
+      if (decr != IX_UNDF) {
 	  if (list->msgcount[decr] > msgcount)
 	      list->msgcount[decr] -= msgcount;
 	  else
 	      list->msgcount[decr] = 0;
       }
 
-      val.spamcount = list->msgcount[SPAM];
-      val.goodcount = list->msgcount[GOOD];
+      val.spamcount = list->msgcount[IX_SPAM];
+      val.goodcount = list->msgcount[IX_GOOD];
 
       ds_set_msgcounts(list->dsh, &val);
 
@@ -107,7 +107,7 @@ void register_words(run_t _run_type, wordhash_t *h, int msgcount)
 
       if (verbose>1)
 	  (void)fprintf(stderr, "bogofilter: list %s - %ld spam, %ld good\n",
-			list->filename, list->msgcount[SPAM], list->msgcount[GOOD]);
+			list->filename, list->msgcount[IX_SPAM], list->msgcount[IX_GOOD]);
   }
 }
 

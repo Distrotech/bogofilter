@@ -222,8 +222,8 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 	    bool ok;
 	    /* if index is spamlist, but not writing to spamlist ... */
 	    /* if index is goodlist, but not writing to goodlist ... */
-	    ok = ((dsh->index == SPAM && (run_type & (REG_SPAM | UNREG_SPAM))) ||
-		  (dsh->index == GOOD && (run_type & (REG_GOOD | UNREG_GOOD))));
+	    ok = ((dsh->index == IX_SPAM && (run_type & (REG_SPAM | UNREG_SPAM))) ||
+		  (dsh->index == IX_GOOD && (run_type & (REG_GOOD | UNREG_GOOD))));
 	    if (!ok)
 		continue;
 	}

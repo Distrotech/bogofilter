@@ -26,11 +26,6 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 
 #include "word.h"
 
-typedef enum sh_e { SPAM, GOOD } sh_t;
-
-#define	spamcount count[SPAM]
-#define	goodcount count[GOOD]
-
 #define MSG_COUNT ".MSG_COUNT"
 
 /* typedef:  Datastore handle type
@@ -50,9 +45,12 @@ typedef struct {
 */
 
 typedef struct {
-    uint32_t count[2];		/* spam and ham counts */
+    uint32_t count[IX_SIZE];	/* spam and ham counts */
     uint32_t date;
 } dsv_t;
+
+#define	spamcount count[IX_SPAM]
+#define	goodcount count[IX_GOOD]
 
 /* typedef:  Database value type
 ** - used to communicate between datastore layer and database layer

@@ -339,7 +339,7 @@ void rob_initialize_with_parameters(rob_stats_t *stats, double _min_dev, double 
 	    robx = ROBX;
 	else {
 	    /* If found, unscale; else use predefined value */
-	    long l_robx = val.count[SPAM];
+	    long l_robx = val.count[IX_SPAM];
 	    robx = l_robx ? (double)l_robx / 1000000 : ROBX;
 	}
     }

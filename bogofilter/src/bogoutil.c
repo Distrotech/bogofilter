@@ -490,10 +490,10 @@ static double compute_robx(dsh_t *dsh)
 	ds_foreach(dsh, robx_hook, &rh);
     }
     else {
-	dsh->index = GOOD;	    /* robx needs count good tokens */
+	dsh->index = IX_GOOD;	    /* robx needs count good tokens */
 	ds_foreach(dsh, count_hook, &rh);
 
-	dsh->index = SPAM;	    /* and scores for spam spam tokens */
+	dsh->index = IX_SPAM;	    /* and scores for spam spam tokens */
 	ds_foreach(dsh, robx_hook, &rh);
     }
 

@@ -74,10 +74,10 @@ static int init_wordlist(/*@out@*/ wordlist_t **list, const char* name, const ch
     new->index = ++listcount;
     new->override=override;
     new->active=false;
-    new->weight[SPAM]=sweight;
-    new->weight[GOOD]=gweight;
-    new->bad[SPAM]=sbad;
-    new->bad[GOOD]=gbad;
+    new->weight[IX_SPAM]=sweight;
+    new->weight[IX_GOOD]=gweight;
+    new->bad[IX_SPAM]=sbad;
+    new->bad[IX_GOOD]=gbad;
     new->ignore=ignore;
 
     if (! word_lists) {
@@ -225,8 +225,8 @@ void open_wordlists(dbmode_t mode)
 	    } else { /* ds_open */
 		dsv_t val;
 		ds_get_msgcounts(list->dsh, &val);
-		list->msgcount[GOOD] = val.goodcount;
-		list->msgcount[SPAM] = val.spamcount;
+		list->msgcount[IX_GOOD] = val.goodcount;
+		list->msgcount[IX_SPAM] = val.spamcount;
 	    } /* ds_open */
 	} /* for */
     } while(retry);
@@ -319,7 +319,7 @@ void set_good_weight(double weight)
 
     for ( list = word_lists; list != NULL; list = list->next )
     {
-	list->weight[GOOD] = weight;
+	list->weight[IX_GOOD] = weight;
     }
 
     return;

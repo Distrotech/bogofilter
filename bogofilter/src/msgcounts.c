@@ -64,8 +64,8 @@ void compute_msg_counts()
 
     for(list=word_lists; list != NULL; list=list->next)
     {
-	msgs_bad  += list->msgcount[SPAM];
-	msgs_good += list->msgcount[GOOD];
+	msgs_bad  += list->msgcount[IX_SPAM];
+	msgs_good += list->msgcount[IX_GOOD];
     }
 }
 
