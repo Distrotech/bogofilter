@@ -6,10 +6,11 @@ $Id$
 
 0.14.5.3 2003-08-29
 
-	 * Fix parser errors that can cause:
-	   1. Incorrect processing of html comments.
-	   2. "fatal flex scanner internal error--end of buffer missed", 
-	      which kills bogofilter.
+	* Fix parser errors that can cause:
+	  1. Incorrect processing of html comments.
+	  2. "fatal flex scanner internal error--end of buffer missed", 
+	     which kills bogofilter.
+	* Fix defective printing in 'bogofilter -Q' output.
 
 0.14.5.2 2003-08-20
 
