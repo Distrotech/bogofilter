@@ -167,6 +167,13 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 
 /* If header and library version do not match,
  * print an error message on stderr and exit with EX_ERROR. */
+
+bool db_is_swapped(void *vhandle)
+{
+    dbh_t *handle = vhandle;
+    return handle->is_swapped;
+}
+
 static void check_db_version(void)
 {
     int maj, min;
@@ -390,13 +397,7 @@ retry_db_open:
 	check_fsize_limit(handle->fd, pagesize);
     }
 
-    if (handle) {
-	dsh_t *dsh;
-	dsh = dsh_init(handle, handle->is_swapped);
-	return (void *)dsh;
-    }
-
-    return NULL;
+    return handle;
 
  open_err:
     dbh_free(handle);
@@ -425,14 +426,14 @@ retry_db_open:
 #endif
 
 /** begin transaction. Returns 0 for success. */
-int db_txn_begin(dsh_t *dsh)
+int db_txn_begin(void *vhandle)
 {
     DB_TXN *t;
     int ret;
 
+    dbh_t *handle = vhandle;
     assert(dbe);
-    assert(dsh);
-    assert(dsh->dbh);
+    assert(handle);
 
     ret = BF_TXN_BEGIN(dbe, NULL, &t, 0);
     if (ret) {
@@ -440,7 +441,7 @@ int db_txn_begin(dsh_t *dsh)
 		dbe, db_strerror(ret));
 	return ret;
     }
-    ((dbh_t *)dsh->dbh)->txn = t;
+    handle->txn = t;
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB_ENV->txn_begin(%p), tid: %lx\n",
 		dbe, (unsigned long)BF_TXN_ID(t));
@@ -448,10 +449,11 @@ int db_txn_begin(dsh_t *dsh)
     return 0;
 }
 
-int db_txn_abort(dsh_t *dsh)
+int db_txn_abort(void *vhandle)
 {
     int ret;
-    DB_TXN *t = ((dbh_t *)dsh->dbh)->txn;
+    dbh_t *handle = vhandle;
+    DB_TXN *t = handle->txn;
     assert(dbe);
     assert(t);
 
@@ -463,7 +465,7 @@ int db_txn_abort(dsh_t *dsh)
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_TXN->abort(%lx)\n",
 		    (unsigned long)BF_TXN_ID(t));
-    ((dbh_t *)dsh->dbh)->txn = NULL;
+    handle->txn = NULL;
 
     switch (ret) {
 	case 0:
@@ -475,10 +477,11 @@ int db_txn_abort(dsh_t *dsh)
     }
 }
 
-int db_txn_commit(dsh_t *dsh)
+int db_txn_commit(void *vhandle)
 {
     int ret;
-    DB_TXN *t = ((dbh_t *)dsh->dbh)->txn;
+    dbh_t *handle = vhandle;
+    DB_TXN *t = handle->txn;
     assert(dbe);
     assert(t);
 
@@ -490,7 +493,7 @@ int db_txn_commit(dsh_t *dsh)
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_TXN->commit(%lx, 0)\n",
 		    (unsigned long)BF_TXN_ID(t));
-    ((dbh_t *)dsh->dbh)->txn = NULL;
+    handle->txn = NULL;
 
     switch (ret) {
 	case 0:
@@ -502,10 +505,10 @@ int db_txn_commit(dsh_t *dsh)
     }
 }
 
-int db_delete(dsh_t *dsh, const dbv_t *token)
+int db_delete(void *vhandle, const dbv_t *token)
 {
     int ret = 0;
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
 
     DBT db_key;
@@ -533,13 +536,13 @@ int db_delete(dsh_t *dsh, const dbv_t *token)
 }
 
 
-int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
+int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 {
     int ret = 0;
     DBT db_key;
     DBT db_data;
 
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
     assert(handle->txn);
 
@@ -572,7 +575,7 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     default:
 	print_error(__FILE__, __LINE__, "(db) DB->get( '%.*s' ), err: %d, %s",
 		    CLAMP_INT_MAX(token->leng), (char *) token->data, ret, db_strerror(ret));
-	db_txn_abort(dsh);
+	db_txn_abort(handle);
 	exit(EX_ERROR);
     }
 
@@ -580,14 +583,14 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 }
 
 
-int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
+int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
 {
     int ret;
 
     DBT db_key;
     DBT db_data;
 
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
     assert(handle->txn);
 
@@ -603,7 +606,7 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     ret = dbp->put(dbp, handle->txn, &db_key, &db_data, 0);
 
     if (ret == DB_LOCK_DEADLOCK)
-	db_txn_abort(dsh);
+	db_txn_abort(handle);
 
     if (ret != 0) {
 	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%.*s' ), err: %d, %s",
@@ -652,10 +655,10 @@ void db_close(void *vhandle, bool nosync)
 /*
  flush any data in memory to disk
 */
-void db_flush(dsh_t *dsh)
+void db_flush(void *vhandle)
 {
     int ret;
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
 
     if (DEBUG_DATABASE(1))
@@ -678,9 +681,9 @@ void db_flush(dsh_t *dsh)
 	fprintf(dbgout, "DB_ENV->log_flush(%p): %s\n", dbe, db_strerror(ret));
 }
 
-int db_foreach(dsh_t *dsh, db_foreach_t hook, void *userdata)
+int db_foreach(void *vhandle, db_foreach_t hook, void *userdata)
 {
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
 
     int ret = 0, eflag = 0;

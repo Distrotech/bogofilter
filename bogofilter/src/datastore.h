@@ -118,8 +118,7 @@ extern void ds_cleanup(void);
 
 /** Initialize datastore handle. */
 dsh_t *dsh_init(
-    void *dbh,			/* database handle from db_open() */
-    bool is_swapped);
+    void *dbh);			/* database handle from db_open() */
 
 /** Free data store handle that must not be used after calling this
  * function. */
