@@ -49,36 +49,58 @@ void ds_cleanup(void);
 
 /* Function definitions */
 
-static void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data, bool is_swapped)
+static void convert_external_to_internal(dsh_t *dsh, dbv_t *ex_data, dsv_t *in_data)
 {
     size_t i = 0;
     uint32_t *cv = ex_data->data;
 
-    in_data->spamcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+    if (dsh->count == 1) {
+	in_data->spamcount = !dsh->is_swapped ? cv[i++] : swap_32bit(cv[i++]);
 
-    if (ex_data->leng <= i * sizeof(uint32_t))
-	in_data->goodcount = 0;
-    else
-	in_data->goodcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+	if (ex_data->leng <= i * sizeof(uint32_t))
+	    in_data->goodcount = 0;
+	else
+	    in_data->goodcount = !dsh->is_swapped ? cv[i++] : swap_32bit(cv[i++]);
 
-    if (ex_data->leng <= i * sizeof(uint32_t))
-	in_data->date = 0;
+	if (ex_data->leng <= i * sizeof(uint32_t))
+	    in_data->date = 0;
+	else {
+	    in_data->date = !dsh->is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+	}
+    }
     else {
-	in_data->date = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+	in_data->count[dsh->index] = !dsh->is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+
+	if (ex_data->leng <= i * sizeof(uint32_t))
+	    in_data->date = 0;
+	else {
+	    YYYYMMDD date = !dsh->is_swapped ? cv[i++] : swap_32bit(cv[i++]); 
+	    in_data->date = max(in_data->date, date);
+	}
     }
 
     return;
 }
 
-static void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data, bool is_swapped)
+static void convert_internal_to_external(dsh_t *dsh, dsv_t *in_data, dbv_t *ex_data)
 {
     size_t i = 0;
     uint32_t *cv = ex_data->data;
 
-    cv[i++] = !is_swapped ? in_data->spamcount : swap_32bit(in_data->spamcount);
-    cv[i++] = !is_swapped ? in_data->goodcount : swap_32bit(in_data->goodcount);
+    /* Writing requires extra magic since the counts may need to be
+    ** separated for output to different wordlists.
+    */
+
+    if (dsh->count == 1) {
+	cv[i++] = !dsh->is_swapped ? in_data->spamcount : swap_32bit(in_data->spamcount);
+	cv[i++] = !dsh->is_swapped ? in_data->goodcount : swap_32bit(in_data->goodcount);
+    }
+    else {
+	cv[i++] = !dsh->is_swapped ? in_data->count[dsh->index] : swap_32bit(in_data->count[dsh->index]);
+    }
+
     if (datestamp_tokens || in_data->date != 0)
-	cv[i++] = !is_swapped ? in_data->date : swap_32bit(in_data->date);
+	cv[i++] = !dsh->is_swapped ? in_data->date : swap_32bit(in_data->date);
 
     ex_data->leng = i * sizeof(cv[0]);
 
@@ -93,8 +115,8 @@ dsh_t *dsh_init(
 {
     dsh_t *val = xmalloc(sizeof(*val));
     val->dbh = dbh;
-    val->count = count;
     val->index = 0;
+    val->count = count;
     val->is_swapped = is_swapped;
     return val;
 }
@@ -130,7 +152,7 @@ void ds_flush(void *vhandle)
 int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 {
     dsh_t *dsh = vhandle;
-    int ret;
+    bool found = false;
     dbv_t ex_key;
     dbv_t ex_data;
     uint32_t cv[3];
@@ -144,29 +166,47 @@ int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
     ex_data.data = cv;
     ex_data.leng = ex_data.size = sizeof(cv);
 
-    ret = db_get_dbvalue(dsh, &ex_key, &ex_data);
+    memset(val, 0, sizeof(*val));
 
-    if (ret == 0) {
-	convert_external_to_internal(&ex_data, val, dsh->is_swapped);
+    for (dsh->index = 0; dsh->index < dsh->count; dsh->index += 1) {
+	int ret = db_get_dbvalue(dsh, &ex_key, &ex_data);
 
-	if (DEBUG_DATABASE(3)) {
-	    fprintf(dbgout, "ds_read: [%*s] -- %lu,%lu\n",
-		    word->leng, word->text,
-		    (unsigned long)val->spamcount,
-		    (unsigned long)val->goodcount);
+	switch (ret) {
+	case 0:
+	    found = true;
+
+	    convert_external_to_internal(dsh, &ex_data, val);
+
+	    if (DEBUG_DATABASE(3)) {
+		fprintf(dbgout, "ds_read: [%*s] -- %lu,%lu\n",
+			word->leng, word->text,
+			(unsigned long)val->spamcount,
+			(unsigned long)val->goodcount);
+	    }
+	    break;
+
+	case DB_NOTFOUND:
+	    if (DEBUG_DATABASE(3)) {
+		fprintf(dbgout, "db_get_dbvalue: [%*s] not found\n", 
+			word->leng, (char *) word->text);
+	    }
+	    break;
+	    
+	default:
+	    print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%*s' ), err: %d, %s", 
+			word->leng, (char *) word->text, ret, db_strerror(ret));
+	    exit(EX_ERROR);
 	}
-    } else {
-	memset(val, 0, sizeof(*val));
     }
 
-    return ret;
+    return found ? 0 : 1;
 }
 
 
 int ds_write(void *vhandle, const word_t *word, dsv_t *val)
 {
+    int ret;
     dsh_t *dsh = vhandle;
-    bool ok;
     dbv_t ex_key;
     dbv_t ex_data;
     uint32_t cv[3];
@@ -184,20 +224,37 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
     if (datestamp_tokens || today != 0)
 	val->date = today;
 
-    convert_internal_to_external(val, &ex_data, dsh->is_swapped);
+    for (dsh->index = 0; dsh->index < dsh->count; dsh->index += 1) {
 
-    ok = db_set_dbvalue(dsh, &ex_key, &ex_data);
+	/* With two wordlists, it's necessary to check index and
+	** run_type to avoid writing all tokens to both lists. */
+	if (dsh->count == 2) {
+	    bool ok;
+	    /* if index is spamlist, but not writing to spamlist ... */
+	    /* if index is goodlist, but not writing to goodlist ... */
+	    ok = ((dsh->index == SPAM && (run_type & (REG_SPAM | UNREG_SPAM))) ||
+		  (dsh->index == GOOD && (run_type & (REG_GOOD | UNREG_GOOD))));
+	    if (!ok)
+		continue;
+	}
 
-    if (ok) {
-	if (DEBUG_DATABASE(3)) {
-	    fprintf(dbgout, "ds_write: [%*s] -- %lu,%lu\n",
-		    word->leng, word->text,
-		    (unsigned long)val->spamcount,
-		    (unsigned long)val->goodcount);
+	convert_internal_to_external(dsh, val, &ex_data);
+
+	ret = db_set_dbvalue(dsh, &ex_key, &ex_data);
+
+	if (ret == 0) {
+	    if (DEBUG_DATABASE(3)) {
+		fprintf(dbgout, "ds_write: [%*s] -- %lu,%lu\n",
+			word->leng, word->text,
+			(unsigned long)val->spamcount,
+			(unsigned long)val->goodcount);
+	    }
+	} else {
+	    break;
 	}
     }
 
-    return ok ? 0 : 1;
+    return ret;
 }
 
 
@@ -231,9 +288,13 @@ static int ds_hook(dbv_t *ex_key,
     word_t w_key;
     dsv_t in_data;
     ds_userdata_t *ds_data = userdata;
+    dsh_t *dsh = ds_data->dsh;
+
     w_key.text = ex_key->data;
     w_key.leng = ex_key->leng;
-    convert_external_to_internal(ex_data, &in_data, ds_data->dsh->is_swapped);
+
+    convert_external_to_internal(dsh, ex_data, &in_data);
+
     val = (*ds_data->hook)(&w_key, &in_data, ds_data->data);
     return val;
 }

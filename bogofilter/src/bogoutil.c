@@ -465,7 +465,7 @@ static double compute_robx(void *dbh)
     rh.sum = &sum;
     rh.count = &tok_cnt;
 
-    ds_foreach(dbh, robx_hook,  &rh);
+    ds_foreach(dbh, robx_hook, &rh);
 
     robx = sum/tok_cnt;
     if (verbose)
@@ -509,6 +509,8 @@ static int compute_robinson_x(char *path)
 	    fprintf(stderr, "%s: string too long creating .db file name.\n", PROGNAME);
 	    exit(EX_ERROR);
 	}
+
+	run_type = REG_SPAM;
 
 	dbh = ds_open(".", count, (const char **) filepaths, DB_WRITE);
 	if (dbh == NULL)

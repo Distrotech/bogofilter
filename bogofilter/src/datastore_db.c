@@ -115,9 +115,9 @@ static void dbh_free(/*@only@*/ dbh_t *handle)
 }
 
 
-void dbh_print_names(dsh_t *dsh, const char *msg)
+void dbh_print_names(void *vhandle, const char *msg)
 {
-    dbh_t *handle = dsh->dbh;
+    dbh_t *handle = vhandle;
 
     if (handle->count == 1)
 	fprintf(dbgout, "%s (%s)", msg, handle->name[0]);
@@ -309,11 +309,11 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 {
     int ret;
     bool found = false;
-    size_t i;
     DBT db_key;
     DBT db_data;
 
     dbh_t *handle = dsh->dbh;
+    DB *dbp = handle->dbp[dsh->index];
 
     db_enforce_locking(handle, "db_get_dbvalue");
 
@@ -328,29 +328,24 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
     db_data.ulen = val->size;
     db_data.flags = DB_DBT_USERMEM; /* saves the memcpy */
 
-    for (i = 0; i < handle->count; i += 1) {
-	DB *dbp = handle->dbp[i];
-	ret = dbp->get(dbp, NULL, &db_key, &db_data, 0);
+    ret = dbp->get(dbp, NULL, &db_key, &db_data, 0);
 
-	switch (ret) {
-	case 0:
-	    found = true;
-	    break;
-	case DB_NOTFOUND:
-	    if (handle->count != 1) {
-		uint32_t *count = token->data;
-		count[i] = 0;
-	    }
-	    if (DEBUG_DATABASE(3)) {
-		fprintf(dbgout, "db_get_dbvalue: [%*s] not found\n", 
-			token->leng, (char *) token->data);
-	    }
-	    break;
-	default:
-	    print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%*s' ), err: %d, %s", 
-			token->leng, (char *) token->data, ret, db_strerror(ret));
-	    exit(EX_ERROR);
+    val->leng = db_data.size;
+
+    switch (ret) {
+    case 0:
+	found = true;
+	break;
+    case DB_NOTFOUND:
+	if (DEBUG_DATABASE(3)) {
+	    fprintf(dbgout, "db_get_dbvalue: [%*s] not found\n", 
+		    token->leng, (char *) token->data);
 	}
+	break;
+    default:
+	print_error(__FILE__, __LINE__, "(db) db_get_dbvalue( '%*s' ), err: %d, %s", 
+		    token->leng, (char *) token->data, ret, db_strerror(ret));
+	exit(EX_ERROR);
     }
 
     return found ? 0 : DB_NOTFOUND;
@@ -359,10 +354,13 @@ int db_get_dbvalue(dsh_t *dsh, const dbv_t *token, /*@out@*/ dbv_t *val)
 
 int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
 {
+    int ret;
+
     DBT db_key;
     DBT db_data;
-    size_t i;
+
     dbh_t *handle = dsh->dbh;
+    DB *dbp = handle->dbp[dsh->index];
 
     db_enforce_locking(handle, "db_set_dbvalue");
 
@@ -375,17 +373,12 @@ int db_set_dbvalue(dsh_t *dsh, const dbv_t *token, dbv_t *val)
     db_data.data = val->data;
     db_data.size = val->leng;
 
-    for (i = 0; i < handle->count; i += 1) {
-	int ret;
-	DB *dbp = handle->dbp[i];
+    ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
 
-	ret = dbp->put(dbp, NULL, &db_key, &db_data, 0);
-
-	if (ret != 0) {
-	    print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%*s' ), err: %d, %s", 
-			token->size, (char *)token->data, ret, db_strerror(ret));
-	    exit(EX_ERROR);
-	}
+    if (ret != 0) {
+	print_error(__FILE__, __LINE__, "(db) db_set_dbvalue( '%*s' ), err: %d, %s", 
+		    token->size, (char *)token->data, ret, db_strerror(ret));
+	exit(EX_ERROR);
     }
 
     return 0;
@@ -416,6 +409,8 @@ void db_close(void *vhandle, bool nosync)
 
     for (i = 0; i < handle->count; i += 1) {
 	DB *dbp = handle->dbp[i];
+	if (dbp == NULL)
+	    continue;
 	if ((ret = dbp->close(dbp, f)))
 	    print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
     }

@@ -78,7 +78,7 @@ char *db_handle_filename(dsh_t *dsh);
 int db_lock(int fd, int cmd, short int type);
 
 /* Prints wordlist name(s) */
-void dbh_print_names(dsh_t *dsh, const char *msg);
+void dbh_print_names(void *handle, const char *msg);
 
 /* Returns version string */
 const char *db_version_str(void);
