@@ -480,10 +480,11 @@ int db_delete(dsh_t *dsh, const dbv_t *token)
     int ret = 0;
     dbh_t *handle = dsh->dbh;
     DB *dbp = handle->dbp;
-    assert(handle->txn);
 
     DBT db_key;
     DBT_init(db_key);
+
+    assert(handle->txn);
 
     db_key.data = token->data;
     db_key.size = token->leng;
