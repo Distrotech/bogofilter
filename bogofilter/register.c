@@ -85,8 +85,6 @@ void register_words(run_t _run_type, wordhash_t *h,
   if (decr_list)
     decr_list->active = true;
 
-  db_lock_writer_list(word_lists);
-
   for (list = word_lists; list != NULL; list = list->next){
     if (list->active) {
       list->msgcount = db_getcount(list->dbh);
@@ -117,8 +115,6 @@ void register_words(run_t _run_type, wordhash_t *h,
 		      list->msgcount, list->filename);
     }
   }
-
-  db_lock_release_list(word_lists);
 }
 
 /* this function accumulates the word frequencies from the src hash to
