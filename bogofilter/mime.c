@@ -257,11 +257,9 @@ void set_mime_boundary(void)
     if (DEBUG_MIME(1))
 	fprintf(stderr, "*** --> set_mime_boundary: %d  %p '%-.*s'\n", stackp, yytext, yyleng, yytext);
 
-    if (yytext[0] != '-' || yytext[1] != '-' ) {
-	len = strlen("boundary=");
-	boundary = getword(yytext+len, yytext + yyleng);
-	msg_state_init(true, boundary, strlen(boundary));
-    }
+    len = strlen("boundary=");
+    boundary = getword(yytext+len, yytext + yyleng);
+    msg_state_init(true, boundary, strlen(boundary));
 
     if (DEBUG_MIME(1))
 	fprintf(stderr, "*** <-- set_mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
@@ -271,18 +269,18 @@ void set_mime_boundary(void)
 
 void chk_mime_boundary(void)
 {
-    char *boundary;
-    size_t len;
+    char *boundary = msg_state->boundary;
+    size_t len = msg_state->boundary_len;
 
     if (DEBUG_MIME(1))
 	fprintf(stderr, "*** --> chk_mime_boundary: %d  %p '%-.*s'\n", stackp, yytext, yyleng, yytext);
 
-    boundary = msg_state->boundary;
     if (boundary == NULL )
 	return;
-    len = msg_state->boundary_len;
+
     /* XXX FIXME: recover from missing end boundaries? */
-    if (memcmp(yytext+2, boundary, len) == 0) {
+    if (yytext[0] == '-' && yytext[1] == '-' &&
+	memcmp(yytext+2, boundary, len) == 0) {
 	msg_state = &msg_stack[stackp];
 	memset(msg_state, 0, sizeof(*msg_state));
 	msg_state_init(true, boundary, len);
