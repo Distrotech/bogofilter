@@ -59,19 +59,19 @@ bool	  db_log_autoremove = false;	/* DB_LOG_AUTOREMOVE */
 bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
-static int  dsm_begin_trans	(void *vhandle);
-static int  dsm_abort_trans	(void *vhandle);
-static int  dsm_commit_trans	(void *vhandle);
+static int  txn_begin	(void *vhandle);
+static int  txn_abort	(void *vhandle);
+static int  txn_commit	(void *vhandle);
 
 /* OO function lists */
 
 dsm_t dsm_transactional = {
-    &dsm_begin_trans,
-    &dsm_abort_trans,
-    &dsm_commit_trans
+    &txn_begin,
+    &txn_abort,
+    &txn_commit
 };
 
-static int dsm_begin_trans(void *vhandle)
+static int txn_begin(void *vhandle)
 {
     DB_TXN *t;
     int ret;
@@ -103,7 +103,7 @@ static int dsm_begin_trans(void *vhandle)
     return 0;
 }
 
-static int dsm_abort_trans(void *vhandle)
+static int txn_abort(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;
@@ -137,7 +137,7 @@ static int dsm_abort_trans(void *vhandle)
     }
 }
 
-static int dsm_commit_trans(void *vhandle)
+static int txn_commit(void *vhandle)
 {
     int ret;
     dbh_t *dbh = vhandle;

@@ -45,19 +45,18 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
-static int  dsm_begin_trad	(void *vhandle);
-static int  dsm_abort_trad	(void *vhandle);
-static int  dsm_commit_trad	(void *vhandle);
+static int  tra_begin	(void *vhandle);
+static int  tra_abort	(void *vhandle);
+static int  tra_commit	(void *vhandle);
 
 /* OO function lists */
 
 dsm_t dsm_traditional = {
-    &dsm_begin_trad,
-    &dsm_abort_trad,
-    &dsm_commit_trad,
+    &tra_begin,
+    &tra_abort,
+    &tra_commit,
 };
 
-int  dsm_begin_trad	(void *vhandle) { (void) vhandle; return 0; }
-int  dsm_abort_trad	(void *vhandle) { (void) vhandle; return 0; }
-int  dsm_commit_trad	(void *vhandle) { (void) vhandle; return 0; }
-
+int  tra_begin	(void *vhandle) { (void) vhandle; return 0; }
+int  tra_abort	(void *vhandle) { (void) vhandle; return 0; }
+int  tra_commit	(void *vhandle) { (void) vhandle; return 0; }
