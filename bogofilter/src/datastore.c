@@ -51,20 +51,58 @@ void ds_cleanup(void);
 
 /* Function definitions */
 
-int ds_delete(void *vhandle, const word_t *word)
+static void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data)
 {
-    bool ok;
-    dbv_t ex_key;
+    size_t i = 0;
+    uint32_t *cv = ex_data->data;
 
-    struct_init(ex_key);
-    ex_key.data = word->text;
-    ex_key.leng = word->leng;
+    in_data->spamcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
 
-    ok = db_delete(vhandle, &ex_key);
+    if (ex_data->leng <= i * sizeof(uint32_t))
+	in_data->goodcount = 0;
+    else
+	in_data->goodcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
 
-    return ok ? 0 : 1;
+    if (ex_data->leng <= i * sizeof(uint32_t))
+	in_data->date = 0;
+    else {
+	in_data->date = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
+    }
+
+    return;
 }
 
+static void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data)
+{
+    size_t i = 0;
+    uint32_t *cv = ex_data->data;
+
+    cv[i++] = !is_swapped ? in_data->spamcount : swap_32bit(in_data->spamcount);
+    cv[i++] = !is_swapped ? in_data->goodcount : swap_32bit(in_data->goodcount);
+    if (datestamp_tokens || in_data->date != 0)
+	cv[i++] = !is_swapped ? in_data->date : swap_32bit(in_data->date);
+
+    ex_data->leng = i * sizeof(cv[0]);
+
+    return;
+}
+
+
+void *ds_open(const char *db_file, size_t count, const char **names, dbmode_t open_mode)
+{
+    void *v = db_open(db_file, count, names, open_mode);
+    return v;
+}
+
+void ds_close(/*@only@*/ void *vhandle, bool nosync  /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */)
+{
+    db_close(vhandle, nosync);
+}
+
+void ds_flush(void *vhandle)
+{
+    db_flush(vhandle);
+}
 
 int ds_read(void *vhandle, const word_t *word, /*@out@*/ dsv_t *val)
 {
@@ -141,6 +179,22 @@ int ds_write(void *vhandle, const word_t *word, dsv_t *val)
     return ok ? 0 : 1;
 }
 
+
+int ds_delete(void *vhandle, const word_t *word)
+{
+    bool ok;
+    dbv_t ex_key;
+
+    struct_init(ex_key);
+    ex_key.data = word->text;
+    ex_key.leng = word->leng;
+
+    ok = db_delete(vhandle, &ex_key);
+
+    return ok ? 0 : 1;
+}
+
+
 typedef struct {
     ds_foreach_t *hook;
     void         *data;
@@ -215,65 +269,6 @@ void ds_set_msgcounts(void *vhandle, dsv_t *val)
 }
 
 
-void convert_external_to_internal(dbv_t *ex_data, dsv_t *in_data)
-{
-    size_t i = 0;
-    uint32_t *cv = ex_data->data;
-
-    in_data->spamcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
-
-    if (ex_data->leng <= i * sizeof(uint32_t))
-	in_data->goodcount = 0;
-    else
-	in_data->goodcount = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
-
-    if (ex_data->leng <= i * sizeof(uint32_t))
-	in_data->date = 0;
-    else {
-	in_data->date = !is_swapped ? cv[i++] : swap_32bit(cv[i++]);
-    }
-
-    return;
-}
-
-void convert_internal_to_external(dsv_t *in_data, dbv_t *ex_data)
-{
-    size_t i = 0;
-    uint32_t *cv = ex_data->data;
-
-    cv[i++] = !is_swapped ? in_data->spamcount : swap_32bit(in_data->spamcount);
-    cv[i++] = !is_swapped ? in_data->goodcount : swap_32bit(in_data->goodcount);
-    if (datestamp_tokens || in_data->date != 0)
-	cv[i++] = !is_swapped ? in_data->date : swap_32bit(in_data->date);
-
-    ex_data->leng = i * sizeof(cv[0]);
-
-    return;
-}
-
-
-void *ds_open(const char *db_file, size_t count, const char **names, dbmode_t open_mode)
-{
-    void *v = db_open(db_file, count, names, open_mode);
-    return v;
-}
-
-void ds_close(/*@only@*/ void *vhandle, bool nosync  /** Normally false, if true, do not synchronize data. This should not be used in regular operation but only to ease the disk I/O load when the lock operation failed. */)
-{
-    db_close(vhandle, nosync);
-}
-
-void ds_flush(void *vhandle)
-{
-    db_flush(vhandle);
-}
-
-const char *ds_version_str(void)
-{
-    return db_version_str();
-}
-
-
 /* implements locking. */
 int db_lock(int fd, int cmd, short int type)
 {
@@ -286,9 +281,9 @@ int db_lock(int fd, int cmd, short int type)
     return (fcntl(fd, cmd, &lock));
 }
 
-/*
-    Retrieve numeric value associated with word.
-    Returns: value if the the word is found in database,
-    0 if the word is not found.
-    Notes: Will call exit if an error occurs.
-*/
+const char *ds_version_str(void)
+{
+    return db_version_str();
+}
+
+

@@ -32,19 +32,36 @@ Matthias Andree <matthias.andree@gmx.de> 2003
 #undef UINT32_MAX
 #define UINT32_MAX 4294967295lu /* 2 ^ 32 - 1 */
 
+/* typedef:  Datastore handle type
+** - used to communicate between datastore layer and database layer
+** - known to program layer as a void*
+*/
+
+typedef struct {
+    void *dbh;			/* database handle from db_open() */
+    size_t count;		/* database count (1 or 2) */
+    size_t index;		/* database index (0 or 1) */
+    bool is_swapped;
+} dsh_t;
+
+/* typedef:  Datastore value type
+** - used to communicate between program layer and datastore layer
+*/
+
 typedef struct {
     uint32_t count[2];		/* spam and ham counts */
     uint32_t date;
 } dsv_t;
+
+/* typedef:  Database value type
+** - used to communicate between datastore layer and database layer
+*/
 
 typedef struct {
     void     *data;		/* addr of buffer       */
     u_int32_t leng;		/* number of data bytes */
     u_int32_t size;		/* capacity of buffer   */
 } dbv_t;
-
-void convert_external_to_internal(dbv_t *db_data, dsv_t *tk_data);
-void convert_internal_to_external(dsv_t *tk_data, dbv_t *db_data);
 
 /** Iterate over all elements in data base and call \p hook for each item.
  * \p userdata is passed through to the hook function unaltered.
