@@ -437,5 +437,5 @@ const char *ds_version_str(void)
 
 int ds_recover(int catastrophic)
 {
-    return db_recover(catastrophic);
+    return db_recover(catastrophic, 1);
 }

@@ -473,7 +473,7 @@ int db_txn_begin(void *vhandle)
 	return ret;
     }
     handle->txn = t;
-    if (DEBUG_DATABASE(1))
+    if (DEBUG_DATABASE(2))
 	fprintf(dbgout, "DB_ENV->txn_begin(%p), tid: %lx\n",
 		(void *)dbe, (unsigned long)BF_TXN_ID(t));
 
@@ -493,7 +493,7 @@ int db_txn_abort(void *vhandle)
 	print_error(__FILE__, __LINE__, "DB_TXN->abort(%lx) error: %s",
 		(unsigned long)BF_TXN_ID(t), db_strerror(ret));
     else
-	if (DEBUG_DATABASE(1))
+	if (DEBUG_DATABASE(2))
 	    fprintf(dbgout, "DB_TXN->abort(%lx)\n",
 		    (unsigned long)BF_TXN_ID(t));
     handle->txn = NULL;
@@ -523,7 +523,7 @@ int db_txn_commit(void *vhandle)
 	print_error(__FILE__, __LINE__, "DB_TXN->commit(%lx) error: %s",
 		(unsigned long)id, db_strerror(ret));
     else
-	if (DEBUG_DATABASE(1))
+	if (DEBUG_DATABASE(2))
 	    fprintf(dbgout, "DB_TXN->commit(%lx, 0)\n",
 		    (unsigned long)id);
     handle->txn = NULL;
@@ -581,6 +581,7 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 
     dbh_t *handle = vhandle;
     DB *dbp = handle->dbp;
+    assert(handle);
     assert(handle->txn);
 
     DBT_init(db_key);
@@ -597,8 +598,6 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
     /* DB_RMW can avoid deadlocks */
     ret = dbp->get(dbp, handle->txn, &db_key, &db_data, handle->open_mode == DS_READ ? 0 : DB_RMW);
 
-    val->leng = db_data.size;		/* read count */
-
     if (DEBUG_DATABASE(3))
 	fprintf(dbgout, "DB->get(%.*s): %s\n",
 		CLAMP_INT_MAX(token->leng), (char *) token->data, db_strerror(ret));
@@ -614,11 +613,13 @@ int db_get_dbvalue(void *vhandle, const dbv_t *token, /*@out@*/ dbv_t *val)
 	ret = DS_ABORT_RETRY;
 	break;
     default:
-	print_error(__FILE__, __LINE__, "(db) DB->get( '%.*s' ), err: %d, %s",
-		    CLAMP_INT_MAX(token->leng), (char *) token->data, ret, db_strerror(ret));
+	print_error(__FILE__, __LINE__, "(db) DB->get(TXN=%lu,  '%.*s' ), err: %d, %s",
+		    (unsigned long)handle->txn, CLAMP_INT_MAX(token->leng), (char *) token->data, ret, db_strerror(ret));
 	db_txn_abort(handle);
 	exit(EX_ERROR);
     }
+
+    val->leng = db_data.size;		/* read count */
 
     return ret;
 }
@@ -840,17 +841,12 @@ static int plock(const char *path, short locktype, int mode) {
     return fd;
 }
 
-/* dummy infrastructure, to be expanded by environment
- * or transactional initialization/shutdown */
-static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
-	u_int32_t flags, short locktype /* for fcntl */)
-{
+static int db_try_glock(short locktype, int lockcmd) {
+    int ret;
     char *t;
     const char *const tackon = DIRSEP_S "lockfile-d";
-    int ret;
 
     assert(bogohome);
-    assert(dbe == NULL);
 
     /* lock */
     ret = mkdir(bogohome, (mode_t)0755);
@@ -864,14 +860,17 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 
     /* FIXME: this may be dead code if we leave recover outside */
     ret = open(t, O_RDWR|O_CREAT|O_EXCL, (mode_t)0644);
-    if (ret && errno != EEXIST) {
+    if (ret < 0 && errno != EEXIST) {
 	print_error(__FILE__, __LINE__, "open(%s): %s",
 		t, strerror(errno));
 	exit(EXIT_FAILURE);
     }
 
-    lockfd = plock(t, locktype, F_SETLKW);
-    if (lockfd < 0) {
+    if (ret >= 0)
+	close(ret);
+
+    lockfd = plock(t, locktype, lockcmd);
+    if (lockfd < 0 && errno != EAGAIN && errno != EACCES) {
 	print_error(__FILE__, __LINE__, "lock(%s): %s",
 		t, strerror(errno));
 	exit(EXIT_FAILURE);
@@ -879,6 +878,17 @@ static int db_xinit(u_int32_t numlocks, u_int32_t numobjs,
 
     free(t);
     /* lock set up */
+    return lockfd;
+}
+
+/* dummy infrastructure, to be expanded by environment
+ * or transactional initialization/shutdown */
+static int db_xinit(u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags)
+{
+    int ret;
+
+    assert(bogohome);
+    assert(dbe == NULL);
 
     ret = db_env_create(&dbe, 0);
     if (ret != 0) {
@@ -966,27 +976,34 @@ int db_init(void) {
     const u_int32_t numlocks = 16384;
     const u_int32_t numobjs = 16384;
 
-    if (needs_recovery(bogohome))
-    {
-	db_recover(0);
+    if (needs_recovery(bogohome)) {
+	db_recover(0, 0);
     }
+
+    db_try_glock(F_RDLCK, F_SETLKW);
 
     if (set_lock(bogohome)) {
 	exit(EX_ERROR);
     }
 
-    return db_xinit(numlocks, numobjs, /* flags */ 0, F_RDLCK);
+    return db_xinit(numlocks, numobjs, /* flags */ 0);
 }
 
-int db_recover(int catastrophic) {
+int db_recover(int catastrophic, int force) {
     int ret;
+
+    while((force || needs_recovery(bogohome))
+	    && (db_try_glock(F_WRLCK, F_SETLKW) <= 0))
+	rand_sleep(10000,1000000);
+
+    if (!(force || needs_recovery(bogohome)))
+	return 0;
 
 retry:
     if (DEBUG_DATABASE(0))
         fprintf(dbgout, "running %s data base recovery\n",
 	    catastrophic ? "catastrophic" : "regular");
-    ret = db_xinit(1024, 1024, catastrophic ? DB_RECOVER_FATAL : DB_RECOVER,
-	    F_WRLCK);
+    ret = db_xinit(1024, 1024, catastrophic ? DB_RECOVER_FATAL : DB_RECOVER);
     if (ret) {
 	if(!catastrophic) {
 	    catastrophic = 1;
@@ -995,8 +1012,8 @@ retry:
 	goto rec_fail;
     }
 
-    ds_cleanup();
     clear_lockfile(bogohome);
+    ds_cleanup();
 
     return 0;
 
@@ -1022,9 +1039,9 @@ void db_cleanup(void) {
 	if (DEBUG_DATABASE(1) || ret)
 	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", (void *)dbe, db_strerror(ret));
     }
+    clear_lock();
     if (lockfd >= 0)
 	close(lockfd); /* release locks */
-    clear_lock();
     dbe = NULL;
     init = false;
 }
