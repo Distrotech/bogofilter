@@ -10,7 +10,7 @@ static void die(void) {
 }
 
 int main(void) {
-    long size;
+    size_t size;
     char *buf;
 
     if (fseek(stdin, 0, SEEK_END)) die();

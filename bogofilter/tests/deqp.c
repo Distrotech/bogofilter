@@ -1,3 +1,5 @@
+/* $Id$ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +12,7 @@ static void die(void) {
 }
 
 int main(void) {
-    long size;
+    size_t size;
     char *buf;
 
     if (fseek(stdin, 0, SEEK_END)) die();
