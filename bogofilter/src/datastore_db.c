@@ -510,12 +510,6 @@ retry_db_open:
 
     } /* for idx over retryflags */
 
-    if (!fTransaction && handle) {
-	handle->locked = true;
-	if (handle->fd < 0)
-	    handle->locked=false;
-    }
-
     return handle;
 
  open_err:
