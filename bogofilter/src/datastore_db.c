@@ -252,16 +252,6 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 
     dbh_t *handle = NULL;
     uint32_t opt_flags = 0;
-    /*
-     * If locking fails with EAGAIN, then try without MMAP, fcntl()
-     * locking may be forbidden on mmapped files, or mmap may not be
-     * available for NFS. Thanks to Piotr Kucharski and Casper Dik,
-     * see news:comp.protocols.nfs and the bogofilter mailing list,
-     * message #1520, Message-ID: <20030206172016.GS1214@sgh.waw.pl>
-     * Date: Thu, 6 Feb 2003 18:20:16 +0100
-     */
-    size_t idx;
-    uint32_t retryflags[] = { 0, DB_NOMMAP };
 
     if (!init)
 	/* internal error: must be called only after initialization */
@@ -277,19 +267,17 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 	 * applications try to create a DB at the same time. */
 	opt_flags = 0;
 
-    /* retry when locking failed */
-    for (idx = 0; idx < COUNTOF(retryflags); idx += 1)
     {
 #if DB_AT_LEAST(4,1)
 	int flags;
 #endif
 	DB *dbp;
-	uint32_t retryflag = retryflags[idx], pagesize;
+	uint32_t pagesize;
 
 	handle = dbh_init(db_file, name);
 
 	if (handle == NULL)
-	    break;
+	    return NULL;
 
 	/* create DB handle */
 	if ((ret = db_create (&dbp, dbe, 0)) != 0) {
@@ -326,9 +314,9 @@ void *db_open(const char *db_file, const char *name, dbmode_t open_mode)
 	    t = handle->name;
 
 retry_db_open:
-	if ((ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | retryflag, 0664)) != 0
+	if ((ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags, 0664)) != 0
 	    && ( ret != ENOENT || opt_flags == DB_RDONLY ||
-		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL | retryflag, 0664)) != 0))
+		(ret = DB_OPEN(dbp, t, NULL, dbtype, opt_flags | DB_CREATE | DB_EXCL, 0664)) != 0))
 	{
 	    if (opt_flags != DB_RDONLY && ret == EEXIST && --retries) {
 		/* sleep for 4 to 100 ms - this is just to give up the CPU
@@ -387,8 +375,7 @@ retry_db_open:
 
 	/* check file size limit */
 	check_fsize_limit(handle->fd, pagesize);
-	break;
-    } /* for idx over retryflags */
+    }
 
     if (handle) {
 	dsh_t *dsh;
