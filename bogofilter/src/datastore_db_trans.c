@@ -71,15 +71,17 @@ bool	  db_log_autoremove = false;	/* DB_LOG_AUTOREMOVE */
 bool	  db_txn_durable = true;	/* not DB_TXN_NOT_DURABLE */
 #endif
 
+/* public -- used in datastore.c */
+static int	   txn_begin		(void *vhandle);
+static int  	   txn_abort		(void *vhandle);
+static int  	   txn_commit		(void *vhandle);
+/* private -- used in datastore_db_*.c */
 static DB_ENV	  *txn_get_env_dbe	(dbe_t *env);
 static const char *txn_database_name	(const char *db_file);
 static DB_ENV	  *txn_recover_open	(const char *db_file, DB **dbp);
 static int	   txn_auto_commit_flags(void);
 static int	   txn_get_rmw_flag	(int open_mode);
 static int	   txn_lock		(void *handle, int open_mode);
-static int	   txn_begin		(void *vhandle);
-static int  	   txn_abort		(void *vhandle);
-static int  	   txn_commit		(void *vhandle);
 static ex_t	   txn_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   txn_sync		(DB_ENV *env, int ret);
 static void	   txn_log_flush	(DB_ENV *env);
@@ -87,15 +89,17 @@ static void	   txn_log_flush	(DB_ENV *env);
 /* OO function lists */
 
 dsm_t dsm_transactional = {
+    /* public -- used in datastore.c */
+    &txn_begin,
+    &txn_abort,
+    &txn_commit,
+    /* private -- used in datastore_db_*.c */
     &txn_get_env_dbe,
     &txn_database_name,
     &txn_recover_open,
     &txn_auto_commit_flags,
     &txn_get_rmw_flag,
     &txn_lock,
-    &txn_begin,
-    &txn_abort,
-    &txn_commit,
     &txn_common_close,
     &txn_sync,
     &txn_log_flush

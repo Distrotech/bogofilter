@@ -51,15 +51,17 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "db_lock.h"
 #include "error.h"
 
+/* public -- used in datastore.c */
+static int	   tra_begin		(void *vhandle);
+static int  	   tra_abort		(void *vhandle);
+static int  	   tra_commit		(void *vhandle);
+/* private -- used in datastore_db_*.c */
 static DB_ENV	  *tra_get_env_dbe	(dbe_t *env);
 static const char *tra_database_name	(const char *db_file);
 static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
 static int	   tra_auto_commit_flags(void);
 static int	   tra_get_rmw_flag	(int open_mode);
 static int	   tra_lock		(void *handle, int open_mode);
-static int	   tra_begin		(void *vhandle);
-static int  	   tra_abort		(void *vhandle);
-static int  	   tra_commit		(void *vhandle);
 static ex_t	   tra_common_close	(DB_ENV *dbe, const char *db_file);
 static int	   tra_sync		(DB_ENV *env, int ret);
 static void	   tra_log_flush	(DB_ENV *env);
@@ -67,15 +69,17 @@ static void	   tra_log_flush	(DB_ENV *env);
 /* OO function lists */
 
 dsm_t dsm_traditional = {
+    /* public -- used in datastore.c */
+    &tra_begin,
+    &tra_abort,
+    &tra_commit,
+    /* private -- used in datastore_db_*.c */
     &tra_get_env_dbe,
     &tra_database_name,
     &tra_recover_open,
     &tra_auto_commit_flags,
     &tra_get_rmw_flag,
     &tra_lock,
-    &tra_begin,
-    &tra_abort,
-    &tra_commit,
     &tra_common_close,
     &tra_sync,
     &tra_log_flush

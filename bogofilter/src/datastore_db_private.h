@@ -11,7 +11,9 @@ typedef struct {
     char	*directory;	/* stores the home directory for this environment */
 } dbe_t;
 
+/* public -- used in datastore.c */
 typedef int	dsm_function		(void *vhandle);
+/* private -- used in datastore_db_*.c */
 typedef DB_ENV *dsm_get_env_dbe		(dbe_t *env);
 typedef const char *dsm_database_name	(const char *db_file);
 typedef DB_ENV *dsm_recover_open	(const char *db_file, DB **dbp);
@@ -24,15 +26,17 @@ typedef int	dsm_sync		(DB_ENV *env, int ret);
 typedef void	dsm_log_flush		(DB_ENV *env);
 
 typedef struct {
+    /* public -- used in datastore.c */
+    dsm_function	        *dsm_begin;
+    dsm_function        	*dsm_abort;
+    dsm_function        	*dsm_commit;
+    /* private -- used in datastore_db_*.c */
     dsm_get_env_dbe		*dsm_get_env_dbe;
     dsm_database_name		*dsm_database_name;
     dsm_recover_open		*dsm_recover_open;
     dsm_auto_commit_flags	*dsm_auto_commit_flags;
     dsm_get_rmw_flag		*dsm_get_rmw_flag;
     dsm_lock			*dsm_lock;
-    dsm_function	        *dsm_begin;
-    dsm_function        	*dsm_abort;
-    dsm_function        	*dsm_commit;
     dsm_common_close		*dsm_common_close;
     dsm_sync			*dsm_sync;
     dsm_log_flush		*dsm_log_flush;

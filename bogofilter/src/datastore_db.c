@@ -58,7 +58,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "xmalloc.h"
 #include "xstrdup.h"
 
-static dsm_t *dsm = NULL;
+extern dsm_t *dsm;			/* in datastore.c */
 
 extern dsm_t dsm_traditional;		/* in datastore_db_trad.c */
 extern dsm_t dsm_transactional;		/* in datastore_db_trans.c */
