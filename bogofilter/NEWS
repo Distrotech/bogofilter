@@ -2,7 +2,7 @@
 
 				bogofilter news
 
-0.7.6	2002-10-26
+0.7.6	2002-10-27
 	* Added README.hp-ux for those using HP-UX.
 	* Added support for additional architectures - ia64, arm,
 	  powerpc, and s390.
