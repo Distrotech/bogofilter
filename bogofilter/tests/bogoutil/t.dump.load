@@ -9,7 +9,7 @@ if [ "$1" = "-v" ]; then
     verbose=1
 fi
 
-BOGOUTIL="../../bogoutil"
+BOGOUTIL="$VAL ../../bogoutil"
 
 BASE=t.dump.load
 OUT="${TMPDIR}/$BASE.out"

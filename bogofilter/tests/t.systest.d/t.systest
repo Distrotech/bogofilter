@@ -20,8 +20,8 @@ fi
 mkdir -p ${TMPDIR}/tests
 
 CONFIG="${TMPDIR}/test.cf"
-BOGOFILTER="${relpath}/bogofilter -c ${CONFIG} -y 0"
-BOGOUTIL="${relpath}/bogoutil"
+BOGOFILTER="$VAL ${relpath}/bogofilter -c ${CONFIG} -y 0"
+BOGOUTIL="$VAL ${relpath}/bogoutil"
 SYSTEST="${srcdir}"
 
 cat <<EOF > ${CONFIG}

@@ -50,8 +50,8 @@ EOF
 
 V="v"	# verbosity level
 
-BOGOFILTER="${relpath}/bogofilter"
-BOGOUTIL="${relpath}/bogoutil"
+BOGOFILTER="$VAL ${relpath}/bogofilter"
+BOGOUTIL="$VAL ${relpath}/bogoutil"
 SYSTEST="${srcdir}"
 
 map_rc()
