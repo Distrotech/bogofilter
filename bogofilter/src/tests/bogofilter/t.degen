@@ -69,7 +69,7 @@ $BOGOFILTER -y 0 -s -d $BOGOFILTER_DIR -I ${TMPDIR}/msg.Free
 
 $BOGOFILTER -y 0 -s -d $BOGOFILTER_DIR -I ${TMPDIR}/msg.xxxx
 
-$BOGOUTIL -d ${TMPDIR}/wordlist.${DB_EXT} >> ${OUT}
+$BOGOUTIL -d ${TMPDIR}/wordlist.${DB_EXT} | sort >> ${OUT}
 echo >> ${OUT}
 
 for flags in PD ; do
