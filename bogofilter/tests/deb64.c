@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../base64.h"
+#include "base64.h"
 
 static void die(void) {
     perror("debase64");

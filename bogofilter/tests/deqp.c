@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../qp.h"
+#include "qp.h"
 
 static void die(void) {
     perror("deqp");
