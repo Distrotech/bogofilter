@@ -3,10 +3,11 @@
 . ${srcdir:=.}/t.frame
 
 filelist=`find $srcdir/* \( -type d -prune \) -o \( -type f -print \)`
+cat $filelist >$TMPDIR/inp
 
 grind() {
     a=0
-    cat $filelist | ../bogofilter -n -d $TMPDIR -xd -vvv 2>> $TMPDIR/log || a=$?
+    ../bogofilter -n -d $TMPDIR -xd -vvv <$TMPDIR/inp 2>> $TMPDIR/log || a=$?
     echo >>$TMPDIR/res $a
 }
 
