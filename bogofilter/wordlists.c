@@ -258,11 +258,11 @@ bool configure_wordlist(const char *val)
     *tmp++ = '\0';
     while (isspace((unsigned char)*tmp)) tmp += 1;
 
-    if (isdigit(*tmp))
+    if (isdigit((unsigned char)*tmp))
 	ignore=atoi(tmp);
     else {
 	ignore = false;		/* default is "don't ignore" */
-	switch (tolower(*tmp)) {
+	switch (tolower((unsigned char)*tmp)) {
 	case 'n':		/* no */
 	case 'f':		/* false */
 	    ignore = false;
@@ -273,7 +273,7 @@ bool configure_wordlist(const char *val)
 	    break;
 	}
     }
-    while (isalnum(*tmp))
+    while (isalnum((unsigned char)*tmp))
 	tmp++;
     while (isspace((unsigned char)*tmp)) tmp += 1;
 
