@@ -108,7 +108,7 @@ void register_words(run_t _run_type, wordhash_t *h,
       db_flush(list->dbh);
       if (verbose>1)
 	(void)fprintf(stderr, "bogofilter: %ld messages on the %s list\n",
-		      list->msgcount, list->name);
+		      list->msgcount, list->filename);
     }
   }
 

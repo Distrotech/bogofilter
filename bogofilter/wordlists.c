@@ -21,6 +21,7 @@
 
 wordlist_t good_list;
 wordlist_t spam_list;
+wordlist_t ignore_list;
 /*@null@*/ wordlist_t* word_lists=NULL;
 
 void *open_wordlist( const char *name, const char *filepath )
@@ -38,15 +39,16 @@ void *open_wordlist( const char *name, const char *filepath )
 }
 
 /* returns -1 for error, 0 for success */
-static int init_list(/*@out@*/ wordlist_t* list, const char* name, const char* filepath,
-	      double weight, bool bad, int override, bool ignore)
+static int init_wordlist(/*@out@*/ wordlist_t* list, const char* name, const char* path,
+			 double weight, bool bad, int override, bool ignore)
 {
     wordlist_t* list_index;
     wordlist_t** last_list_ptr;
+    static int wordlist_index;
 
-    list->dbh=open_wordlist(name, filepath);
-    if (list->dbh == NULL) return -1;
-    list->name=xstrdup(name);
+    list->filename=xstrdup(name);
+    list->filepath=xstrdup(path);
+    list->index = ++wordlist_index;
     list->msgcount=0;
     list->override=override;
     list->active=false;
@@ -81,7 +83,7 @@ static int init_list(/*@out@*/ wordlist_t* list, const char* name, const char* f
 }
 
 /* returns -1 for error, 0 for success */
-int setup_lists(const char* dir)
+int setup_wordlists(const char* dir)
 {
     int rc = 0;
     char filepath[PATH_LEN];
@@ -97,23 +99,43 @@ int setup_lists(const char* dir)
     }
 
     if ((build_path(filepath, sizeof(filepath), dir, GOODFILE) < 0) ||
-	init_list(&good_list, "good", filepath, good_weight, false, 0, 0) != 0)
+	init_wordlist(&good_list, "good", filepath, good_weight, false, 0, 0) != 0)
 	rc = -1;
 
     if ((build_path(filepath, sizeof(filepath), dir, SPAMFILE) < 0) ||
-	init_list(&spam_list, "spam", filepath, bad_weight, true,  0, 0) != 0)
+	init_wordlist(&spam_list, "spam", filepath, bad_weight, true,  0, 0) != 0)
 	rc = -1;
 
+/*
+    if (build_path(filepath, sizeof(filepath), dir, IGNOREFILE) < 0) rc = -1;
+    if (init_wordlist(&ignore_list, "ignore", filepath, 0, true,  0, 0)) rc = -1;
+*/
     return rc;
 }
 
-void close_lists(void)
+void open_wordlists(void)
+{
+    wordlist_t* list;
+    for ( list = word_lists; list != NULL; list = list->next )
+    {
+
+	list->dbh=open_wordlist(list->filename, list->filepath);
+	if (list->dbh == NULL) {
+	    fprintf(stderr, "Can't open %s\n", list->filename);
+	    close_wordlists();
+	    exit(2);
+	}
+    }
+}
+
+void close_wordlists(void)
 {
     wordlist_t* list;
     for ( list = word_lists; list != NULL; list = list->next )
     {
 	db_close(list->dbh);
-	if (list->name) free(list->name);
+	if (list->filename) free(list->filename);
+	if (list->filepath) free(list->filepath);
     }
 }
 
@@ -223,7 +245,7 @@ bool configure_wordlist(const char *val)
     *tmp++ = '\0';
     while (isspace((unsigned char)*tmp)) tmp += 1;
 
-    rc = init_list(list, name, path, weight, bad, override, ignore);
+    rc = init_wordlist(list, name, path, weight, bad, override, ignore);
     ok = rc == 0;
 
     return ok;

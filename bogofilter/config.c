@@ -272,7 +272,7 @@ static bool process_config_parameter(const parm_desc *arg, const unsigned char *
 		*arg->addr.s = dir = xstrdup(val);
 		if (DEBUG_CONFIG(0))
 		    fprintf( stderr, "%s -> '%s'\n", arg->name, dir );
-		if (setup_lists(dir) != 0)
+		if (setup_wordlists(dir) != 0)
 		    exit(2);
 		break;
 	    }
@@ -516,7 +516,7 @@ int process_args(int argc, char **argv)
 	    if (directory)
 		xfree(directory);
 	    directory = xstrdup(optarg);
-	    if (setup_lists(directory) != 0)
+	    if (setup_wordlists(directory) != 0)
 		exit(2);
 	    break;
 
