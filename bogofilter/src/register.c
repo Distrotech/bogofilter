@@ -31,7 +31,6 @@ void register_words(run_t _run_type, wordhash_t *h, u_int32_t msgcount)
     u_int32_t g = 0, b = 0;
     u_int32_t wordcount = h->count;	/* use number of unique tokens */
 
-    wordlist_t *list;
     sh_t incr = IX_UNDF, decr = IX_UNDF;
 
     /* If update directory explicity supplied, setup the wordlists. */
@@ -113,7 +112,7 @@ retry:
 
     if (DEBUG_REGISTER(1))
 	(void)fprintf(dbgout, "bogofilter: word_list %s - %ul spam, %ul good\n",
-		      word_list->filename, list->msgcount[IX_SPAM], list->msgcount[IX_GOOD]);
+		      word_list->filename, word_list->msgcount[IX_SPAM], word_list->msgcount[IX_GOOD]);
 
     set_msg_counts(g, b);
 }
