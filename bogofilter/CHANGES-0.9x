@@ -73,7 +73,7 @@
 	2004-05-30
 
 	* Fixed registration.  When multiple wordlists are specified,
-          registration is to first regular wordlist.
+	  registration is to first regular wordlist.
 	* Added regresstion test for multiple wordlists.
 
 	2004-05-29
@@ -138,6 +138,6 @@
 	2004-04-02
 
 	* Lower output precision for regression tests, by using %f
-          rather than %e, to mask differences between GSL versions.
+	  rather than %e, to mask differences between GSL versions.
 
 0.17.5	2004-04-01 - previous stable release
