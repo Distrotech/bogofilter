@@ -1,4 +1,4 @@
-#! /usr/bin/env perl
+#!/usr/bin/env perl
 # $Id$
 
 # bogopass -- emulate bogofilter -p with base64 decoder
@@ -26,47 +26,55 @@
 # The X-Bogosity header output by bogofilter is added to the original
 # message by formail, and the updated message is output to stdout.
 #
-# Make sure that base64 is installed in /usr/local/bin or /usr/bin,
-# because this script is NOT going to look at your $PATH for security
-# reasons.
-#
 # Any options given to bogopass will be passed on to bogofilter along
-# with "-v". For instance, call "bogopass -r" to use the Robinson
+# with "-v". For instance, call "bogopass -g" to use the Graham
 # algorithm.
 #
-# This script requires formail (part of the procmail suite) to be
-# installed in /usr/local/bin or /usr/bin.
+# This script requires formail (part of the procmail suite).
 
 require 5.004;
 use strict;
 use File::Temp qw(tempfile unlink0);
+use IO::Handle;
 
 sub my_die($ );
 sub parsewait($ );
 
 my $PROG = 'bogopass';
-$ENV{PATH} = '/bin:/usr/bin:/usr/local/bin';
+
+sub werr($ ) {
+    my ($f) = shift;
+    my_die("Error writing to temporary file $f: $!");
+}
 
 ### Begin Main ###
 
 my ($fh, $fn) = tempfile("/tmp/$PROG.XXXXXXXXXX");
-open P, "|unbase64 >\"$fn\"" or my_die "Can't pipe to unbase64: $?";
 while (<STDIN>) {
-    print P $_ or my_die("Error writing to unbase64 pipe: " . parsewait($?));
+    print $fh $_ or werr($fn);
 }
-close P or my_die("Error writing to unbase64 pipe: " . parsewait($?));
+defined $fh->flush or werr($fn);
+
+my ($h2, $n2) = tempfile("/tmp/$PROG.XXXXXXXXXX");
+my $r;
+($r = (system "unbase64 <\"$fn\" >>\"$n2\"")) == 0 or
+    my_die("Error executing unbase64: " . parsewait($r));
 
 my $options = join ' ', @ARGV;
-my $bogo_header = `bogofilter -v $options <$fn`;
+my $bogo_header = `bogofilter -v $options <"$n2"`;
+my_die "bogofilter failed" unless defined $bogo_header;
 chomp $bogo_header;
 $bogo_header =~ /^X-Bogosity:/ or
     my_die "bogofilter returned invalid output (\"$bogo_header\")";
+unlink0 ($h2,$n2) or
+    my_die "cannot unlink temporary file $n2: $!";
+close $h2 or my_die("Error closing temporary file $n2: $!");
 
-system("formail -I \"$bogo_header\" < $fn") == 0 or
-    my_die "formail failed ($?)";
+system("formail -I \"$bogo_header\" < \"$fn\"") == 0 or
+    my_die "formail failed (" . parsewait($?) . ")";
 unlink0 ($fh,$fn) or
-    my_die "cannot unlink temporary file $fn: $?";
-close $fh or my_die "strange error: could not open temporary file";
+    my_die "cannot unlink temporary file $fn: $!";
+close $fh or my_die("Error closing temporary file $fn: $!");
 exit 0;
 
 ### End Main ###
