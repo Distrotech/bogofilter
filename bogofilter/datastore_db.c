@@ -300,8 +300,13 @@ void db_setcount(void *vhandle, long count){
 /* Close files and clean up. */
 void db_close(void *vhandle){
   dbh_t *handle = vhandle;
+  int ret;
+
   if (handle == NULL) return;
-  handle->dbp->close(handle->dbp, 0);
+  if ((ret = handle->dbp->close(handle->dbp, 0))) {
+    print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
+  }
+  db_lock_release(handle);
   dbh_free(handle);
 }
 
@@ -310,7 +315,10 @@ void db_close(void *vhandle){
 */
 void db_flush(void *vhandle){
   dbh_t *handle = vhandle;
-  handle->dbp->sync(handle->dbp, 0);
+  int ret;
+  if ((ret = handle->dbp->sync(handle->dbp, 0))) {
+    print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));
+  }
 }
 
 
@@ -327,7 +335,7 @@ static int db_lock(dbh_t *handle, int cmd, int type){
 
   lock.l_type = type;
   lock.l_start = 0;
-  lock.l_whence = SEEK_END;
+  lock.l_whence = SEEK_SET;
   lock.l_len = 0;
   return (fcntl(fd, cmd, &lock));
 }
