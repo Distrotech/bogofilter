@@ -429,6 +429,7 @@ retry_db_open:
 /* wrapper for the API that changed in 4.0, to
  * collect the junk in a location separate from the implementation */
 #if DB_AT_LEAST(4,0)
+/* BerkeleyDB 4.0, 4.1, 4.2 */
 #define BF_LOG_FLUSH(e, i) ((e)->log_flush((e), (i)))
 #define BF_MEMP_SYNC(e, l) ((e)->memp_sync((e), (l)))
 #define BF_MEMP_TRICKLE(e, p, n) ((e)->memp_trickle((e), (p), (n)))
@@ -436,7 +437,9 @@ retry_db_open:
 #define BF_TXN_ID(t) ((t)->id(t))
 #define BF_TXN_ABORT(t) ((t)->abort((t)))
 #define BF_TXN_COMMIT(t, f) ((t)->commit((t), (f)))
+#define BF_TXN_CHECKPOINT(e, k, m, f) ((e)->txn_checkpoint((e), (k), (m), (f)))
 #else
+/* BerkeleyDB 3.0, 3.1, 3.2, 3.3 */
 #define BF_LOG_FLUSH(e, i) (log_flush((e), (i)))
 #define BF_MEMP_SYNC(e, l) (memp_sync((e), (l)))
 #define BF_MEMP_TRICKLE(e, p, n) (memp_trickle((e), (p), (n)))
@@ -444,6 +447,13 @@ retry_db_open:
 #define BF_TXN_ID(t) (txn_id(t))
 #define BF_TXN_ABORT(t) (txn_abort((t)))
 #define BF_TXN_COMMIT(t, f) (txn_commit((t), (f)))
+#if DB_AT_LEAST(3,1)
+/* BerkeleyDB 3.1, 3.2, 3.3 */
+#define BF_TXN_CHECKPOINT(e, k, m, f) (txn_checkpoint((e), (k), (m), (f)))
+#else
+/* BerkeleyDB 3.0 */
+#define BF_TXN_CHECKPOINT(e, k, m, f) (txn_checkpoint((e), (k), (m)))
+#endif
 #endif
 
 /** begin transaction. Returns 0 for success. */
@@ -654,6 +664,19 @@ int db_set_dbvalue(void *vhandle, const dbv_t *token, dbv_t *val)
     return 0;
 }
 
+static int db_flush_dirty(DB_ENV *env, int ret) {
+#if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
+    /* flush dirty pages in buffer pool */
+    while (ret == DB_INCOMPLETE) {
+	rand_sleep(10000,1000000);
+	ret = BF_MEMP_SYNC(env, NULL);
+    }
+#else
+    (void)env;
+#endif
+
+    return ret;
+}
 
 /* Close files and clean up. */
 void db_close(void *vhandle)
@@ -684,13 +707,7 @@ void db_close(void *vhandle)
     }
 
     ret = dbp->close(dbp, f);
-#if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
-    /* flush dirty pages in buffer pool */
-    while (ret == DB_INCOMPLETE) {
-	rand_sleep(10000,1000000);
-	ret = BF_MEMP_SYNC(dbe, NULL);
-    }
-#endif
+    ret = db_flush_dirty(dbe, ret);
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_close err: %d, %s", ret, db_strerror(ret));
 
@@ -712,16 +729,11 @@ void db_flush(void *vhandle)
 	fprintf(dbgout, "db_flush(%s)\n", handle->name);
 
     ret = dbp->sync(dbp, 0);
+    ret = db_flush_dirty(dbe, ret);
+
     if (DEBUG_DATABASE(1))
 	fprintf(dbgout, "DB->sync(%p): %s\n", (void *)dbp, db_strerror(ret));
 
-#if DB_AT_LEAST(3,0) && DB_AT_MOST(4,0)
-    /* flush dirty pages in buffer pool */
-    while (ret == DB_INCOMPLETE) {
-	rand_sleep(10000,1000000);
-	ret = BF_MEMP_SYNC(dbe, NULL);
-    }
-#endif
     if (ret)
 	print_error(__FILE__, __LINE__, "(db) db_sync: err: %d, %s", ret, db_strerror(ret));
 
@@ -996,8 +1008,18 @@ void db_cleanup(void) {
     if (!init)
 	return;
     if (dbe) {
-	int ret = dbe->close(dbe, 0);
-	if (DEBUG_DATABASE(1))
+	int ret;
+
+	/* checkpoint if more than 64 kB of logs have been written
+	 * or 120 min have passed since the previous checkpoint */
+	/*                           kB  min flags */
+	ret = BF_TXN_CHECKPOINT(dbe, 64, 120, 0);
+	ret = db_flush_dirty(dbe, ret);
+	if (ret)
+	    print_error(__FILE__, __LINE__, "(db) DBE->txn_checkpoint returned %s", db_strerror(ret));
+
+	ret = dbe->close(dbe, 0);
+	if (DEBUG_DATABASE(1) || ret)
 	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", (void *)dbe, db_strerror(ret));
     }
     if (lockfd >= 0)
