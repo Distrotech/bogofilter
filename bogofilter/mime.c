@@ -92,7 +92,7 @@ void msg_state_init(bool header, char *boundary, size_t len)
     msg_state->mime_header = header;
     msg_state->mime_mail = false;
     msg_state->mime_type = MIME_TEXT;
-//  msg_state->mime_encoding = MIME_7BIT;
+/*  msg_state->mime_encoding = MIME_7BIT; */
     msg_state->boundary     = NULL;
     msg_state->boundary_len = 0;
     msg_state->nxt_boundary = boundary;
@@ -161,7 +161,7 @@ char *getword(const char *t, const char *e)
 #if	0
 char *getparam(char *t, char *e, const char *param)
 {
-//    char *w, *u;
+/*    char *w, *u; */
 
     return NULL; /* NOT YET IMPLEMENTED */
 }
@@ -383,13 +383,13 @@ size_t mime_decode(char *buff, size_t size)
 	/* do nothing */
 	break;
     case MIME_QP:
-	count = qp_decode(buff, size);
+	count = qp_decode((unsigned char *)buff, size);
 	break;
     case MIME_BASE64:
-	if (size > 4) count = base64_decode(buff, size);
+	if (size > 4) count = base64_decode((unsigned char *)buff, size);
 	break;
     case MIME_UUENCODE:
-	count = uudecode(buff, size);
+	count = uudecode((unsigned char *)buff, size);
 	break;
     case MIME_ENCODING_UNKNOWN:
 	break;
