@@ -113,7 +113,7 @@ double compute_robinson_x(char *path)
     open_wordlists(DS_READ);
 
     if (DST_OK == ds_txn_begin(word_lists->dsh)) {
-	rx = compute_robx(word_lists->dsh);
+	rx = compute_robx(default_wordlist()->dsh);
 	if (DST_OK != ds_txn_commit(word_lists->dsh))
 	    rx = -1;
     } else rx = -1;
