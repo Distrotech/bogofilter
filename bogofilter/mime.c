@@ -103,6 +103,7 @@ void resetmsgstate(struct msg_state *ms, int new)
     ms->mime_type = MIME_TEXT;
     ms->mime_encoding = MIME_7BIT;
     ms->boundary = NULL;
+    ms->boundary_len = 0;
     ms->charset = xstrdup("US-ASCII");
 }
 
@@ -247,10 +248,12 @@ void mime_boundary(void)
 {
     char *boundary;
     size_t len;
+    
     if (yytext[0] != '-' || yytext[1] != '-' ) {
 	len = strlen("boundary=");
 	boundary = getmimew(yytext+len, yytext + yyleng);
 	msg_state->boundary = boundary;
+	msg_state->boundary_len = strlen(boundary);
     }
     else {			/* verify that it's really a boundary line */
 	boundary = msg_state->boundary;
@@ -263,8 +266,10 @@ void mime_boundary(void)
 	    memset(msg_state, 0, sizeof(*msg_state));
 	    msg_state->mime_header = 1;
 	    msg_state->boundary = boundary;
+	    msg_state->boundary_len = len;
 	}
     }
+
     if (DEBUG_MIME(1)) fprintf(stderr, "*** mime_boundary: %d  %p '%s'\n", stackp, boundary, boundary);
     return;
 }
@@ -276,7 +281,13 @@ size_t mime_decode(char *buff, size_t size)
 
     if (msg_state->mime_header)	/* do nothing if in header */
 	return count;
-
+     
+    /*Don't try to decode boundary */
+    if (size > 1 &&
+	buff[0] == '-' && buff[1] == '-' &&
+        memcmp(msg_state->boundary, buff+2,msg_state->boundary_len) == 0)
+	return count;
+    
     if (!base64_initialized) {
 	base64_init();
 	base64_initialized = true;
