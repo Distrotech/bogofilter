@@ -38,6 +38,9 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #define DONT_TYPEDEF_SSIZE_T 1
 #include "common.h"
 
+#include <errno.h>
+#include <unistd.h>
+
 #include <db.h>
 
 #include "datastore.h"
@@ -45,8 +48,13 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
 
+#include "db_lock.h"
+#include "error.h"
+
 static DB_ENV	  *tra_get_env_dbe	(dbe_t *env);
 static DB_ENV	  *tra_recover_open	(const char *db_file, DB **dbp);
+static int	   tra_auto_commit_flags(void);
+static int	   tra_get_rmw_flag	(int open_mode);
 static int	  tra_begin		(void *vhandle);
 static int  	  tra_abort		(void *vhandle);
 static int  	  tra_commit		(void *vhandle);
@@ -56,6 +64,8 @@ static int  	  tra_commit		(void *vhandle);
 dsm_t dsm_traditional = {
     &tra_get_env_dbe,
     &tra_recover_open,
+    &tra_auto_commit_flags,
+    &tra_get_rmw_flag,
     &tra_begin,
     &tra_abort,
     &tra_commit,
@@ -65,6 +75,17 @@ DB_ENV *tra_get_env_dbe	(dbe_t *env)
 {
     (void) env;
     return NULL;
+}
+
+int  tra_auto_commit_flags(void)
+{
+    return 0;
+}
+
+int tra_get_rmw_flag(int open_mode)
+{
+    (void) open_mode;
+    return 0;
 }
 
 DB_ENV *tra_recover_open	(const char *db_file, DB **dbp)
@@ -100,3 +121,4 @@ DB_ENV *tra_recover_open	(const char *db_file, DB **dbp)
 int  tra_begin	(void *vhandle) { (void) vhandle; return 0; }
 int  tra_abort	(void *vhandle) { (void) vhandle; return 0; }
 int  tra_commit	(void *vhandle) { (void) vhandle; return 0; }
+

@@ -66,12 +66,6 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "mxcat.h"
 #include "db_lock.h"
 
-static int lockfd = -1;	/* fd of lock file to prevent concurrent recovery */
-
-/** Default flags for DB_ENV->open() */
-static const u_int32_t dbenv_defflags = DB_INIT_MPOOL | DB_INIT_LOCK
-				      | DB_INIT_LOG | DB_INIT_TXN;
-
 static dsm_t *dsm = NULL;
 
 extern dsm_t dsm_traditional;		/* in datastore_db_trad.c */
@@ -156,7 +150,7 @@ static int DB_SET_FLAGS(DB *db, u_int32_t flags)
 #endif
 
 /* implements locking. */
-static int db_lock(int fd, int cmd, short int type)
+int db_lock(int fd, int cmd, short int type)
 {
     struct flock lock;
 

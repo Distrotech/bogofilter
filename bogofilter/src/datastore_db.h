@@ -107,4 +107,6 @@ bool db_created(void *vhandle);
 /** Returns parent environment handle. */
 void *db_get_env(void *vhandle);
 
+int db_lock(int fd, int cmd, short int type);
+
 #endif

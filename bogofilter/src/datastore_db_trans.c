@@ -40,12 +40,24 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 
 #include <assert.h>
 #include <error.h>
+#include <errno.h>
+#include <unistd.h>
+
 #include <db.h>
 
 #include "datastore.h"
 #include "datastore_db_private.h"
 #include "datastore_db.h"
 #include "datastore_dbcommon.h"
+
+#include "bogohome.h"
+#include "db_lock.h"
+#include "mxcat.h"
+#include "rand_sleep.h"
+#include "xmalloc.h"
+#include "xstrdup.h"
+
+static int lockfd = -1;	/* fd of lock file to prevent concurrent recovery */
 
 /** Default flags for DB_ENV->open() */
 static const u_int32_t dbenv_defflags = DB_INIT_MPOOL | DB_INIT_LOCK
@@ -69,7 +81,7 @@ static int  	  txn_commit		(void *vhandle);
 
 /* OO function lists */
 
-dsm_t dsm_traditional = {
+dsm_t dsm_transactional = {
     &txn_get_env_dbe,
     &txn_recover_open,
     &txn_auto_commit_flags,
@@ -78,6 +90,19 @@ dsm_t dsm_traditional = {
     &txn_abort,
     &txn_commit,
 };
+
+/* non-OO static function prototypes */
+
+static int plock(const char *path, short locktype, int mode);
+static int db_try_glock(const char *directory, short locktype, int lockcmd);
+static int bf_dbenv_create(DB_ENV **env);
+static void dbe_config(void *vhandle, u_int32_t numlocks, u_int32_t numobjs);
+static dbe_t *dbe_xinit(const char *directory, u_int32_t numlocks, u_int32_t numobjs, u_int32_t flags);
+static void dbe_cleanup_lite(dbe_t *env);
+static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags);
+static ex_t dbe_common_close(DB_ENV *env, const char *directory);
+
+/* non-OO static functions */
 
 DB_ENV *txn_get_env_dbe(dbe_t *env)
 {
@@ -158,6 +183,24 @@ static DB_ENV *dbe_recover_open(const char *db_file, uint32_t flags)
     }
 
     free(tmp);
+
+    return env;
+}
+
+static DB_ENV *txn_recover_open(const char *dir, DB **dbp)
+{
+    int e;
+    DB_ENV *env;
+
+    env = dbe_recover_open(dir, 0); /* this sets an exclusive lock */
+    e = db_create(dbp, NULL, 0);    /* do not use environment here, verify
+				       does not lock by itself, we hold the
+				       global lock instead! */
+    if (e != 0) {
+	print_error(__FILE__, __LINE__, "error creating DB handle: %s",
+		    db_strerror(e));
+	return NULL;
+    }
 
     return env;
 }
@@ -633,48 +676,6 @@ void dbe_cleanup(void *vhandle)
 	close(lockfd); /* release locks */
 }
 
-static DB_ENV *dbe_recover_open(const char *directory, uint32_t flags)
-{
-    const uint32_t local_flags = flags | DB_CREATE;
-    DB_ENV *env;
-    int e;
-
-    if (DEBUG_DATABASE(0))
-        fprintf(dbgout, "trying to lock database directory\n");
-    db_try_glock(directory, F_WRLCK, F_SETLKW); /* wait for exclusive lock */
-
-    /* run recovery */
-    bf_dbenv_create(&env);
-
-    if (DEBUG_DATABASE(0))
-        fprintf(dbgout, "running regular data base recovery%s\n",
-	       flags & DB_PRIVATE ? " and removing environment" : "");
-
-    /* quirk: DB_RECOVER requires DB_CREATE and cannot work with DB_JOINENV */
-
-    /*
-     * Hint from Keith Bostic, SleepyCat support, 2004-11-29,
-     * we can use the DB_PRIVATE flag, that rebuilds the database
-     * environment in heap memory, so we don't need to remove it.
-     */
-
-    e = env->open(env, directory,
-	    dbenv_defflags | local_flags | DB_RECOVER, DS_MODE);
-    if (e == DB_RUNRECOVERY) {
-	/* that didn't work, try harder */
-	if (DEBUG_DATABASE(0))
-	    fprintf(dbgout, "running catastrophic data base recovery\n");
-	e = env->open(env, directory,
-		dbenv_defflags | local_flags | DB_RECOVER_FATAL, DS_MODE);
-    }
-    if (e) {
-	print_error(__FILE__, __LINE__, "Cannot recover environment \"%s\": %s",
-		directory, db_strerror(e));
-	exit(EX_ERROR);
-    }
-
-    return env;
-}
 
 static ex_t dbe_common_close(DB_ENV *env, const char *directory)
 {
