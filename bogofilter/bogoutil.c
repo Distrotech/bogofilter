@@ -166,7 +166,7 @@ static int load_file(char *db_file)
 {
     void *dbh;
     byte buf[BUFSIZE];
-    unsigned char *p;
+    byte *p;
     int rv = 0;
     size_t len;
     long line = 0;
@@ -196,26 +196,26 @@ static int load_file(char *db_file)
 	    continue;
 
 	p = buf;
-	while ( *p != '\0' && !isspace((unsigned char)*p) )
+	while ( *p != '\0' && !isspace(*p) )
 	    ++p;
 
 	*p++ = '\0';	/* delimit token */
 
-	while ( *p != '\0' && isspace((unsigned char)*p) )	/* skip whitespace */
+	while ( *p != '\0' && isspace(*p) )	/* skip whitespace */
 	    ++p;
 
 	count = 0;
-	while (isdigit((unsigned char)*p))			/* parse count */
+	while (isdigit(*p))			/* parse count */
 	    count = count * 10 + *p++ - '0';
 
-	while ( *p != '\0' && isspace((unsigned char)*p) )	/* skip whitespace */
+	while ( *p != '\0' && isspace(*p) )	/* skip whitespace */
 	    ++p;
 
 	date = 0;
-	while (isdigit((unsigned char)*p))			/* parse date */
+	while (isdigit(*p))			/* parse date */
 	    date = date * 10 + *p++ - '0';
 	
-	while ( *p != '\0' && isspace((unsigned char)*p) )	/* skip whitespace */
+	while ( *p != '\0' && isspace(*p) )	/* skip whitespace */
 	    ++p;
 
 	if ( *p != '\0' ) {
