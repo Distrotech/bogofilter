@@ -301,7 +301,7 @@ void mime_boundary_chk(const char *text, int leng)
     size_t len = leng;
 
     if (DEBUG_MIME(1))
-	fprintf(stdout, "*** --> mime_boundary_chk: %d  %p '%-.*s'\n", stackp, text, len, text);
+	fprintf(stdout, "*** --> mime_boundary_chk: %d  %p '%-.*s'\n", stackp, text, (int)len, text);
 
     if (msg_state->boundary == NULL && msg_state->nxt_boundary == NULL )
 	return;
@@ -352,7 +352,7 @@ size_t mime_decode(char *buff, size_t size)
 {
     size_t count = size;
 
-    if (DEBUG_MIME(3)) fprintf(stdout, "*** mime_decode %d \"%*.*s\"\n", size, size-1, size-1, buff);
+    if (DEBUG_MIME(3)) fprintf(stdout, "*** mime_decode %d \"%-.*s\"\n", size, (int)size-1, buff);
 
     if (msg_state->mime_header)	/* do nothing if in header */
 	return count;
