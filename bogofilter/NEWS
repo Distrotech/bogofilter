@@ -4,6 +4,14 @@
 
 $Id$
 
+0.10.3.2  2003-02-XX
+
+	* Split bogofilter command-line arguments -l [optional] into -l
+	  (without argument) to enable logging and -L logtag (with mandatory
+	  argument) to enable logging and define the log tag for %l expansions.
+	  If you're running bogofilter -l tag, change that to bogofilter
+	  -L tag. If you're running bogofilter -l, that'll be fine.
+
 0.10.3.1  2003-02-17
 
 	* Updated bogofilter and bogoutil man pages.
