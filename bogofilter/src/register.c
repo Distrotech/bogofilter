@@ -168,7 +168,9 @@ retry:
 	    abort();
     }
 
+#if 0
     ds_flush(list->dsh);
+#endif
 
     if (DEBUG_REGISTER(1))
 	(void)fprintf(dbgout, "bogofilter: list %s (%s) - %ul spam, %ul good\n",
