@@ -5,6 +5,6 @@
 #
 # test below
 # remember to use ${srcdir}
-( cd ${TMPDIR} && uudecode ../t.integrity.uu )
+( cd ${TMPDIR} && uudecode ) <${srcdir}/t.integrity.uu
 ../bogofilter -e -p <${TMPDIR}/input >${TMPDIR}/output
 head -1 ${TMPDIR}/output | cmp - ${TMPDIR}/input
