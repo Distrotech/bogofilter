@@ -1,3 +1,21 @@
+/* $Id$ */
+
+/*****************************************************************************
+
+NAME:
+
+datastore_db_private.h - provide OO interface for datastore methods;
+		       	 used for Berkeley DB transactional &
+		       	 non-transactional support.
+
+AUTHOR:
+David Relson	<relson@osagesoftware.com> 2005
+
+******************************************************************************/
+
+#ifndef DATASTORE_DB_PRIVATE_H
+#define DATASTORE_DB_PRIVATE_H
+
 /** Default flags for DB_ENV->open() */
 
 #define MAGIC_DBE 0xdbe
@@ -66,3 +84,5 @@ typedef struct {
 } dbh_t;
 
 #define DBT_init(dbt)		(memset(&dbt, 0, sizeof(DBT)))
+
+#endif
