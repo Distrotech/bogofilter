@@ -29,6 +29,9 @@ AUTHOR:
 #include "xmalloc.h"
 #include "xstrdup.h"
 
+#define	MIN_SLEEP	1000		/* 1 millisecond */
+#define	MAX_SLEEP	1000000		/* 1 second      */
+
 #define DBT_init(dbt) do { memset(&dbt, 0, sizeof(DBT)); } while(0)
 
 #if DB_VERSION_MAJOR <= 3 || (DB_VERSION_MAJOR == 4 && DB_VERSION_MINOR == 0)
@@ -493,8 +496,8 @@ static void db_lock_list(wordlist_t *list, int type){
     /* Some locks failed. Release all acquired locks */
     db_lock_release_list(list);
 
-    /*sleep for short, random time between 1 microsecond and 1 second */
-    usleep( 1 + (unsigned long) (999999.0*rand()/(RAND_MAX+1.0)));
+    /*sleep for short, random time */
+    usleep( MIN_SLEEP + (unsigned long) ((MAX_SLEEP-MIN_SLEEP)*rand()/(RAND_MAX+1.0)));
   }
 }
 
