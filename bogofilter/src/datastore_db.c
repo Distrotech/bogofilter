@@ -64,7 +64,7 @@ Matthias Andree <matthias.andree@gmx.de> 2003 - 2004
 #include "mxcat.h"
 
 static DB_ENV *dbe; /* libdb environment, if in use, NULL otherwise */
-static int lockfd;  /* fd of locked file to prevent concurrent recovery etc. */
+static int lockfd = -1;  /* fd of lock file to prevent concurrent recovery */
 
 static const DBTYPE dbtype = DB_BTREE;
 
@@ -953,6 +953,8 @@ void db_cleanup(void) {
 	if (DEBUG_DATABASE(1))
 	    fprintf(dbgout, "DB_ENV->close(%p): %s\n", dbe, db_strerror(ret));
     }
+    if (lockfd >= 0)
+	close(lockfd); /* release locks */
     dbe = NULL;
     init = false;
 }
