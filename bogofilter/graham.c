@@ -190,10 +190,8 @@ static void wordprob_add(wordprob_t* wordstats, double newprob, int bad)
 
 static double wordprob_result(wordprob_t* wordstats)
 {
-    double prob = 0.0;
     double count = wordstats->good + wordstats->bad;
-
-    prob = wordstats->bad/count;
+    double prob = wordstats->bad/count;
 
     return (prob);
 }
