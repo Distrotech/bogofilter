@@ -46,6 +46,11 @@ YYYYMMDD time_to_date(long days)
     return date;
 }
 
+void set_date(YYYYMMDD date)
+{
+    today = date;
+}
+
 void set_today(void)
 {
     today = time_to_date(0);
@@ -99,6 +104,10 @@ bool keep_size(size_t size)
 void do_replace_nonascii_characters(byte *str)
 {
     byte ch;
+    if (str == NULL) {
+	fprintf(stderr, "%s:%d  %s( NULL )\n", __FILE__, __LINE__, __PRETTY_FUNCTION__);
+	exit(2);
+    }
     while ((ch=*str) != '\0')
     {
 	if ( ch & 0x80)

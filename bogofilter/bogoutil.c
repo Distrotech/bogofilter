@@ -117,6 +117,7 @@ static int load_file(char *db_file)
     size_t len;
     long line = 0;
     long count, date;
+    YYYYMMDD today_save = today;
 
     if ((dbh = db_open(db_file, db_file, DB_WRITE)) == NULL)
 	return 2;
@@ -176,7 +177,7 @@ static int load_file(char *db_file)
 	}
 
 	if (date == 0)				/* date as YYYYMMDD */
-	    date = today;
+	    date = today_save;
 
 	if (replace_nonascii_characters)
 	    do_replace_nonascii_characters(buf);
@@ -185,10 +186,13 @@ static int load_file(char *db_file)
 	    continue;
 
 	/* Slower, but allows multiple lists to be concatenated */
-	db_increment_with_date(dbh, (char *)buf, count, date);
+	set_date(date);
+	count += db_getvalue(dbh, (char *)buf);
+	db_setvalue(dbh, (char *)buf, count);
     }
     db_lock_release(dbh);
     db_close(dbh);
+
     return rv;
 }
 
@@ -480,7 +484,7 @@ static int compute_robinson_x(char *path)
 
     robx = compute_robx( dbh_spam, dbh_good );
 
-    db_setvalue( dbh_spam, ".ROBX", (int) (robx * 1000000) );
+    db_setvalue(dbh_spam, ".ROBX", (int) (robx * 1000000));
 
     db_lock_release(dbh_spam);
     db_close(dbh_spam);

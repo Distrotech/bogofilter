@@ -59,6 +59,7 @@ static dbh_t *dbh_init(const char *filename, const char *name){
   dbh_t *handle;
 
   handle = xmalloc(sizeof(dbh_t));
+  memset(handle, 0, sizeof(dbh_t));	/* valgrind */
 
   handle->filename  = xstrdup(filename);
   handle->name	    = xstrdup(name);
@@ -199,17 +200,10 @@ long db_get_dbvalue(void *vhandle, const char *word, dbv_t *val){
 Store VALUE in database, using WORD as database key
 Notes: Calls exit if an error occurs.
 */
-void db_setvalue(void *vhandle, const char * word, long value){
+void db_setvalue(void *vhandle, const char * word, long count){
   dbv_t val;
-  val.count = value;
+  val.count = count;
   val.date  = today;		/* date in form YYYYMMDD */
-  db_set_dbvalue(vhandle, word, &val);
-}
-
-void db_setvalue_and_date(void *vhandle, const char * word, long value, long date){
-  dbv_t val;
-  val.count = value;
-  val.date  = date;		/* date in form YYYYMMDD */
   db_set_dbvalue(vhandle, word, &val);
 }
 
@@ -265,13 +259,6 @@ void db_increment(void *vhandle, const char *word, long value){
   value = db_getvalue(vhandle, word) + value;
   db_setvalue(vhandle, word, value < 0 ? 0 : value);
 }
-
-
-void db_increment_with_date(void *vhandle, const char *word, long value, long date){
-  value = db_getvalue(vhandle, word) + value;
-  db_setvalue_and_date(vhandle, word, value < 0 ? 0 : value, date);
-}
-
 
 /*
   Decrement count associated with WORD by VALUE,
