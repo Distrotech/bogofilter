@@ -29,7 +29,6 @@ THEORY:
 
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #include "bogofilter.h"
 #include "bogoconfig.h"
@@ -110,7 +109,6 @@ rc_t bogofilter(int argc, char **argv)
 
 	if (classify_msg || write_msg) {
 	    spamicity = msg_compute_spamicity(w, NULL);
-	    assert(spamicity >= 0 && spamicity <= 1);
 	    status = msg_status();
 	    if (run_type & RUN_UPDATE)		/* Note: don't register if RC_UNSURE */
 	    {
