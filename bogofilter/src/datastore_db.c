@@ -826,8 +826,6 @@ const char *db_str_err(int e) {
 
 ex_t db_verify(const char *db_file)
 {
-    char *dir;
-    char *tmp;
     DB_ENV *env = NULL;
     DB *db;
     int e;
@@ -836,13 +834,6 @@ ex_t db_verify(const char *db_file)
 	print_error(__FILE__, __LINE__, "\"%s\" is not a file.", db_file);
 	return EX_ERROR;
     }
-
-    dir = xstrdup(db_file);
-    tmp = strrchr(dir, DIRSEP_C);
-    if (!tmp)
-	free(dir), dir = xstrdup(CURDIR_S);
-    else
-	*tmp = '\0';
 
     env = dsm->dsm_recover_open(db_file, &db);
     if (env == NULL) {
@@ -853,14 +844,13 @@ ex_t db_verify(const char *db_file)
     if (e) {
 	print_error(__FILE__, __LINE__, "database %s does not verify: %s",
 		db_file, db_strerror(e));
-	free(dir);
 	exit(EX_ERROR);
     }
 
     e = dsm->dsm_common_close(env, db_file);
 
-    free(dir);
     if (e == 0 && verbose)
 	printf("%s OK.\n", db_file);
+
     return e;
 }
