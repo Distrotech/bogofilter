@@ -152,12 +152,60 @@ extern bool ds_get_msgcounts(void *vhandle, dsv_t *val);
 /** Set the database message count. */
 extern void ds_set_msgcounts(void *vhandle, dsv_t *val);
 
-/* */
+/* transactional code */
+/** Start a transaction for the data store identified by vhandle.
+ * All data base operations, including reading, must be "opened" by
+ * ds_txn_begin and must be "closed" by either ds_txn_commit (to keep
+ * changes) or ds_txn_abort (to discard changes made since the last
+ * ds_txn_begin for the data base). Application or system crash will
+ * lose any changes made since ds_txn_begin that have not been
+ * acknowledged by successful ds_txn_commit().
+ * \returns
+ * - DST_OK for success. It is OK to proceed in data base access.
+ * - DST_TEMPFAIL for problem. It is unknown whether this actually
+ *   happens. You must not touch the data base.
+ * - DST_FAILURE for problem. You must not touch the data base.
+ */
 extern int ds_txn_begin(void *vhandle);
+
+/** Commit a transaction, keeping changes. As with any transactional
+ * data base, concurrent updates to the same pages in the data base can
+ * cause a deadlock of the writers. The datastore_xxx.c code will handle
+ * the detection for you, in a way that it aborts as many transactions
+ * until one can proceed. The aborted transactions will return
+ * DST_TEMPFAIL and must be retried. No data base access must happen
+ * after this call until the next ds_txn_begin().
+ * \returns
+ * - DST_OK to signify that the data has made it to the disk
+ *   (which means nothing if the disk's write cache is enabled and the
+ *   kernel has no means of synchronizing the cache - this is unknown for
+ *   most kernels)
+ * - DST_TEMPFAIL when a transaction has been aborted by the deadlock
+ *   detector and must be retried
+ * - DST_FAILURE when a permanent error has occurred that cannot be
+ *   recovered from by the application (for instance, because corruption
+ *   has occurred and needs to be recovered).
+ */
 extern int ds_txn_commit(void *vhandle);
+
+/** Abort a transaction, discarding all changes since the previous
+ * ds_txn_begin(). Changes are rolled back as though the transaction had
+ * never been tried. No data base access must happen after this call
+ * until the next ds_txn_begin().
+ * \returns
+ * - DST_OK for success.
+ * - DST_TEMPFAIL for failure. It is uncertain if this actually happens.
+ * - DST_FAILURE for failure. The application cannot continue.
+ */
 extern int ds_txn_abort(void *vhandle);
+
+/** Successful return from ds_txn_* operation. */
 #define DST_OK (0)
+/** Temporary failure return from ds_txn_* operation, the application
+ * should retry the failed data base transaction. */
 #define DST_TEMPFAIL (1)
+/** Permanent failure return from ds_txn_* operation, the application
+ * should clean up and exit. */
 #define DST_FAILURE (2)
 
 /** Get the current process ID. */
