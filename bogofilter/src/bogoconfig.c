@@ -37,6 +37,7 @@ Note: bogolexer also uses configfile.c.
 
 #include <ctype.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
