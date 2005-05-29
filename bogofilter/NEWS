@@ -13,6 +13,13 @@
 
 -------------------------------------------------------------------------------
 
+	2005-05-29
+
+	* Consistency: Skip test if Berkeley DB supports shared environments
+	  when ./configure --disable-transactions is run, as shared
+	  environments are only needed for transactions.
+	  (Fixes SunOS portability problem reported by Charles Hewson.)
+
 0.94.13	2005-05-28
 
 	* Minor cleanups to iconv code.

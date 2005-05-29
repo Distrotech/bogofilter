@@ -511,7 +511,7 @@ You can download Berkeley DB 4.3.x from http://www.sleepycat.com/]]),
 #include <db.h>]]
 	)
 	AC_MSG_CHECKING(if Berkeley DB supports shared environments)
-	if test "x$enable_dbshared_test" != xno ; then
+	if test "x$enable_dbshared_test" != xno && test "x$USE_TRANSACTIONS" != xNO ; then
 	AC_RUN_IFELSE(
 	AC_LANG_PROGRAM([[
 #ifdef HAVE_INTTYPES_H
