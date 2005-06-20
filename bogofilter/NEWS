@@ -13,6 +13,12 @@
 
 -------------------------------------------------------------------------------
 
+	2005-06-20
+
+	* Fix bf_resize bash-isms (let FOO=...) and use POSIX-sh arithmetic
+	  expansion FOO=$((...)) instead, to fix bf_resize on FreeBSD.
+	  Reported by Andrey Chernov.
+
 	2005-06-10
 
 	* TDB driver now copies TDB returned data in the traversor to
