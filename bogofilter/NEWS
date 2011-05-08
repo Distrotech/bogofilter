@@ -15,6 +15,22 @@
 
 -------------------------------------------------------------------------------
 
+	2011-05-08
+
+	* Halfway fix for the RFC2047-related lexer pushback buffer overflow,
+	  reported to the bogofilter mailing list the day before.
+
+	  The fix is almost complete, resolves the pushback overflow in the
+	  MIME parser (see "spam" under evidence-vault), but there is one
+	  TODO: Unfortunately, the code runs the charset conversion twice, causing
+	  corruption of non-ASCII characters. This needs to be fixed.
+
+	  TODO: The other messages will probably still break the parser --
+	  we mustn't use pushback with flex (it's likely very inefficient,
+	  too).
+
+	2010-09-15
+
 	* Mark "Berkeley DB 5.1.19: (August 27, 2010)" supported.
 
 1.2.2	2010-07-08 (released)

@@ -149,9 +149,22 @@ static int yy_get_new_line(buff_t *buff)
     return count;
 }
 
+/*  RFC2047.2
+    encoded-word = "=?" charset "?" encoding "?" encoded-text "?="
+    charset = token    ; see section 3
+    encoding = token   ; see section 4
+    token = 1*<Any CHAR except SPACE, CTLs, and especials>
+    especials = "(" / ")" / "<" / ">" / "@" / "," / ";" / ":" / "
+		<"> / "/" / "[" / "]" / "?" / "." / "="
+    encoded-text = 1*<Any printable ASCII character other than "?"
+		      or SPACE>
+		   ; (but see "Use of encoded-words in message
+		   ; headers", section 5)
+*/
 static int get_decoded_line(buff_t *buff)
 {
     int count;
+    int c;
     buff_t *linebuff;
 
 #ifdef	DISABLE_UNICODE
@@ -192,6 +205,26 @@ static int get_decoded_line(buff_t *buff)
 	}
     }
 
+    if (msg_header) {
+	int oread = linebuff->read;
+
+	do {
+	    int add;
+
+	    /* in headers, peek at the next character to see if we need to fetch another
+	     * line to unfold headers */
+	    c = getc(fpin);
+	    if (c == EOF) break;
+	    ungetc(c, fpin);
+	    if (isblank(c)) {
+		add = yy_get_new_line(linebuff);
+		if (add >= 0) count += add; else break;
+	    }
+	} while (isblank(c));
+
+	linebuff->read = oread;
+    }
+
     /* Save the text on a linked list of lines.
      * Note that we store fixed-length blocks here, not lines.
      * One very long physical line could break up into more
@@ -199,6 +232,30 @@ static int get_decoded_line(buff_t *buff)
 
     if (passthrough && count > 0)
 	textblock_add(linebuff->t.u.text+linebuff->read, (size_t) count);
+
+    if (msg_header) {
+	/* Try RFC-2047 decoder on everything */
+	word_t temp, *res;
+
+	temp.leng = (uint)count;
+	temp.u.text = linebuff->t.u.text+linebuff->read;
+
+	if (DEBUG_LEXER(2)) {
+	    fprintf(dbgout, "before: ");
+	    lexer_display_buffer(linebuff);
+	}
+	res = text_decode(&temp);
+	if (res != &temp) {
+	    memcpy(linebuff->t.u.text+linebuff->read,
+		    res->u.text, res->leng);
+	}
+	linebuff->t.leng -= (uint)(count - res->leng);
+	count = res->leng;
+	if (DEBUG_LEXER(2)) {
+	    fprintf(dbgout, "after:   ");
+	    lexer_display_buffer(linebuff);
+	}
+    }
 
     if ( !msg_header && 
 	 !msg_state->mime_dont_decode &&
@@ -225,6 +282,7 @@ static int get_decoded_line(buff_t *buff)
 	!msg_state->mime_dont_decode)
     {
 	iconvert(linebuff, buff);
+
 	/*
 	 * iconvert, treating multi-byte sequences, can shrink or enlarge
 	 * the output compared to its input.  Correct count.
@@ -401,7 +459,7 @@ word_t *text_decode(word_t *w)
     uint size = (uint) (txt - beg);				/* output offset */
 
 #ifndef	DISABLE_UNICODE
-    size_t max = w->leng * 4;
+    size_t max = w->leng * 6;
     static buff_t * buf = NULL;
 #endif
 
@@ -439,17 +497,29 @@ word_t *text_decode(word_t *w)
 
 	char *charset;
 
-	txt += 2;
-	typ = (byte *) memchr((char *)txt+1, '?', fin-txt);	/* Encoding type - 'B' or 'Q' */
-	*typ++ = '\0';						/* nul terminate */
+	if (txt[0] == '=' && txt[1] == '?') {
+	    txt += 2;
+	} else {
+	    len = fin - txt;
+	    memcpy(buf->t.u.text+size, txt, len);
+	    size += len;
+	    break;
+	}
 
+
+	typ = (byte *) memchr((char *)txt+1, '?', fin-txt);	/* Encoding type - 'B' or 'Q' */
+	if (!typ) break;
+
+	typ++;
 	charset = charset_as_string(txt, typ - txt - 1);
 
 	tmp = typ + 2;						/* start of encoded word */
 	end = (byte *) memstr((char *)tmp, fin-tmp, "?=");	/* last byte of encoded word  */
+	if (!end) break;
+
 	len = end - tmp;
 
-	w->u.text = tmp;				/* Start of encoded word */
+	w->u.text = tmp;			/* Start of encoded word */
 	w->leng = len;				/* Length of encoded word */
 	Z(w->u.text[w->leng]);			/* for easier debugging - removable */
 
@@ -497,6 +567,8 @@ word_t *text_decode(word_t *w)
 	    iconvert_cd(cd, &src, buf);
 	    iconv_close(cd);
 
+	    size = buf->t.leng;
+
 	    if (DEBUG_LEXER(3)) {
 		fputs("**4**  ", dbgout);
 		word_puts(&buf->t, 0, dbgout);
@@ -527,11 +599,12 @@ word_t *text_decode(word_t *w)
 
 	/* we have a next encoded word and we've had only whitespace
 	 * between the current and the next */
-	if (adjacent)
+	if (adjacent) {
 	    /* just skip whitespace */
 	    txt = end;
-	else
+	} else {
 	    /* copy everything that was between the encoded words */
+	    if (!end) end = fin;
 	    while (txt < end) {
 		if (encoding == E_RAW)
 		    beg[size++] = *txt++;
@@ -540,6 +613,7 @@ word_t *text_decode(word_t *w)
 		    buf->t.u.text[buf->t.leng++] = *txt++;
 #endif
 	    }
+	}
     }
 
     if (encoding == E_RAW) {

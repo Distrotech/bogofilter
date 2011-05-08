@@ -161,37 +161,11 @@ BACK_CHAR	[^[:blank:][:cntrl:]:$*<>;=()&%#@+|/\\{}^\"?,\[\]._~\'\`\-]
 
 TOKEN		{FRONT_CHAR}({MID_CHAR}*{BACK_CHAR})?
 
-/*  RFC2047.2
-    encoded-word = "=?" charset "?" encoding "?" encoded-text "?="
-    charset = token    ; see section 3
-    encoding = token   ; see section 4
-    token = 1*<Any CHAR except SPACE, CTLs, and especials>
-    especials = "(" / ")" / "<" / ">" / "@" / "," / ";" / ":" / "
-		<"> / "/" / "[" / "]" / "?" / "." / "="
-    encoded-text = 1*<Any printable ASCII character other than "?"
-		      or SPACE>
-		   ; (but see "Use of encoded-words in message
-		   ; headers", section 5)
-*/
-
-/* 09/01/03
-  Using "[^?]" in the pattern and validating the charset in 'C'
-  reduces executable size by approx 290k.
-  new: ENCODED_WORD =\?{CHARSET}\?[bq]\?[^?]*\?=
-  old: ENCODED_WORD =\?{CHARSET}\?(b\?{BASE64}\|q\?{QP})\?=
-
-  BASE64	[0-9a-zA-Z/+=]+
-  QP		[!->@-~]+
-*/
-
 WHITESPACE	[[:blank:]\n]
 NOTWHITESPACE	[^[:blank:]\n]
 
 HTML_ENCODING	"&#"x?[[:xdigit:]]+";"
 URL_ENCODING	"%"[[:xdigit:]][[:xdigit:]]
-
-ENCODED_WORD	=\?{CHARSET}\?[bq]\?[^?\n]*\?=
-ENCODED_TOKEN	({FRONT_CHAR}{MID_CHAR}*)?({ENCODED_WORD}{WHITESPACE}+)*{ENCODED_WORD}
 
 /*
 HTML_WI_COMMENTS	"<"[^>]*">"
@@ -231,11 +205,6 @@ VERP		{TOKEN}-{VERPID}-{TOKEN}={TOKEN}@{TOKEN}
 						}
 <BOGO_LEX>^\"{BOGOLEX_CHAR}+\"{NUM_NUM}$	{ return BOGO_LEX_LINE; }
 <BOGO_LEX>\n					{ lineno += 1; }
-
-<INITIAL>{ENCODED_TOKEN}			{ word_t *raw = yy_text();
-						  word_t *txt = text_decode(raw);
-						  yy_unput(txt->u.text, txt->leng);
-						}
 
 <INITIAL>^(To|CC|From|Return-Path|Subject|Received):	{ set_tag(yytext); }
 <INITIAL>^Content-(Transfer-Encoding|Type|Disposition):{MTYPE}	{ mime_content(yy_text()); skip_to(':'); header(); return TOKEN; }
@@ -439,6 +408,8 @@ static void url_char(void)
 
 static void yy_unput(const byte *txt, uint len)
 {
+    if (DEBUG_LEXER(3))
+	fprintf(dbgout, "Ungetting %u bytes.\n", len);
     while (len-- > 0)
 	yyunput(txt[len], yytext);
 }
