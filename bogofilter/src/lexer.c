@@ -173,8 +173,7 @@ static int get_decoded_line(buff_t *buff)
     if (encoding == E_RAW ||
 	msg_state->mime_dont_decode ) {
 	linebuff = buff;
-    }
-    else {
+    } else {
 	static buff_t *tempbuff = NULL;
 
 	if (tempbuff == NULL)
@@ -197,7 +196,7 @@ static int get_decoded_line(buff_t *buff)
     count = yy_get_new_line(linebuff);
 
     if (count == EOF) {
-	if ( !ferror(fpin))
+	if (!ferror(fpin))
 	    return YY_NULL;
 	else {
 	    print_error(__FILE__, __LINE__, "input in flex scanner failed\n");
@@ -211,8 +210,8 @@ static int get_decoded_line(buff_t *buff)
 	do {
 	    int add;
 
-	    /* in headers, peek at the next character to see if we need to fetch another
-	     * line to unfold headers */
+	    /* in headers, peek at the next character to see if we need to fetch
+             * another line to unfold headers */
 	    c = getc(fpin);
 	    if (c == EOF) break;
 	    ungetc(c, fpin);
@@ -330,24 +329,6 @@ static int skip_folded_line(buff_t *buff)
 	if (is_eol((char *)buff->t.u.text, count))
 	    return count;
     }
-}
-
-int buff_fill(buff_t *buff, size_t used, size_t need)
-{
-    int cnt = 0;
-    size_t leng = buff->t.leng;
-    size_t size = buff->size;
-
-    /* check bytes needed vs. bytes in buff */
-    while (size - leng > 2 && need > leng - used) {
-	/* too few, read more */
-	int add = get_decoded_line(buff);
-	if (add == EOF) return EOF;
-	if (add == 0) break ;
-	cnt += add;
-	leng += add;
-    }
-    return cnt;
 }
 
 void yyinit(void)
