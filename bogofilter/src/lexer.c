@@ -277,17 +277,21 @@ static int get_decoded_line(buff_t *buff)
     }
 
 #ifndef	DISABLE_UNICODE
-    if (encoding == E_UNICODE &&
-	!msg_state->mime_dont_decode)
-    {
-	iconvert(linebuff, buff);
+    if (msg_header) {
+	buff_add(buff, &linebuff->t);
+    } else {
+	if (encoding == E_UNICODE &&
+		!msg_state->mime_dont_decode)
+	{
+	    iconvert(linebuff, buff);
 
-	/*
-	 * iconvert, treating multi-byte sequences, can shrink or enlarge
-	 * the output compared to its input.  Correct count.
-	 */
-	if (count > 0)
-	    count = buff->t.leng;
+	    /*
+	     * iconvert, treating multi-byte sequences, can shrink or enlarge
+	     * the output compared to its input.  Correct count.
+	     */
+	    if (count > 0)
+		count = buff->t.leng;
+	}
     }
 #endif
 
