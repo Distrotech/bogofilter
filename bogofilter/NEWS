@@ -15,6 +15,10 @@
 
 -------------------------------------------------------------------------------
 
+	2011-06-21
+
+	* Mark Berkeley DB 5.2.28 supported.
+
 	2011-05-08
 
 	* Halfway fix for the RFC2047-related lexer pushback buffer overflow,
