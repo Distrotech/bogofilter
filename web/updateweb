@@ -28,12 +28,12 @@ fi
 
 echo "==> CHECKING OUT WEB, FAQ AND NEWS"
 URL=http://bogofilter.svn.sourceforge.net/svnroot/bogofilter/trunk/
-CMDPFX="svn --non-interactive"
+CMDPFX="svn"
 
 # check out
 $CMDPFX up -q &
 
-FILES="bogofilter-faq.html bogofilter-faq-fr.html bogofilter-faq-it.html"
+FILES="bogofilter-faq.html bogofilter-faq-fr.html bogofilter-faq-it.html bogofilter-faq-bg.html"
 for FILE in $FILES ; do
 	$CMDPFX cat $URL/bogofilter/doc/$FILE >$FILE &
 done
