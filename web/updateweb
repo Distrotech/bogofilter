@@ -26,22 +26,24 @@ if test "x$SF_USER" = x ; then
 	exit 1
 fi
 
-echo "==> CHECKING OUT WEB, FAQ AND NEWS"
-URL=http://bogofilter.svn.sourceforge.net/svnroot/bogofilter/trunk/
-CMDPFX="svn"
+echo "==> CHECKING OUT WEB, FAQ, AND NEWS"
+URL="http://bogofilter.svn.sourceforge.net/svnroot/bogofilter/trunk/"
+CMD="svn"
 
 # check out
-$CMDPFX up -q &
+$CMD update -q &
 
-FILES="bogofilter-faq.html bogofilter-faq-fr.html bogofilter-faq-it.html bogofilter-faq-bg.html"
+FILES="bogofilter-faq.html bogofilter-faq-??"
 for FILE in $FILES ; do
-	$CMDPFX cat $URL/bogofilter/doc/$FILE >$FILE &
+	$CMD cat $URL/bogofilter/doc/$FILE >$FILE &
 done
-$CMDPFX cat $URL/bogofilter/NEWS >NEWS &
+
+$CMD cat $URL/bogofilter/NEWS >NEWS &
+
 wait
 
 # check if no uncommitted files are there
-a=$($CMDPFX status -q)
+a=$($CMD status -q)
 if test "x$a" != x ; then
 	echo >&2 "### UNCOMMITTED FILES PERSIST IN LOCAL DIRECTORY - COMMIT FIRST ###"
 	echo >&2 "$a"
